@@ -66,8 +66,33 @@ describe('bindAtomsLoggerToStore', () => {
   describe('store', () => {
     it('should bind the logger to the store', () => {
       expect(isAtomsLoggerBoundToStore(store)).toBeFalsy();
-      bindAtomsLoggerToStore(store, defaultOptions);
+      expect(bindAtomsLoggerToStore(store, defaultOptions)).toBe(true);
       expect(isAtomsLoggerBoundToStore(store)).toBeTruthy();
+      expect(consoleMock.log.mock.calls).toEqual([]);
+    });
+
+    it('should not bind the logger to the store if the store does not contain jotai internal building blocks', () => {
+      const fakeStore: Store = {
+        get() {
+          throw new Error('Function not implemented.');
+        },
+        set() {
+          throw new Error('Function not implemented.');
+        },
+        sub() {
+          throw new Error('Function not implemented.');
+        },
+      };
+      expect(bindAtomsLoggerToStore(fakeStore, defaultOptions)).toBe(false);
+      expect(consoleMock.log.mock.calls).toEqual([
+        [
+          'Fail to bind atoms logger to',
+          fakeStore,
+          ': internal building blocks not found.',
+          'This can happen if the store is not a Jotai store or if it has been modified in some way.',
+          'The most common case is that the store was created with a different version of Jotai by another library like jotai-devtools and the symbol used to as key for the internal building blocks is different.',
+        ],
+      ]);
     });
 
     it('should override store methods', () => {
@@ -75,7 +100,9 @@ describe('bindAtomsLoggerToStore', () => {
       const originalSet = store.set;
       const originalSub = store.sub;
 
-      bindAtomsLoggerToStore(store, defaultOptions);
+      if (!bindAtomsLoggerToStore(store, defaultOptions)) {
+        expect.fail('store should be bound to logger');
+      }
 
       expect(store.get).not.toBe(originalGet);
       expect(store.set).not.toBe(originalSet);
@@ -164,7 +191,9 @@ describe('bindAtomsLoggerToStore', () => {
         enableDebugMode: true,
       };
 
-      bindAtomsLoggerToStore(store, customOptions);
+      if (!bindAtomsLoggerToStore(store, customOptions)) {
+        expect.fail('store should be bound to logger');
+      }
 
       expect(store[ATOMS_LOGGER_SYMBOL].enabled).toBe(false);
       expect(store[ATOMS_LOGGER_SYMBOL].shouldShowPrivateAtoms).toBe(true);
