@@ -17,13 +17,13 @@ Logging utility for [Jotai](https://github.com/pmndrs/jotai) that helps you debu
 
 ```bash
 # npm
-npm install --save-dev jotai-logger
+npm install jotai-logger
 
 # yarn
-yarn add -D jotai-logger
+yarn add jotai-logger
 
 # pnpm
-pnpm install --save-dev jotai-logger
+pnpm install jotai-logger
 ```
 
 ## Usage
@@ -33,17 +33,18 @@ pnpm install --save-dev jotai-logger
 ```tsx
 import { useAtomsLogger } from 'jotai-logger';
 
-const AtomsLogger = ({ children }) => {
-  useAtomsLogger();
-  return children;
-};
-
 function App() {
   return (
-    <AtomsLogger>
-      <YourApp />
-    </AtomsLogger>
+    <>
+      <AtomsLogger />
+      {/* your app */}
+    </>
   );
+}
+
+function AtomsLogger() {
+  useAtomsLogger();
+  return null;
 }
 ```
 
@@ -116,6 +117,64 @@ useAtomsLogger({ colorScheme: import.meta.env.VITE_ATOMS_LOGGER_COLOR_SCHEME });
 
 // If you want to disable colors
 useAtomsLogger({ plainTextOutput: true });
+```
+
+## Tree-shaking
+
+Jotai Logger can be used in production mode.
+
+If you only want it in development mode we recommend wrapping the `AtomsLogger` in a conditional statement and tree-shake it out in production to avoid any accidental usage in production.
+
+### Using with Vite.js
+
+For Vite.js applications, you can use environment variables to conditionally include the logger:
+
+```tsx
+import { useAtomsLogger } from 'jotai-logger';
+
+function App() {
+  return (
+    <>
+      {import.meta.env.DEV && <AtomsLogger />}
+      {/* your app */}
+    </>
+  );
+}
+
+function AtomsLogger() {
+  useAtomsLogger();
+  return null;
+}
+```
+
+### Using with Next.js
+
+For Next.js applications, you can leverage environment variables or the built-in `process.env.NODE_ENV`:
+
+```tsx
+// App.tsx
+import dynamic from 'next/dynamic';
+
+const AtomsLogger = process.env.NODE_ENV === 'development'
+  ? dynamic(() => import('./AtomsLogger').then((mod) => ({ default: mod.DevTools })), { ssr: false })
+  : null;
+
+function App() {
+  return (
+    <>
+      {AtomsLogger && <AtomsLogger />}
+      {/* your app */}
+    </>
+  );
+}
+
+// AtomsLogger.tsx
+import { useAtomsLogger } from 'jotai-logger';
+
+export function AtomsLogger() {
+  useAtomsLogger();
+  return null;
+}
 ```
 
 ## Example Logs
