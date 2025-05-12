@@ -196,6 +196,16 @@ export function getAtomEventMapLogs(
     isOldValueError = oldValue instanceof Error;
   }
 
+  let hasOldValues = false;
+  let oldValues: unknown[] = [];
+  if ('oldValues' in event && event.oldValues !== undefined && event.oldValues.length > 0) {
+    hasOldValues = true;
+    oldValues = event.oldValues;
+    hasOldValue = true;
+    oldValue = oldValues[0];
+    isOldValueError = oldValue instanceof Error;
+  }
+
   let hasNewValue = false;
   let newValue: unknown;
   let isNewValueError = false;
@@ -222,6 +232,13 @@ export function getAtomEventMapLogs(
   });
 
   addAtomIdToLogs(logs, atomId, options);
+
+  if (hasOldValues) {
+    addToLogs(logs, options, {
+      plainText: `${oldValues.length.toString()} times`,
+      colored: [`%c${oldValues.length.toString()} %ctimes`, 'default', 'grey'],
+    });
+  }
 
   if (hasOldValue) {
     const stringifiedState = stringifyValue(oldValue, {
@@ -250,7 +267,10 @@ export function getAtomEventMapLogs(
   const subLogsArray: [string, ...unknown[]][] = [];
   const subLogsObject: Record<string, unknown> = {};
 
-  if (hasOldValue) {
+  if (hasOldValues) {
+    subLogsArray.push(['old values', oldValues]);
+    subLogsObject.oldValues = oldValues;
+  } else if (hasOldValue) {
     if (isOldValueError) {
       subLogsArray.push(['old error', oldValue]);
       subLogsObject.oldError = oldValue;

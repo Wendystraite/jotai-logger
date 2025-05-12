@@ -873,6 +873,28 @@ describe('bindAtomsLoggerToStore', () => {
         ],
       ]);
     });
+
+    it('should merge atom value changes if they are in the same transaction', () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const valueAtom = atom(0);
+
+      const valueSetAtom = atom(null, (get, set) => {
+        set(valueAtom, 1);
+        set(valueAtom, 2);
+        set(valueAtom, 3);
+      });
+
+      store.set(valueSetAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : called set of ${valueSetAtom}`],
+        [`initialized value of ${valueAtom} to 1`, { value: 1 }],
+        [`changed value of ${valueAtom} 2 times from 1 to 3`, { oldValues: [1, 2], newValue: 3 }],
+      ]);
+    });
   });
 
   describe('dependencies', () => {

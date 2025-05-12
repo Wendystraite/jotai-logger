@@ -14,7 +14,7 @@ export function addEventToTransaction(
   if (!store[ATOMS_LOGGER_SYMBOL].currentTransaction) {
     // Execute the event in an independent "unknown" transaction if there is no current transaction.
     let transactionMap: AtomsLoggerTransactionMap = { unknown: {} };
-    const event = Object.values(eventMap)[0] ?? undefined;
+    const event = Object.values(eventMap)[0];
     if (event) {
       if ('atom' in event) {
         transactionMap = { unknown: { atom: event.atom } };
@@ -35,18 +35,63 @@ export function addEventToTransaction(
     // Add the event to the current transaction.
     (store[ATOMS_LOGGER_SYMBOL].currentTransaction.transaction.events ??= []).push(eventMap);
 
-    // HACK: logs that a promise was aborted before a new one is pending
-    // -> In Jotai's code (`setAtomStateValueOrPromise`) the value of the promise is set **before** the abort event is triggered.
-    //    This means that the abort event is added in the transaction after the new pending promise event.
-    //    This hack just swap their order to make the log more readable.
-    if (eventMap.initialPromiseAborted || eventMap.changedPromiseAborted) {
-      const events = store[ATOMS_LOGGER_SYMBOL].currentTransaction.transaction.events;
-      if (events.length > 1) {
-        const eventBeforeAbort = events[events.length - 2];
-        if (eventBeforeAbort?.initialPromisePending || eventBeforeAbort?.changedPromisePending) {
-          events[events.length - 2] = eventMap;
-          events[events.length - 1] = eventBeforeAbort;
+    // Compute/reorder the events in the transaction.
+    mergeChangedEvents(store, eventMap);
+    reversePromiseAbortedAndPending(store, eventMap);
+  }
+}
+
+/**
+ * HACK: logs that a promise was aborted before a new one is pending
+ *
+ * In Jotai's code (`setAtomStateValueOrPromise`) the value of the promise is set **before** the abort event is triggered.
+ * This means that the abort event is added in the transaction after the new pending promise event.
+ * This hack just swap their order to make the log more readable.
+ */
+function reversePromiseAbortedAndPending(
+  store: StoreWithAtomsLogger,
+  eventMap: AtomsLoggerEventMap,
+): void {
+  if (eventMap.initialPromiseAborted || eventMap.changedPromiseAborted) {
+    const events = store[ATOMS_LOGGER_SYMBOL].currentTransaction?.transaction.events;
+    if (events && events.length > 1) {
+      const eventBeforeAbort = events[events.length - 2];
+      if (eventBeforeAbort?.initialPromisePending || eventBeforeAbort?.changedPromisePending) {
+        events[events.length - 2] = eventMap;
+        events[events.length - 1] = eventBeforeAbort;
+      }
+    }
+  }
+}
+
+/**
+ * Merge multiple "changed" events that occurs in the same transaction to prevent spam.
+ */
+function mergeChangedEvents(store: StoreWithAtomsLogger, eventMap: AtomsLoggerEventMap): void {
+  if (eventMap.changed !== undefined) {
+    const changedEvent = Object.values(eventMap)[0] as NonNullable<AtomsLoggerEventMap['changed']>;
+    const events = store[ATOMS_LOGGER_SYMBOL].currentTransaction?.transaction.events;
+    const previousChangedEventIndex = events?.findIndex(
+      (previousEventMap) =>
+        previousEventMap !== eventMap && previousEventMap.changed?.atom === changedEvent.atom,
+    );
+    if (events && previousChangedEventIndex !== undefined && previousChangedEventIndex > -1) {
+      const [previousChangedEventMap] = events.splice(previousChangedEventIndex, 1);
+      const previousChangedEvent = previousChangedEventMap?.changed;
+      if (previousChangedEvent !== undefined) {
+        const oldValues: unknown[] = [];
+        if (previousChangedEvent.oldValues !== undefined) {
+          oldValues.push(...previousChangedEvent.oldValues);
+        } else if ('oldValue' in previousChangedEvent) {
+          oldValues.push(previousChangedEvent.oldValue);
         }
+        if (changedEvent.oldValues !== undefined) {
+          oldValues.push(...changedEvent.oldValues);
+        } else if ('oldValue' in changedEvent) {
+          oldValues.push(changedEvent.oldValue);
+        }
+        changedEvent.oldValues = oldValues;
+        delete changedEvent.oldValue;
       }
     }
   }

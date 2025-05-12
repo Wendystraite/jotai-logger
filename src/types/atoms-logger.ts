@@ -328,7 +328,7 @@ export type AtomsLoggerEventMap = Partial<{
   initialPromiseResolved: { atom: Atom<unknown>; value: unknown };
   initialPromiseRejected: { atom: Atom<unknown>; error: unknown };
   initialPromiseAborted: { atom: Atom<unknown> };
-  changed: { atom: Atom<unknown>; oldValue: unknown; newValue: unknown };
+  changed: { atom: Atom<unknown>; oldValue?: unknown; oldValues?: unknown[]; newValue: unknown };
   changedPromisePending: { atom: Atom<unknown>; oldValue: unknown };
   changedPromiseResolved: {
     atom: Atom<unknown>;
