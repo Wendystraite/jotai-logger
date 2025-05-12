@@ -46,7 +46,7 @@
   },
   "scripts": {
     "build": "rm -fr dist && tsc --build tsconfig.lib.json",
-    "ci": "pnpm run build && pnpm run check-types && pnpm run check-format && pnpm run lint:package && pnpm run check-exports && pnpm run lint && pnpm run test",
+    "ci": "pnpm run build && pnpm run check-types && pnpm run check-format && pnpm run lint:package && pnpm run check-exports && pnpm run lint && pnpm run coverage",
     "format": "prettier --write .",
     "check-format": "prettier --check .",
     "check-exports": "attw --pack . --ignore-rules=cjs-resolves-to-esm",
