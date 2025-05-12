@@ -1,14 +1,15 @@
 import type { Atom } from 'jotai';
-import { type INTERNAL_AtomState, INTERNAL_getBuildingBlocksRev1 } from 'jotai/vanilla/internals';
+import { type INTERNAL_AtomState } from 'jotai/vanilla/internals';
 
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import { getInternalBuildingBlocks } from '../utils/get-internal-building-blocks.js';
 import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { onAtomValueChanged } from './on-atom-value-changed.js';
 
 export function getOnAtomStateMapSet(store: StoreWithAtomsLogger) {
   return function onAtomStateMapSet(atom: Atom<unknown>, atomState: INTERNAL_AtomState): void {
-    const atomStateMap = INTERNAL_getBuildingBlocksRev1(store)[0];
+    const { atomStateMap } = getInternalBuildingBlocks(store);
 
     let isInitialValue = !atomStateMap.get(atom);
 

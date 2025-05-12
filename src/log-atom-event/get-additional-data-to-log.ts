@@ -1,9 +1,10 @@
 import type { Atom } from 'jotai';
-import { INTERNAL_getBuildingBlocksRev1, INTERNAL_isPromiseLike } from 'jotai/vanilla/internals';
+import { INTERNAL_isPromiseLike } from 'jotai/vanilla/internals';
 
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import type { AtomsLoggerEventMap, StoreWithAtomsLogger } from '../types/atoms-logger.js';
 import { convertAtomsToStrings } from '../utils/convert-atoms-to-strings.js';
+import { getInternalBuildingBlocks } from '../utils/get-internal-building-blocks.js';
 
 export function getAdditionalDataToLog(
   store: StoreWithAtomsLogger,
@@ -41,9 +42,7 @@ export function getAdditionalDataToLog(
     internal?: Record<string, unknown>;
   } = {};
 
-  const buildingBlocks = INTERNAL_getBuildingBlocksRev1(store);
-  const atomStateMap = buildingBlocks[0];
-  const mountedMap = buildingBlocks[1];
+  const { atomStateMap, getMounted } = getInternalBuildingBlocks(store);
 
   const atomState = atomStateMap.get(atom);
 
@@ -72,7 +71,7 @@ export function getAdditionalDataToLog(
     }
   }
 
-  const mountedState = mountedMap.get(atom);
+  const mountedState = getMounted(atom);
 
   if (mountedState) {
     if (mountedState.d.size > 0) {

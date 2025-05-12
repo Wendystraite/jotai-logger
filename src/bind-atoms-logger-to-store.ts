@@ -1,17 +1,18 @@
-import {
-  INTERNAL_getBuildingBlocksRev1,
-  INTERNAL_initializeStoreHooks,
-} from 'jotai/vanilla/internals';
+import type { Atom } from 'jotai';
+import { INTERNAL_initializeStoreHooks } from 'jotai/vanilla/internals';
 
 import { getOnAtomGarbageCollected } from './callbacks/on-atom-garbage-collected.js';
 import { getOnAtomMounted } from './callbacks/on-atom-mounted.js';
 import { getOnAtomStateMapSet as onAtomStateMapSet } from './callbacks/on-atom-state-map-set.js';
 import { getOnAtomUnmounted } from './callbacks/on-atom-unmounted.js';
+import { getOnDevtoolsMountedAdd } from './callbacks/on-devtools-mounted-add.js';
+import { getOnDevtoolsMountedDelete } from './callbacks/on-devtools-mounted-delete.js';
 import { getOnStoreGet } from './callbacks/on-store-get.js';
 import { getOnStoreSet } from './callbacks/on-store-set.js';
 import { getOnStoreSub } from './callbacks/on-store-sub.js';
 import { ATOMS_LOGGER_SYMBOL } from './consts/atom-logger-symbol.js';
 import type { AtomsLoggerOptions, Store, StoreWithAtomsLogger } from './types/atoms-logger.js';
+import { getInternalBuildingBlocks } from './utils/get-internal-building-blocks.js';
 import { atomsLoggerOptionsToState } from './utils/logger-options-to-state.js';
 
 export function bindAtomsLoggerToStore(
@@ -20,20 +21,11 @@ export function bindAtomsLoggerToStore(
 ): store is StoreWithAtomsLogger {
   const newStateOptions = atomsLoggerOptionsToState(options);
 
-  const buildingBlocks = INTERNAL_getBuildingBlocksRev1(store) as
-    | ReturnType<typeof INTERNAL_getBuildingBlocksRev1>
-    | undefined;
-
-  if (!buildingBlocks) {
-    // If building blocks are not found, we cannot bind the logger to the store.
-    const errorLogs = [
-      'Fail to bind atoms logger to',
-      store,
-      ': internal building blocks not found.',
-      'This can happen if the store is not a Jotai store or if it has been modified in some way.',
-      'The most common case is that the store was created with a different version of Jotai by another library like jotai-devtools and the symbol used to as key for the internal building blocks is different.',
-    ];
-    newStateOptions.logger.log(...errorLogs);
+  let buildingBlocks: ReturnType<typeof getInternalBuildingBlocks>;
+  try {
+    buildingBlocks = getInternalBuildingBlocks(store);
+  } catch (error) {
+    newStateOptions.logger.log('Fail to bind atoms logger to', store, ':', error);
     return false;
   }
 
@@ -47,18 +39,28 @@ export function bindAtomsLoggerToStore(
   store.set = getOnStoreSet(storeWithAtomsLogger);
   store.sub = getOnStoreSub(storeWithAtomsLogger);
 
-  const storeHooks = INTERNAL_initializeStoreHooks(buildingBlocks[6]);
-  const atomStateMap = buildingBlocks[0];
-
   const atomsFinalizationRegistry = new FinalizationRegistry<string>(
     getOnAtomGarbageCollected(storeWithAtomsLogger),
   );
 
+  const atomStateMap = buildingBlocks.atomStateMap;
+  const devtoolsMountedAtoms = buildingBlocks.devtoolsMountedAtoms;
   const prevAtomStateMapSet = atomStateMap.set.bind(atomStateMap);
   atomStateMap.set = onAtomStateMapSet(storeWithAtomsLogger);
 
-  storeHooks.m.add(undefined, getOnAtomMounted(storeWithAtomsLogger));
-  storeHooks.u.add(undefined, getOnAtomUnmounted(storeWithAtomsLogger));
+  let prevDevtoolsMountedAtomsAdd: Set<Atom<unknown>>['add'] | undefined;
+  let prevDevtoolsMountedAtomsDelete: Set<Atom<unknown>>['delete'] | undefined;
+
+  if (buildingBlocks.storeHooks) {
+    const storeHooks = INTERNAL_initializeStoreHooks(buildingBlocks.storeHooks);
+    storeHooks.m.add(undefined, getOnAtomMounted(storeWithAtomsLogger));
+    storeHooks.u.add(undefined, getOnAtomUnmounted(storeWithAtomsLogger));
+  } else if (devtoolsMountedAtoms) {
+    prevDevtoolsMountedAtomsAdd = devtoolsMountedAtoms.add.bind(devtoolsMountedAtoms);
+    prevDevtoolsMountedAtomsDelete = devtoolsMountedAtoms.delete.bind(devtoolsMountedAtoms);
+    devtoolsMountedAtoms.add = getOnDevtoolsMountedAdd(storeWithAtomsLogger);
+    devtoolsMountedAtoms.delete = getOnDevtoolsMountedDelete(storeWithAtomsLogger);
+  }
 
   storeWithAtomsLogger[ATOMS_LOGGER_SYMBOL] = {
     ...newStateOptions,
@@ -66,6 +68,8 @@ export function bindAtomsLoggerToStore(
     prevStoreSet,
     prevStoreSub,
     prevAtomStateMapSet,
+    prevDevtoolsMountedAtomsAdd,
+    prevDevtoolsMountedAtomsDelete,
     transactionNumber: 0,
     currentTransaction: undefined,
     atomsFinalizationRegistry,

@@ -12,6 +12,7 @@ Logging utility for [Jotai](https://github.com/pmndrs/jotai) that helps you debu
 - 🧩 Configurable log levels and filtering options
 - 🔍 Stack trace support for debugging
 - 🛠️ Customizable with various configuration options
+- 🐞 Compatible with [jotai-devtools](https://github.com/jotaijs/jotai-devtools)
 
 ## Installation
 

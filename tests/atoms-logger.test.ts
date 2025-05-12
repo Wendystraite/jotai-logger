@@ -1,5 +1,6 @@
 import { atom } from 'jotai';
 import { type Atom, createStore } from 'jotai/vanilla';
+import { INTERNAL_buildStoreRev1, INTERNAL_getBuildingBlocksRev1 } from 'jotai/vanilla/internals';
 import { loadable } from 'jotai/vanilla/utils';
 import {
   type Mock,
@@ -18,6 +19,7 @@ import {
 } from '../src/bind-atoms-logger-to-store.js';
 import { ATOMS_LOGGER_SYMBOL } from '../src/consts/atom-logger-symbol.js';
 import type { AtomsLoggerOptions, Store } from '../src/types/atoms-logger.js';
+import { isDevtoolsStore } from '../src/utils/get-internal-building-blocks.js';
 
 let mockDate: MockInstance;
 
@@ -64,6 +66,11 @@ describe('bindAtomsLoggerToStore', () => {
   });
 
   describe('store', () => {
+    it('jotai-devtools should not create a dev store when calling createStore', () => {
+      // Just to be sure that the test file is not running with a devtools store
+      expect(isDevtoolsStore(createStore())).toBeFalsy();
+    });
+
     it('should bind the logger to the store', () => {
       expect(isAtomsLoggerBoundToStore(store)).toBeFalsy();
       expect(bindAtomsLoggerToStore(store, defaultOptions)).toBe(true);
@@ -88,11 +95,24 @@ describe('bindAtomsLoggerToStore', () => {
         [
           'Fail to bind atoms logger to',
           fakeStore,
-          ': internal building blocks not found.',
-          'This can happen if the store is not a Jotai store or if it has been modified in some way.',
-          'The most common case is that the store was created with a different version of Jotai by another library like jotai-devtools and the symbol used to as key for the internal building blocks is different.',
+          ':',
+          new Error('internal jotai building blocks not found'),
         ],
       ]);
+    });
+
+    it('should bind the logger to a store with a custom symbol for internal building blocks', () => {
+      const customSymbol = Symbol();
+      const store = INTERNAL_buildStoreRev1();
+      const buildingBlocks = INTERNAL_getBuildingBlocksRev1(store);
+      const customStore = { ...store, [customSymbol]: buildingBlocks };
+
+      // INTERNAL_getBuildingBlocksRev1 should not work with the custom symbol
+      expect(INTERNAL_getBuildingBlocksRev1(store)).toBeDefined();
+      expect(INTERNAL_getBuildingBlocksRev1(customStore)).toEqual(undefined);
+
+      // But bindAtomsLoggerToStore should work
+      expect(bindAtomsLoggerToStore(customStore, defaultOptions)).toBe(true);
     });
 
     it('should override store methods', () => {
