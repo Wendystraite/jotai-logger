@@ -1,8 +1,8 @@
 # Jotai Logger
 
-[![npm](https://img.shields.io/npm/v/jotai-logger)](https://www.npmjs.com/package/jotai-logger)
+[![NPM Version](https://img.shields.io/npm/v/jotai-logger)](https://www.npmjs.com/package/jotai-logger)
 [![Codecov](https://img.shields.io/codecov/c/gh/Wendystraite/jotai-logger)](https://app.codecov.io/gh/Wendystraite/jotai-logger)
-[![license](https://shields.io/badge/license-MIT-informational)](https://github.com/Wendystraite/jotai-logger/blob/main/LICENSE.md)
+[![GitHub License](https://img.shields.io/github/license/Wendystraite/jotai-logger)](https://github.com/Wendystraite/jotai-logger/blob/main/LICENSE.md)
 
 Logging utility for [Jotai](https://github.com/pmndrs/jotai) that helps you debug and track atom state changes.
 
