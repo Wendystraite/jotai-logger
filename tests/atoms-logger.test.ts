@@ -1405,22 +1405,67 @@ describe('bindAtomsLoggerToStore', () => {
       expect(consoleMock.log.mock.calls).toEqual([
         [
           `%ctransaction %c1 %c: %cretrieved value %cof %catom%c${atomNumber}`,
-          'color: #757575; font-weight: normal;',
-          'color: default; font-weight: normal;',
-          'color: #757575; font-weight: normal;',
-          'color: #0072B2; font-weight: bold;',
-          'color: #757575; font-weight: normal;',
-          'color: #757575; font-weight: normal;',
-          'color: default; font-weight: normal;',
+          'color: #757575; font-weight: normal;', // transaction
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // :
+          'color: #0072B2; font-weight: bold;', // retrieved value
+          'color: #757575; font-weight: normal;', // of
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
         ],
         [
           `%cinitialized value %cof %catom%c${atomNumber} %cto %c0`,
-          'color: #0072B2; font-weight: bold;',
-          'color: #757575; font-weight: normal;',
-          'color: #757575; font-weight: normal;',
-          'color: default; font-weight: normal;',
-          'color: #757575; font-weight: normal;',
-          'color: default; font-weight: normal;',
+          'color: #0072B2; font-weight: bold;', // initialized value
+          'color: #757575; font-weight: normal;', // of
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // to
+          'color: default; font-weight: normal;', // 0
+          { value: 0 },
+        ],
+      ]);
+    });
+
+    it('should log atom name without namespaces with color', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        plainTextOutput: false,
+      });
+
+      const testAtom = atom(0);
+      testAtom.debugLabel = 'testAtomWithoutNamespaces';
+
+      const atomNumber = /atom(\d+)(.*)/.exec(testAtom.toString())?.[1];
+
+      expect(Number.isInteger(parseInt(atomNumber!))).toBeTruthy();
+
+      store.get(testAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [
+          `%ctransaction %c1 %c: %cretrieved value %cof %catom%c${atomNumber}%c:%ctestAtomWithoutNamespaces`,
+          'color: #757575; font-weight: normal;', // transaction
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // :
+          'color: #0072B2; font-weight: bold;', // retrieved value
+          'color: #757575; font-weight: normal;', // of
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // :
+          'color: default; font-weight: normal;', // testAtomWithoutNamespaces
+        ],
+        [
+          `%cinitialized value %cof %catom%c${atomNumber}%c:%ctestAtomWithoutNamespaces %cto %c0`,
+          'color: #0072B2; font-weight: bold;', // initialized value
+          'color: #757575; font-weight: normal;', // of
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // :
+          'color: default; font-weight: normal;', // testAtomWithoutNamespaces
+          'color: #757575; font-weight: normal;', // to
+          'color: default; font-weight: normal;', // 0
           { value: 0 },
         ],
       ]);
@@ -1446,36 +1491,36 @@ describe('bindAtomsLoggerToStore', () => {
       expect(consoleMock.log.mock.calls).toEqual([
         [
           `%ctransaction %c1 %c: %cretrieved value %cof %catom%c${atomNumber}%c:%ctest%c/%catom%c/%cwith%c/namespaces`,
-          'color: #757575; font-weight: normal;',
-          'color: default; font-weight: normal;',
-          'color: #757575; font-weight: normal;',
-          'color: #0072B2; font-weight: bold;',
-          'color: #757575; font-weight: normal;',
-          'color: #757575; font-weight: normal;',
-          'color: default; font-weight: normal;',
-          'color: #757575; font-weight: normal;',
-          'color: #757575; font-weight: normal;',
-          'color: default; font-weight: normal;',
-          'color: #757575; font-weight: normal;',
-          'color: default; font-weight: normal;',
-          'color: #757575; font-weight: normal;',
-          'color: default; font-weight: normal;',
+          'color: #757575; font-weight: normal;', // transaction
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // :
+          'color: #0072B2; font-weight: bold;', // retrieved value
+          'color: #757575; font-weight: normal;', // of
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // :
+          'color: #757575; font-weight: normal;', // test
+          'color: default; font-weight: normal;', // /
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // /
+          'color: #757575; font-weight: normal;', // with
+          'color: default; font-weight: normal;', // /namespaces
         ],
         [
           `%cinitialized value %cof %catom%c${atomNumber}%c:%ctest%c/%catom%c/%cwith%c/namespaces %cto %c0`,
-          'color: #0072B2; font-weight: bold;',
-          'color: #757575; font-weight: normal;',
-          'color: #757575; font-weight: normal;',
-          'color: default; font-weight: normal;',
-          'color: #757575; font-weight: normal;',
-          'color: #757575; font-weight: normal;',
-          'color: default; font-weight: normal;',
-          'color: #757575; font-weight: normal;',
-          'color: default; font-weight: normal;',
-          'color: #757575; font-weight: normal;',
-          'color: default; font-weight: normal;',
-          'color: #757575; font-weight: normal;',
-          'color: default; font-weight: normal;',
+          'color: #0072B2; font-weight: bold;', // initialized value
+          'color: #757575; font-weight: normal;', // of
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // :
+          'color: #757575; font-weight: normal;', // test
+          'color: default; font-weight: normal;', // /
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // /
+          'color: #757575; font-weight: normal;', // with
+          'color: default; font-weight: normal;', // /namespaces
+          'color: #757575; font-weight: normal;', // to
+          'color: default; font-weight: normal;', // 0
           { value: 0 },
         ],
       ]);

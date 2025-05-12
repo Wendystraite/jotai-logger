@@ -31,16 +31,21 @@ export function addAtomIdToLogs(
 
       let atomNameNamespacesStr = '';
       const atomNameNamespacesColors: (keyof typeof DEFAULT_ATOMS_LOGGER_COLORS)[] = [];
-      for (const [idx, ns] of atomNameNamespaces.entries()) {
-        if (idx === 0) {
-          atomNameNamespacesStr += `%c${ns}`;
-          atomNameNamespacesColors.push('grey');
-        } else if (idx < atomNameNamespaces.length - 1) {
-          atomNameNamespacesStr += `%c/%c${ns}`;
-          atomNameNamespacesColors.push('default', 'grey');
-        } else {
-          atomNameNamespacesStr += `%c/${ns}`;
-          atomNameNamespacesColors.push('default');
+      if (atomNameNamespaces.length === 1 && atomNameNamespaces[0] !== undefined) {
+        atomNameNamespacesStr = `%c${atomNameNamespaces[0]}`;
+        atomNameNamespacesColors.push('default');
+      } else {
+        for (const [idx, ns] of atomNameNamespaces.entries()) {
+          if (idx === 0) {
+            atomNameNamespacesStr += `%c${ns}`;
+            atomNameNamespacesColors.push('grey');
+          } else if (idx < atomNameNamespaces.length - 1) {
+            atomNameNamespacesStr += `%c/%c${ns}`;
+            atomNameNamespacesColors.push('default', 'grey');
+          } else {
+            atomNameNamespacesStr += `%c/${ns}`;
+            atomNameNamespacesColors.push('default');
+          }
         }
       }
 
