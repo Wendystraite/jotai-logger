@@ -670,6 +670,46 @@ describe('bindAtomsLoggerToStore', () => {
         [`resolved promise of ${testAtom} from 1 to 2`, { newValue: 2, oldValue: 1 }],
       ]);
     });
+
+    it('should show promise aborted before a new promise is pending', async () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const dependencyAtom = atom(0);
+      dependencyAtom.debugPrivate = true;
+
+      const promiseAtom = atom(async (get, { signal }) => {
+        const dependency = get(dependencyAtom);
+        return new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            resolve(dependency);
+          }, 1000);
+          signal.addEventListener('abort', () => {
+            clearTimeout(timeoutId);
+            reject(new Error('Promise aborted'));
+          });
+        });
+      });
+
+      void store.get(promiseAtom);
+
+      await vi.advanceTimersByTimeAsync(250);
+
+      store.set(dependencyAtom, (prev) => prev + 1); // Change the dependency before the promise resolves
+
+      void store.get(promiseAtom);
+
+      await vi.advanceTimersByTimeAsync(1250);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of ${promiseAtom}`],
+        [`pending initial promise of ${promiseAtom}`],
+        [`transaction 2`],
+        [`aborted initial promise of ${promiseAtom}`], // Must be before pending
+        [`pending initial promise of ${promiseAtom}`],
+        [`transaction 3 : resolved promise of ${promiseAtom}`],
+        [`resolved initial promise of ${promiseAtom} to 1`, { value: 1 }],
+      ]);
+    });
   });
 
   describe('errors', () => {
