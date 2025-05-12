@@ -4,7 +4,6 @@ import { INTERNAL_getBuildingBlocksRev1, INTERNAL_isPromiseLike } from 'jotai/va
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import type { AtomsLoggerEventMap, StoreWithAtomsLogger } from '../types/atoms-logger.js';
 import { convertAtomsToStrings } from '../utils/convert-atoms-to-strings.js';
-import { getInternalAtomDataToLog } from './get-internal-data-to-log.js';
 
 export function getAdditionalDataToLog(
   store: StoreWithAtomsLogger,
@@ -29,7 +28,7 @@ export function getAdditionalDataToLog(
     return {};
   }
 
-  const { shouldShowPrivateAtoms, enableDebugMode } = store[ATOMS_LOGGER_SYMBOL];
+  const { shouldShowPrivateAtoms } = store[ATOMS_LOGGER_SYMBOL];
 
   const dataToLog: {
     dependencies?: string[];
@@ -92,11 +91,6 @@ export function getAdditionalDataToLog(
         dataToLog.mountedDependents = mountedDependents;
       }
     }
-  }
-
-  if (enableDebugMode) {
-    dataToLog.event = logEventMap;
-    dataToLog.internal = getInternalAtomDataToLog(store, atom);
   }
 
   return dataToLog;

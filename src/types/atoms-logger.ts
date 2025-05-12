@@ -99,9 +99,6 @@ export interface AtomsLoggerOptionsInState {
 
   /** @see AtomsLoggerOptions.collapseEvents */
   collapseEvents: boolean;
-
-  /** @see AtomsLoggerOptions.enableDebugMode */
-  enableDebugMode: boolean;
 }
 
 /**
@@ -287,16 +284,6 @@ export interface AtomsLoggerOptions {
    * @default true
    */
   collapseEvents?: boolean;
-
-  /**
-   * Whether to show debug information in the console.
-   *
-   * This is useful for debugging the logger itself.
-   * This includes information about the store, the atoms, and the internal state of the logger, ect.
-   *
-   * @default false
-   */
-  // enableDebugMode?: boolean; // Untyped, as it is used in the code but not in the type definition
 }
 
 export interface AtomsLoggerTransactionBase {

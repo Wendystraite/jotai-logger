@@ -126,7 +126,6 @@ describe('useAtomsLogger', () => {
       showTransactionElapsedTime: true,
       collapseTransactions: false,
       collapseEvents: true,
-      enableDebugMode: false,
     };
     expect(isAtomsLoggerBoundToStore(store)).toBeTruthy();
     expect((store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL]).toEqual(

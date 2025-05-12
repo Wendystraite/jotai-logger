@@ -21,11 +21,6 @@ export function atomsLoggerOptionsToState(
     collapseEvents = true,
   } = options;
 
-  let enableDebugMode = false;
-  if ('enableDebugMode' in options && typeof options.enableDebugMode === 'boolean') {
-    enableDebugMode = options.enableDebugMode;
-  }
-
   return {
     enabled,
     domain,
@@ -46,6 +41,5 @@ export function atomsLoggerOptionsToState(
     showTransactionElapsedTime,
     collapseTransactions,
     collapseEvents,
-    enableDebugMode,
   };
 }

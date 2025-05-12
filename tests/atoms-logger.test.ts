@@ -188,7 +188,6 @@ describe('bindAtomsLoggerToStore', () => {
         logger: consoleMock,
         groupLogs: false,
         collapseEvents: false,
-        enableDebugMode: true,
       };
 
       if (!bindAtomsLoggerToStore(store, customOptions)) {
@@ -201,7 +200,6 @@ describe('bindAtomsLoggerToStore', () => {
       expect(store[ATOMS_LOGGER_SYMBOL].logger).toBe(consoleMock);
       expect(store[ATOMS_LOGGER_SYMBOL].groupLogs).toBe(false);
       expect(store[ATOMS_LOGGER_SYMBOL].collapseEvents).toBe(false);
-      expect(store[ATOMS_LOGGER_SYMBOL].enableDebugMode).toBe(true);
     });
 
     describe('enabled', () => {

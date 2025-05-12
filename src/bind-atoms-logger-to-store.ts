@@ -39,10 +39,6 @@ export function bindAtomsLoggerToStore(
 
   const storeWithAtomsLogger = store as StoreWithAtomsLogger;
 
-  if (newStateOptions.enableDebugMode) {
-    newStateOptions.logger.log('Atoms logger bound to', store, 'with options', newStateOptions);
-  }
-
   const prevStoreGet = store.get;
   const prevStoreSet = store.set;
   const prevStoreSub = store.sub;

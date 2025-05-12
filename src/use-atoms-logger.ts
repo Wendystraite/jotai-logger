@@ -33,13 +33,6 @@ export function useAtomsLogger(
   // Disable the logger bound to the previous store if the store changes
   if (store !== prevStore && isAtomsLoggerBoundToStore(prevStore)) {
     prevStore[ATOMS_LOGGER_SYMBOL].enabled = false;
-    if (prevStore[ATOMS_LOGGER_SYMBOL].enableDebugMode) {
-      prevStore[ATOMS_LOGGER_SYMBOL].logger.log(
-        'Atoms logger disabled in',
-        store,
-        'due to store change',
-      );
-    }
   }
 
   // Bind the logger to the store if it is not already bound
