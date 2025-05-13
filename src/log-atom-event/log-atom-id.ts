@@ -5,26 +5,19 @@ export function addAtomIdToLogs(
   logs: unknown[],
   atomId: string,
   options: {
-    plainTextOutput: boolean;
+    formattedOutput: boolean;
     colorScheme: 'default' | 'light' | 'dark';
   },
 ): void {
-  if (options.plainTextOutput) {
+  if (!options.formattedOutput) {
     addToLogs(logs, options, {
-      plainText: atomId,
-      colored: [`%c${atomId}`, 'default'],
+      plainText: () => atomId,
+      formatted: () => [`%c${atomId}`, 'default'],
     });
   } else {
     const atomNameMatch = /^atom(?<atomNumber>\d+)(?::(?<atomDebugLabel>.+))?$/.exec(atomId);
-    const atomNumber = atomNameMatch?.groups?.atomNumber;
+    const atomNumber = atomNameMatch?.groups?.atomNumber ?? ''; // should be always defined
     const atomDebugLabel = atomNameMatch?.groups?.atomDebugLabel;
-
-    if (atomNumber) {
-      addToLogs(logs, options, {
-        plainText: `atom${atomNumber}`,
-        colored: [`%catom%c${atomNumber}`, 'grey', 'default'],
-      });
-    }
 
     if (atomDebugLabel) {
       const atomNameNamespaces = atomDebugLabel.split('/');
@@ -49,14 +42,21 @@ export function addAtomIdToLogs(
         }
       }
 
-      addToLogs(
-        logs,
-        { ...options, concatToPrevious: true },
-        {
-          plainText: atomDebugLabel,
-          colored: [`%c:${atomNameNamespacesStr}`, 'grey', ...atomNameNamespacesColors],
-        },
-      );
+      addToLogs(logs, options, {
+        plainText: () => `atom${atomNumber}:${atomDebugLabel}`,
+        formatted: () => [
+          `%catom%c${atomNumber}%c:${atomNameNamespacesStr}`,
+          'grey',
+          'default',
+          'grey',
+          ...atomNameNamespacesColors,
+        ],
+      });
+    } else {
+      addToLogs(logs, options, {
+        plainText: () => `atom${atomNumber}`,
+        formatted: () => [`%catom%c${atomNumber}`, 'grey', 'default'],
+      });
     }
   }
 }

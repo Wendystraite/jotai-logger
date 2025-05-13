@@ -56,7 +56,7 @@ describe('bindAtomsLoggerToStore', () => {
     defaultOptions = {
       logger: consoleMock,
       groupLogs: false,
-      plainTextOutput: true,
+      formattedOutput: false,
       showTransactionElapsedTime: false,
     };
   });
@@ -539,6 +539,204 @@ describe('bindAtomsLoggerToStore', () => {
         expect(consoleMock.log.mock.calls).toEqual([
           [`transaction 1 : retrieved value of ${testAtom}`],
           [`initialized value of ${testAtom} to "${value}"`, { value: value }],
+        ]);
+      });
+    });
+
+    describe('stringifyValues', () => {
+      const testAtom = atom({ foo: 'bar' } as unknown);
+      const setTestAtom = atom(null, (get, set, newValue: unknown) => {
+        set(testAtom, newValue);
+        return 'something';
+      });
+
+      it('should stringify values when stringifyValues is true and formattedOutput is false', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          formattedOutput: false,
+          stringifyValues: true,
+        });
+
+        store.get(testAtom);
+        store.set(setTestAtom, { fizz: 'buzz' });
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 : retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to {"foo":"bar"}`, { value: { foo: 'bar' } }],
+          [
+            `transaction 2 : called set of ${setTestAtom} with {"fizz":"buzz"} and returned "something"`,
+            { args: [{ fizz: 'buzz' }], result: 'something' },
+          ],
+          [
+            `changed value of ${testAtom} from {"foo":"bar"} to {"fizz":"buzz"}`,
+            { newValue: { fizz: 'buzz' }, oldValue: { foo: 'bar' } },
+          ],
+        ]);
+      });
+
+      it('should stringify values with colors when stringifyValues is true and formattedOutput is true', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          formattedOutput: true,
+          stringifyValues: true,
+        });
+
+        const testAtomNumber = /atom(\d+)(.*)/.exec(testAtom.toString())?.[1];
+        const setTestAtomNumber = /atom(\d+)(.*)/.exec(setTestAtom.toString())?.[1];
+
+        expect(Number.isInteger(parseInt(testAtomNumber!))).toBeTruthy();
+        expect(Number.isInteger(parseInt(setTestAtomNumber!))).toBeTruthy();
+
+        store.get(testAtom);
+        store.set(setTestAtom, { fizz: 'buzz' });
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [
+            `%ctransaction %c1 %c: %cretrieved value %cof %catom%c${testAtomNumber}`,
+            'color: #757575; font-weight: normal;', // transaction
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // 1
+          ],
+          [
+            `%cinitialized value %cof %catom%c${testAtomNumber} %cto %c{"foo":"bar"}`,
+            'color: #0072B2; font-weight: bold;', // initialized value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // to
+            'color: default; font-weight: normal;', // {"foo":"bar"}
+            { value: { foo: 'bar' } },
+          ],
+          [
+            `%ctransaction %c2 %c: %ccalled set %cof %catom%c${setTestAtomNumber} %cwith %c{"fizz":"buzz"} %cand returned %c"something"`,
+            'color: #757575; font-weight: normal;', // transaction
+            'color: default; font-weight: normal;', // 2
+            'color: #757575; font-weight: normal;', // :
+            'color: #E69F00; font-weight: bold;', // called set
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // 2
+            'color: #757575; font-weight: normal;', // with
+            'color: default; font-weight: normal;', // {"fizz":"buzz"}
+            'color: #757575; font-weight: normal;', // and returned
+            'color: default; font-weight: normal;', // "something"
+            { args: [{ fizz: 'buzz' }], result: 'something' },
+          ],
+          [
+            `%cchanged value %cof %catom%c${testAtomNumber} %cfrom %c{"foo":"bar"} %cto %c{"fizz":"buzz"}`,
+            'color: #56B4E9; font-weight: bold;', // changed value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // from
+            'color: default; font-weight: normal;', // {"foo":"bar"}
+            'color: #757575; font-weight: normal;', // to
+            'color: default; font-weight: normal;', // {"fizz":"buzz"}
+            { newValue: { fizz: 'buzz' }, oldValue: { foo: 'bar' } },
+          ],
+        ]);
+      });
+
+      it('should log values as is when stringifyValues is false and formattedOutput is false', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          formattedOutput: false,
+          stringifyValues: false,
+        });
+
+        store.get(testAtom);
+        store.set(setTestAtom, { fizz: 'buzz' });
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 : retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to`, { foo: 'bar' }],
+          [
+            `transaction 2 : called set of ${setTestAtom} with`,
+            { fizz: 'buzz' },
+            `and returned something`,
+          ],
+          [`changed value of ${testAtom} from`, { foo: 'bar' }, `to`, { fizz: 'buzz' }],
+        ]);
+      });
+
+      it('should log values using string substitution and colors when stringifyValues is false and formattedOutput is true', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          formattedOutput: true,
+          stringifyValues: false,
+        });
+
+        const testAtomNumber = /atom(\d+)(.*)/.exec(testAtom.toString())?.[1];
+        const setTestAtomNumber = /atom(\d+)(.*)/.exec(setTestAtom.toString())?.[1];
+
+        expect(Number.isInteger(parseInt(testAtomNumber!))).toBeTruthy();
+        expect(Number.isInteger(parseInt(setTestAtomNumber!))).toBeTruthy();
+
+        store.get(testAtom);
+        store.set(setTestAtom, { fizz: 'buzz' });
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [
+            `%ctransaction %c1 %c: %cretrieved value %cof %catom%c${testAtomNumber}`,
+            'color: #757575; font-weight: normal;', // transaction
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // 1
+          ],
+          [
+            `%cinitialized value %cof %catom%c${testAtomNumber} %cto %c%o`,
+            'color: #0072B2; font-weight: bold;', // initialized value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // to
+            'color: default; font-weight: normal;', // {"foo":"bar"}
+            { foo: 'bar' },
+          ],
+          [
+            `%ctransaction %c2 %c: %ccalled set %cof %catom%c${setTestAtomNumber} %cwith %c%o %cand returned %c%o`,
+            'color: #757575; font-weight: normal;', // transaction
+            'color: default; font-weight: normal;', // 2
+            'color: #757575; font-weight: normal;', // :
+            'color: #E69F00; font-weight: bold;', // called set
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // 2
+            'color: #757575; font-weight: normal;', // with
+            'color: default; font-weight: normal;', // {"fizz":"buzz"}
+            { fizz: 'buzz' },
+            'color: #757575; font-weight: normal;', // and returned
+            'color: default; font-weight: normal;', // "something"
+            'something',
+          ],
+          [
+            `%cchanged value %cof %catom%c${testAtomNumber} %cfrom %c%o %cto %c%o`,
+            'color: #56B4E9; font-weight: bold;', // changed value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // from
+            'color: default; font-weight: normal;', // {"foo":"bar"}
+            { foo: 'bar' },
+            'color: #757575; font-weight: normal;', // to
+            'color: default; font-weight: normal;', // {"fizz":"buzz"}
+            { fizz: 'buzz' },
+          ],
         ]);
       });
     });
@@ -1228,13 +1426,13 @@ describe('bindAtomsLoggerToStore', () => {
         [`changed value of ${valueAtom} from 1 to 2`, { newValue: 2, oldValue: 1 }],
 
         [
-          `transaction 4 : called set of ${threeSetAtom} returned "myReturnValue-3"`,
+          `transaction 4 : called set of ${threeSetAtom} and returned "myReturnValue-3"`,
           { result: 'myReturnValue-3' },
         ],
         [`changed value of ${valueAtom} from 2 to 3`, { newValue: 3, oldValue: 2 }],
 
         [
-          `transaction 5 : called set of ${fourSetAtom} with [{"newValue":4},"otherArg"] returned "myOtherReturnValue-4-otherArg"`,
+          `transaction 5 : called set of ${fourSetAtom} with [{"newValue":4},"otherArg"] and returned "myOtherReturnValue-4-otherArg"`,
           {
             args: [{ newValue: 4 }, 'otherArg'],
             result: 'myOtherReturnValue-4-otherArg',
@@ -1387,10 +1585,10 @@ describe('bindAtomsLoggerToStore', () => {
   });
 
   describe('colors', () => {
-    it('should not log colors if plainTextOutput is true', () => {
+    it('should not log colors if formattedOutput is false', () => {
       bindAtomsLoggerToStore(store, {
         ...defaultOptions,
-        plainTextOutput: true,
+        formattedOutput: false,
       });
 
       const testAtom = atom(0);
@@ -1404,10 +1602,10 @@ describe('bindAtomsLoggerToStore', () => {
       ]);
     });
 
-    it('should log colors if plainTextOutput is false', () => {
+    it('should log colors if formattedOutput is true', () => {
       bindAtomsLoggerToStore(store, {
         ...defaultOptions,
-        plainTextOutput: false,
+        formattedOutput: true,
       });
 
       const testAtom = atom(0);
@@ -1447,7 +1645,7 @@ describe('bindAtomsLoggerToStore', () => {
     it('should log atom name without namespaces with color', () => {
       bindAtomsLoggerToStore(store, {
         ...defaultOptions,
-        plainTextOutput: false,
+        formattedOutput: true,
       });
 
       const testAtom = atom(0);
@@ -1492,7 +1690,7 @@ describe('bindAtomsLoggerToStore', () => {
     it('should log atom name namespaces with colors', () => {
       bindAtomsLoggerToStore(store, {
         ...defaultOptions,
-        plainTextOutput: false,
+        formattedOutput: true,
       });
 
       const testAtom = atom(0);
@@ -1547,7 +1745,7 @@ describe('bindAtomsLoggerToStore', () => {
     it('should log dark colors with dark colorScheme option', () => {
       bindAtomsLoggerToStore(store, {
         ...defaultOptions,
-        plainTextOutput: false,
+        formattedOutput: true,
         colorScheme: 'dark',
       });
 
@@ -1588,7 +1786,7 @@ describe('bindAtomsLoggerToStore', () => {
     it('should log light colors with light colorScheme option', () => {
       bindAtomsLoggerToStore(store, {
         ...defaultOptions,
-        plainTextOutput: false,
+        formattedOutput: true,
         colorScheme: 'light',
       });
 

@@ -81,23 +81,55 @@ bindAtomsLoggerToStore(store, options);
 
 ### Options
 
-| Option                       | Type                                                                                       | Default     | Description                                                     |
-| ---------------------------- | ------------------------------------------------------------------------------------------ | ----------- | --------------------------------------------------------------- |
-| `enabled`                    | `boolean`                                                                                  | `true`      | Enable or disable the logger                                    |
-| `domain`                     | `string`                                                                                   | `undefined` | Domain identifier for the logger in console output              |
-| `shouldShowPrivateAtoms`     | `boolean`                                                                                  | `false`     | Whether to show private atoms (used internally by Jotai)        |
-| `shouldShowAtom`             | `(atom: Atom<unknown>) => boolean`                                                         | `undefined` | Custom function to determine whether to show a specific atom    |
-| `logger`                     | `Pick<Console, 'log'> & Partial<Pick<Console, 'group' \| 'groupCollapsed' \| 'groupEnd'>>` | `console`   | Custom logger to use                                            |
-| `groupLogs`                  | `boolean`                                                                                  | `true`      | Whether to group logs with `logger.group` and `logger.groupEnd` |
-| `indentSpaces`               | `number`                                                                                   | `0`         | Number of spaces to use for each level of indentation           |
-| `plainTextOutput`            | `boolean`                                                                                  | `false`     | Whether to disable colors in the console                        |
-| `colorScheme`                | `'default' \| 'light' \| 'dark'`                                                           | `'default'` | Color scheme to use for the logger                              |
-| `stringifyLimit`             | `number`                                                                                   | `50`        | Maximum length of any logged stringified data                   |
-| `showTransactionNumber`      | `boolean`                                                                                  | `true`      | Whether to show the transaction number in the console           |
-| `showTransactionLocaleTime`  | `boolean`                                                                                  | `false`     | Whether to show when a transaction started                      |
-| `showTransactionElapsedTime` | `boolean`                                                                                  | `true`      | Whether to show the elapsed time of a transaction               |
-| `collapseTransactions`       | `boolean`                                                                                  | `false`     | Whether to collapse grouped transaction logs by default         |
-| `collapseEvents`             | `boolean`                                                                                  | `true`      | Whether to collapse grouped events logs by default              |
+You can customize the logger with various options:
+
+```tsx
+type AtomsLoggerOptions = {
+  /** Enable or disable the logger (default: true) */
+  enabled?: boolean;
+  /** Domain identifier for the logger in console output */
+  domain?: string;
+  /** Whether to show private atoms used internally by Jotai (default: false) */
+  shouldShowPrivateAtoms?: boolean;
+  /** Custom function to determine which atoms to show */
+  shouldShowAtom?: (atom: Atom<unknown>) => boolean;
+  /** Custom logger to use instead of console */
+  logger?: Logger;
+  /** Whether to group logs with logger.group (default: true) */
+  groupLogs?: boolean;
+  /** Number of spaces for each indentation level (default: 0) */
+  indentSpaces?: number;
+  /** Whether to use colors/formatting in the console (default: true) */
+  formattedOutput?: boolean;
+  /** Color scheme to use: 'default', 'light', or 'dark' (default: 'default') */
+  colorScheme?: 'default' | 'light' | 'dark';
+  /** Maximum length of stringified data (default: 50) */
+  stringifyLimit?: number;
+  /** Whether to stringify data in the logs (default: true) */
+  stringifyValues?: boolean;
+  /** Whether to show transaction numbers (default: true) */
+  showTransactionNumber?: boolean;
+  /** Whether to show transaction timestamps (default: false) */
+  showTransactionLocaleTime?: boolean;
+  /** Whether to show elapsed time (default: true) */
+  showTransactionElapsedTime?: boolean;
+  /** Whether to collapse transaction logs (default: false) */
+  collapseTransactions?: boolean;
+  /** Whether to collapse event logs (default: true) */
+  collapseEvents?: boolean;
+};
+
+const options: AtomsLoggerOptions = {
+  enabled: true,
+  domain: 'MyApp',
+  shouldShowPrivateAtoms: false,
+  // Add other options as needed
+};
+
+useAtomsLogger(options);
+// or
+bindAtomsLoggerToStore(store, options);
+```
 
 ### Colors
 
@@ -118,7 +150,7 @@ useAtomsLogger({
 useAtomsLogger({ colorScheme: import.meta.env.VITE_ATOMS_LOGGER_COLOR_SCHEME });
 
 // If you want to disable colors
-useAtomsLogger({ plainTextOutput: true });
+useAtomsLogger({ formattedOutput: false });
 ```
 
 ## Tree-shaking

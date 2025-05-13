@@ -80,14 +80,17 @@ export interface AtomsLoggerOptionsInState {
   /** @see AtomsLoggerOptions.indentSpaces */
   indentSpacesDepth2: string;
 
-  /** @see AtomsLoggerOptions.plainTextOutput */
-  plainTextOutput: boolean;
+  /** @see AtomsLoggerOptions.formattedOutput */
+  formattedOutput: boolean;
 
   /** @see AtomsLoggerOptions.colorScheme */
   colorScheme: 'default' | 'light' | 'dark';
 
   /** @see AtomsLoggerOptions.stringifyLimit */
   stringifyLimit: number;
+
+  /** @see AtomsLoggerOptions.stringifyValues */
+  stringifyValues: boolean;
 
   /** @see AtomsLoggerOptions.showTransactionNumber */
   showTransactionNumber: boolean;
@@ -180,8 +183,8 @@ export interface AtomsLoggerOptions {
   /**
    * Whether to group logs with `logger.group` and `logger.groupEnd`.
    *
-   * - If set to true, logs will be grouped using `logger.group`, `logger.groupCollapsed` and `logger.groupEnd`.
-   * - If set to false, only `logger.log` will be used.
+   * - If set to `true`, logs will be grouped using `logger.group`, `logger.groupCollapsed` and `logger.groupEnd`.
+   * - If set to `false`, only `logger.log` will be used.
    *   This can be useful if using a custom `logger` that doesn't support grouping or for testing purposes.
    *
    * @default true
@@ -198,11 +201,17 @@ export interface AtomsLoggerOptions {
   indentSpaces?: number;
 
   /**
-   * Whether to disable colors in the console.
+   * Whether to use colors/formatting in the console.
    *
-   * @default false
+   * - If set to `true`, the logger will use formatted and colorized output using [the browser console's string substitutions](https://developer.mozilla.org/en-US/docs/Web/API/console#using_string_substitutions) (%c / %o).
+   *   This works with the `colorScheme` option to determine the colors to use.
+   * - If set to `false`, the logger will use plain texts without formatting.
+   *
+   * This is useful for testing purposes or if you want to use the logger in a non-browser environment.
+   *
+   * @default true
    */
-  plainTextOutput?: boolean;
+  formattedOutput?: boolean;
 
   /**
    * Color scheme to use for the logger.
@@ -215,6 +224,8 @@ export interface AtomsLoggerOptions {
    * - If `dark`, the logger will use the colors that are easy to read in dark mode.
    *
    * See example bellow if you want the colors to be automatically determined based on the user's system preference using `window.matchMedia`.
+   *
+   * This option has no effect if `formattedOutput` is set to `false`.
    *
    * @default "default"
    *
@@ -242,10 +253,23 @@ export interface AtomsLoggerOptions {
   stringifyLimit?: number;
 
   /**
+   * Whether to stringify data in the logs.
+   *
+   * This includes the state of atoms, the arguments and results of atoms
+   * setter methods, etc.
+   *
+   * - If set to `true`, the logged data will be stringified using `JSON.stringify` with a maximum length of `stringifyLimit`.
+   * - If set to `false`, the logged data will be logged as is.
+   *
+   * @default true
+   */
+  stringifyValues?: boolean;
+
+  /**
    * Whether to show the transaction number in the console.
    *
-   * - If set to true, the transaction log will look like : `transaction 1 - 12:00:00 - 2.00 ms`
-   * - If set to false, the transaction log will look like : `12:00:00 - 2.00 ms`
+   * - If set to `true`, the transaction log will look like : `transaction 1 - 12:00:00 - 2.00 ms`
+   * - If set to `false`, the transaction log will look like : `12:00:00 - 2.00 ms`
    *
    * @default true
    */
@@ -254,8 +278,8 @@ export interface AtomsLoggerOptions {
   /**
    * Whether to show when a transaction started in the console.
    *
-   * - If set to true, the transaction log will look like : `transaction 1 - 12:00:00 - 2.00 ms`
-   * - If set to false, the transaction log will look like : `transaction 1 - 2.00 ms`
+   * - If set to `true`, the transaction log will look like : `transaction 1 - 12:00:00 - 2.00 ms`
+   * - If set to `false`, the transaction log will look like : `transaction 1 - 2.00 ms`
    *
    * @default false
    */
@@ -264,8 +288,8 @@ export interface AtomsLoggerOptions {
   /**
    * Whether to show the elapsed time of a transaction in the console.
    *
-   * - If set to true, the transaction log will look like : `transaction 1 - 12:00:00 - 2.00 ms`
-   * - If set to false, the transaction log will look like : `transaction 1 - 12:00:00`
+   * - If set to `true`, the transaction log will look like : `transaction 1 - 12:00:00 - 2.00 ms`
+   * - If set to `false`, the transaction log will look like : `transaction 1 - 12:00:00`
    *
    * @default true
    */

@@ -146,8 +146,9 @@ export function getAtomEventMapLogs(
   store: StoreWithAtomsLogger,
   logEventMap: AtomsLoggerEventMap,
   options: {
+    stringifyValues: boolean;
     indentSpacesDepth1: string;
-    plainTextOutput: boolean;
+    formattedOutput: boolean;
     stringifyLimit: number;
     colorScheme: 'default' | 'light' | 'dark';
   },
@@ -159,7 +160,7 @@ export function getAtomEventMapLogs(
       additionalDataToLog: Record<string, unknown>;
     }
   | undefined {
-  const { stringifyLimit, indentSpacesDepth1 } = options;
+  const { stringifyLimit: maxLength, indentSpacesDepth1, stringifyValues } = options;
 
   const [eventType, event] = (Object.entries(logEventMap)[0] ?? []) as [
     keyof AtomsLoggerEventMap,
@@ -227,38 +228,60 @@ export function getAtomEventMapLogs(
   const logs = [] as unknown[] as [string, ...unknown[]];
 
   addToLogs(logs, options, {
-    plainText: eventLabel,
-    colored: [coloredEventLabel, ...eventColors],
+    plainText: () => eventLabel,
+    formatted: () => [coloredEventLabel, ...eventColors],
   });
 
   addAtomIdToLogs(logs, atomId, options);
 
   if (hasOldValues) {
     addToLogs(logs, options, {
-      plainText: `${oldValues.length.toString()} times`,
-      colored: [`%c${oldValues.length.toString()} %ctimes`, 'default', 'grey'],
+      plainText: () => `${oldValues.length.toString()} times`,
+      formatted: () => [`%c${oldValues.length.toString()} %ctimes`, 'default', 'grey'],
     });
   }
 
   if (hasOldValue) {
-    const stringifiedState = stringifyValue(oldValue, {
-      maxLength: stringifyLimit,
-    });
-
     addToLogs(logs, options, {
-      plainText: `from ${stringifiedState}`,
-      colored: [`%cfrom %c${stringifiedState}`, 'grey', 'default'],
+      plainText: () => {
+        if (stringifyValues) {
+          const stringifiedState = stringifyValue(oldValue, { maxLength });
+          return `from ${stringifiedState}`;
+        } else if (hasOldValues) {
+          return [`from`, oldValues];
+        } else {
+          return [`from`, oldValue];
+        }
+      },
+      formatted: () => {
+        if (stringifyValues) {
+          const stringifiedState = stringifyValue(oldValue, { maxLength });
+          return [`%cfrom %c${stringifiedState}`, 'grey', 'default'];
+        } else {
+          return [`%cfrom %c%o`, 'grey', 'default', { data: oldValue }];
+        }
+      },
     });
   }
 
   if (hasNewValue) {
-    const stringifiedState = stringifyValue(newValue, {
-      maxLength: stringifyLimit,
-    });
-
     addToLogs(logs, options, {
-      plainText: `to ${stringifiedState}`,
-      colored: [`%cto %c${stringifiedState}`, 'grey', 'default'],
+      plainText: () => {
+        if (stringifyValues) {
+          const stringifiedState = stringifyValue(newValue, { maxLength });
+          return `to ${stringifiedState}`;
+        } else {
+          return [`to`, newValue];
+        }
+      },
+      formatted: () => {
+        if (stringifyValues) {
+          const stringifiedState = stringifyValue(newValue, { maxLength });
+          return [`%cto %c${stringifiedState}`, 'grey', 'default'];
+        } else {
+          return [`%cto %c%o`, 'grey', 'default', { data: newValue }];
+        }
+      },
     });
   }
 
@@ -269,14 +292,14 @@ export function getAtomEventMapLogs(
 
   if (hasOldValues) {
     subLogsArray.push(['old values', oldValues]);
-    subLogsObject.oldValues = oldValues;
+    if (stringifyValues) subLogsObject.oldValues = oldValues;
   } else if (hasOldValue) {
     if (isOldValueError) {
       subLogsArray.push(['old error', oldValue]);
-      subLogsObject.oldError = oldValue;
+      if (stringifyValues) subLogsObject.oldError = oldValue;
     } else {
       subLogsArray.push(['old value', oldValue]);
-      subLogsObject.oldValue = oldValue;
+      if (stringifyValues) subLogsObject.oldValue = oldValue;
     }
   }
 
@@ -284,23 +307,23 @@ export function getAtomEventMapLogs(
     if (isNewValueError) {
       if (hasOldValue && isOldValueError) {
         subLogsArray.push(['new error', newValue]);
-        subLogsObject.newError = newValue;
+        if (stringifyValues) subLogsObject.newError = newValue;
       } else {
         subLogsArray.push(['error', newValue]);
-        subLogsObject.error = newValue;
+        if (stringifyValues) subLogsObject.error = newValue;
       }
-      if ('error' in additionalDataToLog) {
+      if (!stringifyValues || 'error' in additionalDataToLog) {
         delete additionalDataToLog.error;
       }
     } else {
       if (hasOldValue && !isOldValueError) {
         subLogsArray.push(['new value', newValue]);
-        subLogsObject.newValue = newValue;
+        if (stringifyValues) subLogsObject.newValue = newValue;
       } else {
         subLogsArray.push(['value', newValue]);
-        subLogsObject.value = newValue;
+        if (stringifyValues) subLogsObject.value = newValue;
       }
-      if ('value' in additionalDataToLog) {
+      if (!stringifyValues || 'value' in additionalDataToLog) {
         delete additionalDataToLog.value;
       }
     }

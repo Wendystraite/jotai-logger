@@ -65,11 +65,12 @@ export function logTransaction(
   const {
     domain,
     logger,
-    stringifyLimit,
+    stringifyLimit: maxLength,
     showTransactionNumber,
     showTransactionLocaleTime,
     showTransactionElapsedTime,
     collapseTransactions,
+    stringifyValues,
   } = options;
   let { groupLogs } = options;
 
@@ -131,15 +132,15 @@ export function logTransaction(
 
   if (showDomain) {
     addToLogs(logs, options, {
-      plainText: `${domain} -`,
-      colored: [`%c${domain} %c-`, 'grey', 'default'],
+      plainText: () => `${domain} -`,
+      formatted: () => [`%c${domain} %c-`, 'grey', 'default'],
     });
   }
 
   if (showTransactionNumber) {
     addToLogs(logs, options, {
-      plainText: `transaction ${transactionNumber.toString()}`,
-      colored: [`%ctransaction %c${transactionNumber.toString()}`, 'grey', 'default'],
+      plainText: () => `transaction ${transactionNumber.toString()}`,
+      formatted: () => [`%ctransaction %c${transactionNumber.toString()}`, 'grey', 'default'],
     });
   }
 
@@ -155,8 +156,8 @@ export function logTransaction(
     (showStackTrace || showEvent || showAtom || showArgs || showResult)
   ) {
     addToLogs(logs, options, {
-      plainText: ':',
-      colored: [`%c:`, 'grey'],
+      plainText: () => ':',
+      formatted: () => [`%c:`, 'grey'],
     });
   }
 
@@ -165,28 +166,28 @@ export function logTransaction(
     const fileNameOrPath = fileName ?? filePath;
     if (fileNameOrPath) {
       addToLogs(logs, options, {
-        plainText: `[${fileNameOrPath}]`,
-        colored: [`%c[${fileNameOrPath}]`, 'grey'],
+        plainText: () => `[${fileNameOrPath}]`,
+        formatted: () => [`%c[${fileNameOrPath}]`, 'grey'],
       });
     }
     if (componentName && hooks) {
       const hooksNames = hooks.join('.');
       addToLogs(logs, options, {
-        plainText: `${componentName}.${hooksNames}`,
-        colored: [`%c${componentName}%c.${hooksNames}`, 'default', 'grey'],
+        plainText: () => `${componentName}.${hooksNames}`,
+        formatted: () => [`%c${componentName}%c.${hooksNames}`, 'default', 'grey'],
       });
     } else {
       if (componentName) {
         addToLogs(logs, options, {
-          plainText: componentName,
-          colored: [`%c${componentName}`, 'default'],
+          plainText: () => componentName,
+          formatted: () => [`%c${componentName}`, 'default'],
         });
       }
       if (hooks) {
         const hooksNames = hooks.join('.');
         addToLogs(logs, options, {
-          plainText: hooksNames,
-          colored: [`%c${hooksNames}`, 'grey'],
+          plainText: () => hooksNames,
+          formatted: () => [`%c${hooksNames}`, 'grey'],
         });
       }
     }
@@ -218,8 +219,8 @@ export function logTransaction(
     }
 
     addToLogs(logs, options, {
-      plainText: eventLabel,
-      colored: [eventColoredLabel, ...eventColors],
+      plainText: () => eventLabel,
+      formatted: () => [eventColoredLabel, ...eventColors],
     });
   }
 
@@ -232,45 +233,69 @@ export function logTransaction(
 
   if (showArgs) {
     const argsToStringify = args.length <= 1 ? args[0] : args;
-    const stringifiedArgs = stringifyValue(argsToStringify, {
-      maxLength: stringifyLimit,
-    });
 
     if (hasCustomWriteMethod) {
       addToLogs(logs, options, {
-        plainText: 'with',
-        colored: [`%cwith`, 'grey'],
+        plainText: () => 'with',
+        formatted: () => [`%cwith`, 'grey'],
       });
     } else {
       addToLogs(logs, options, {
-        plainText: 'to',
-        colored: [`%cto`, 'grey'],
+        plainText: () => 'to',
+        formatted: () => [`%cto`, 'grey'],
       });
     }
 
     addToLogs(logs, options, {
-      plainText: stringifiedArgs,
-      colored: [`%c${stringifiedArgs}`, 'default'],
+      plainText: () => {
+        if (stringifyValues) {
+          return stringifyValue(argsToStringify, { maxLength });
+        } else {
+          return [argsToStringify];
+        }
+      },
+      formatted: () => {
+        if (stringifyValues) {
+          const stringifiedArgs = stringifyValue(argsToStringify, { maxLength });
+          return [`%c${stringifiedArgs}`, 'default'];
+        } else {
+          return [`%c%o`, 'default', { data: argsToStringify }];
+        }
+      },
     });
 
-    if (hasCustomWriteMethod) {
-      additionalDataToLog.args = args;
-    } else {
-      additionalDataToLog.value = args[0];
+    if (stringifyValues) {
+      if (hasCustomWriteMethod) {
+        additionalDataToLog.args = args;
+      } else {
+        additionalDataToLog.value = args[0];
+      }
     }
   }
 
   if (showResult) {
-    const stringifiedResult = stringifyValue(transaction.result, {
-      maxLength: stringifyLimit,
-    });
-
     addToLogs(logs, options, {
-      plainText: `returned ${stringifiedResult}`,
-      colored: [`%creturned %c${stringifiedResult}`, 'grey', 'default'],
+      plainText: () => {
+        if (stringifyValues) {
+          const stringifiedResult = stringifyValue(transaction.result, { maxLength });
+          return `and returned ${stringifiedResult}`;
+        } else {
+          return [`and returned`, transaction.result];
+        }
+      },
+      formatted: () => {
+        if (stringifyValues) {
+          const stringifiedResult = stringifyValue(transaction.result, { maxLength });
+          return [`%cand returned %c${stringifiedResult}`, 'grey', 'default'];
+        } else {
+          return [`%cand returned %c%o`, 'grey', 'default', { data: transaction.result }];
+        }
+      },
     });
 
-    additionalDataToLog.result = transaction.result;
+    if (stringifyValues) {
+      additionalDataToLog.result = transaction.result;
+    }
   }
 
   if (Object.entries(additionalDataToLog).length > 0) {

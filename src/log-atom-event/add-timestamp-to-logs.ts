@@ -7,7 +7,7 @@ export function addTimestampToLogs(
   options: {
     showTransactionLocaleTime: boolean;
     showTransactionElapsedTime: boolean;
-    plainTextOutput: boolean;
+    formattedOutput: boolean;
     colorScheme: 'default' | 'light' | 'dark';
   },
 ) {
@@ -20,8 +20,8 @@ export function addTimestampToLogs(
   }
 
   addToLogs(logs, options, {
-    plainText: '-',
-    colored: [`%c-`, 'grey'],
+    plainText: () => '-',
+    formatted: () => [`%c-`, 'grey'],
   });
 
   if (options.showTransactionLocaleTime) {
@@ -29,14 +29,14 @@ export function addTimestampToLogs(
     const localeTimeString = date.toLocaleTimeString();
 
     addToLogs(logs, options, {
-      plainText: localeTimeString,
-      colored: [`%c${localeTimeString}`, 'grey'],
+      plainText: () => localeTimeString,
+      formatted: () => [`%c${localeTimeString}`, 'grey'],
     });
 
     if (options.showTransactionElapsedTime) {
       addToLogs(logs, options, {
-        plainText: '-',
-        colored: [`%c-`, 'grey'],
+        plainText: () => '-',
+        formatted: () => [`%c-`, 'grey'],
       });
     }
   }
@@ -46,8 +46,8 @@ export function addTimestampToLogs(
     const msRounded = (Math.round(ms * 100) / 100).toFixed(2);
 
     addToLogs(logs, options, {
-      plainText: `${msRounded} ms`,
-      colored: [`%c${msRounded} ms`, 'grey'],
+      plainText: () => `${msRounded} ms`,
+      formatted: () => [`%c${msRounded} ms`, 'grey'],
     });
   }
 }

@@ -82,7 +82,7 @@ describe('bindAtomsLoggerToStore', () => {
     defaultOptions = {
       logger: consoleMock,
       groupLogs: false,
-      plainTextOutput: true,
+      formattedOutput: false,
       showTransactionElapsedTime: false,
     };
   });
