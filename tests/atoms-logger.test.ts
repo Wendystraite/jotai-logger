@@ -740,6 +740,42 @@ describe('bindAtomsLoggerToStore', () => {
         ]);
       });
     });
+
+    describe('domain', () => {
+      it('should not log domain when empty', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          domain: '',
+        });
+
+        const testAtom = atom(42);
+        store.get(testAtom);
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 : retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to 42`, { value: 42 }],
+        ]);
+      });
+
+      it('should log domain when set', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          domain: 'test-domain',
+        });
+
+        const testAtom = atom(42);
+        store.get(testAtom);
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`test-domain - transaction 1 : retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to 42`, { value: 42 }],
+        ]);
+      });
+    });
   });
 
   describe('promises', () => {
