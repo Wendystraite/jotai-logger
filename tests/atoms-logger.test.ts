@@ -928,6 +928,7 @@ describe('bindAtomsLoggerToStore', () => {
           },
         ],
         [`aborted initial promise of ${promiseAtom}`, { dependencies: [`${dependencyAtom}`] }],
+        // This is still logged as the "initial" promise since it was aborted
         [`pending initial promise of ${promiseAtom}`, { dependencies: [`${dependencyAtom}`] }],
 
         [`transaction 3 : resolved promise of ${promiseAtom}`],
@@ -974,7 +975,7 @@ describe('bindAtomsLoggerToStore', () => {
       ]);
     });
 
-    it('should show promise aborted before a new promise is pending', async () => {
+    it('should show initial promise aborted before a new promise is pending', async () => {
       bindAtomsLoggerToStore(store, defaultOptions);
 
       const dependencyAtom = atom(0);
@@ -993,24 +994,72 @@ describe('bindAtomsLoggerToStore', () => {
         });
       });
 
-      void store.get(promiseAtom);
+      store.sub(promiseAtom, vi.fn());
 
+      // Initial promise aborted
       await vi.advanceTimersByTimeAsync(250);
-
       store.set(dependencyAtom, (prev) => prev + 1); // Change the dependency before the promise resolves
-
-      void store.get(promiseAtom);
-
       await vi.advanceTimersByTimeAsync(1250);
 
       expect(consoleMock.log.mock.calls).toEqual([
-        [`transaction 1 : retrieved value of ${promiseAtom}`],
+        [`transaction 1 : subscribed to ${promiseAtom}`],
         [`pending initial promise of ${promiseAtom}`],
+        [`mounted ${promiseAtom}`],
         [`transaction 2`],
         [`aborted initial promise of ${promiseAtom}`], // Must be before pending
         [`pending initial promise of ${promiseAtom}`],
         [`transaction 3 : resolved promise of ${promiseAtom}`],
         [`resolved initial promise of ${promiseAtom} to 1`, { value: 1 }],
+      ]);
+    });
+
+    it('should show changed promise aborted before a new promise is pending', async () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const dependencyAtom = atom(0);
+      dependencyAtom.debugPrivate = true;
+
+      const promiseAtom = atom(async (get, { signal }) => {
+        const dependency = get(dependencyAtom);
+        return new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            resolve(dependency);
+          }, 1000);
+          signal.addEventListener('abort', () => {
+            clearTimeout(timeoutId);
+            reject(new Error('Promise aborted'));
+          });
+        });
+      });
+
+      store.sub(promiseAtom, vi.fn());
+
+      // Initial promise resolved
+      await vi.advanceTimersByTimeAsync(1250);
+
+      // Changed promise aborted
+      store.set(dependencyAtom, (prev) => prev + 1);
+      await vi.advanceTimersByTimeAsync(250);
+      store.set(dependencyAtom, (prev) => prev + 1); // Change the dependency before the promise resolves
+      await vi.advanceTimersByTimeAsync(1250);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : subscribed to ${promiseAtom}`],
+        [`pending initial promise of ${promiseAtom}`],
+        [`mounted ${promiseAtom}`],
+
+        [`transaction 2 : resolved promise of ${promiseAtom}`],
+        [`resolved initial promise of ${promiseAtom} to 0`, { value: 0 }],
+
+        [`transaction 3`],
+        [`pending promise of ${promiseAtom} from 0`, { oldValue: 0 }],
+
+        [`transaction 4`],
+        [`aborted promise of ${promiseAtom} from 0`, { oldValue: 0 }], // Must be before pending
+        [`pending promise of ${promiseAtom} from 0`, { oldValue: 0 }],
+
+        [`transaction 5 : resolved promise of ${promiseAtom}`],
+        [`resolved promise of ${promiseAtom} from 0 to 2`, { oldValue: 0, newValue: 2 }],
       ]);
     });
   });

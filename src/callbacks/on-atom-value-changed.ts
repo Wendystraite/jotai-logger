@@ -1,9 +1,5 @@
 import type { Atom } from 'jotai';
-import {
-  INTERNAL_isPromiseLike,
-  INTERNAL_promiseStateMap,
-  INTERNAL_registerAbortHandler,
-} from 'jotai/vanilla/internals';
+import { INTERNAL_isPromiseLike, INTERNAL_registerAbortHandler } from 'jotai/vanilla/internals';
 
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import { addEventToTransaction } from '../transactions/add-event-to-transaction.js';
@@ -16,84 +12,83 @@ export function onAtomValueChanged(
   atom: Atom<unknown>,
   args: { isInitialValue?: boolean; oldValue?: unknown; newValue: unknown },
 ) {
-  const { newValue } = args;
+  const { newValue: newValueOrPromise } = args;
   let { isInitialValue = false } = args;
   let { oldValue } = args;
 
-  if (!INTERNAL_isPromiseLike(newValue)) {
+  if (!INTERNAL_isPromiseLike(newValueOrPromise)) {
+    const newValue = newValueOrPromise;
     if (isInitialValue) {
       addEventToTransaction(store, { initialized: { atom, value: newValue } });
-    } else if (oldValue !== newValue) {
+    } else if (oldValue !== newValueOrPromise) {
       addEventToTransaction(store, { changed: { atom, oldValue, newValue } });
     }
     return;
   }
 
-  if (INTERNAL_isPromiseLike(oldValue)) {
-    if (store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.has(oldValue)) {
-      // uses the result of the previous promise instead of the promise itself
-      oldValue = store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.get(oldValue);
-    } else {
-      // Edge case: if the oldValue is a promise BUT we don't have her result
-      // yet this means that the promise was never resolved or rejected or it
-      // was aborted. In this case we consider that there is no old value.
-      isInitialValue = true;
-      oldValue = undefined;
+  const newPromise = newValueOrPromise;
+
+  if (!isInitialValue) {
+    if (INTERNAL_isPromiseLike(oldValue)) {
+      if (store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.has(oldValue)) {
+        // uses the result of the previous promise instead of the promise itself
+        oldValue = store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.get(oldValue);
+      } else {
+        // Edge case to know if the current promise is still the initial promise after the previous (initial) promise was aborted :
+        // if we don't have the result of the previous promise it means that is
+        // was aborted and since we haven't set the oldValue of the previous
+        // promise in the results map just bellow it means that this promise is
+        // the initial promise.
+        isInitialValue = true;
+      }
     }
+
+    // Edge case to retrieve the oldValue of an aborted promise :
+    // - Store the oldValue of the current promise in the results map before it is settled.
+    // - If this promise is aborted, the oldValue will be retrieved from the results map in the above code.
+    //   This also prevent the new promise to think it was an initial promise is the above edge case.
+    // - Else, it will be replaced by the new value or error of the resolved/rejected promise.
+    store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.set(newPromise, oldValue);
   }
 
   let isAborted = false;
 
-  const promiseState = INTERNAL_promiseStateMap.get(newValue);
-  const isPendingPromise = !promiseState || promiseState[0];
-  if (isPendingPromise) {
-    if (isInitialValue) {
-      addEventToTransaction(store, { initialPromisePending: { atom } });
-    } else {
-      addEventToTransaction(store, {
-        changedPromisePending: { atom, oldValue },
-      });
-    }
-
-    INTERNAL_registerAbortHandler(newValue, () => {
-      isAborted = true;
-      if (isInitialValue) {
-        addEventToTransaction(store, { initialPromiseAborted: { atom } });
-      } else {
-        addEventToTransaction(store, {
-          changedPromiseAborted: { atom, oldValue },
-        });
-      }
-    });
+  if (isInitialValue) {
+    addEventToTransaction(store, { initialPromisePending: { atom } });
+  } else {
+    addEventToTransaction(store, { changedPromisePending: { atom, oldValue } });
   }
 
-  newValue.then(
-    (value: unknown) => {
+  INTERNAL_registerAbortHandler(newPromise, () => {
+    isAborted = true;
+    if (isInitialValue) {
+      addEventToTransaction(store, { initialPromiseAborted: { atom } });
+    } else {
+      addEventToTransaction(store, { changedPromiseAborted: { atom, oldValue } });
+    }
+  });
+
+  newPromise.then(
+    (newValue: unknown) => {
       if (!isAborted) {
-        store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.set(newValue, value);
+        store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.set(newPromise, newValue);
         const startedTransaction = maybeStartTransaction(store, { promiseResolved: { atom } });
         if (isInitialValue) {
-          addEventToTransaction(store, { initialPromiseResolved: { atom, value } });
+          addEventToTransaction(store, { initialPromiseResolved: { atom, value: newValue } });
         } else {
-          addEventToTransaction(store, {
-            changedPromiseResolved: { atom, oldValue, newValue: value },
-          });
+          addEventToTransaction(store, { changedPromiseResolved: { atom, oldValue, newValue } });
         }
         if (startedTransaction) endTransaction(store);
       }
     },
     (error: unknown) => {
       if (!isAborted) {
-        store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.set(newValue, error);
+        store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.set(newPromise, error);
         const startedTransaction = maybeStartTransaction(store, { promiseRejected: { atom } });
         if (isInitialValue) {
-          addEventToTransaction(store, {
-            initialPromiseRejected: { atom, error },
-          });
+          addEventToTransaction(store, { initialPromiseRejected: { atom, error } });
         } else {
-          addEventToTransaction(store, {
-            changedPromiseRejected: { atom, oldValue, error },
-          });
+          addEventToTransaction(store, { changedPromiseRejected: { atom, oldValue, error } });
         }
         if (startedTransaction) endTransaction(store);
       }
