@@ -14,13 +14,10 @@ import {
   vi,
 } from 'vitest';
 
-import {
-  bindAtomsLoggerToStore,
-  isAtomsLoggerBoundToStore,
-} from '../src/bind-atoms-logger-to-store.js';
+import { isAtomsLoggerBoundToStore } from '../src/bind-atoms-logger-to-store.js';
 import { ATOMS_LOGGER_SYMBOL } from '../src/consts/atom-logger-symbol.js';
+import { bindAtomsLoggerToStore, useAtomsLogger } from '../src/index.js';
 import type { AtomsLoggerOptions, StoreWithAtomsLogger } from '../src/types/atoms-logger.js';
-import { useAtomsLogger } from '../src/use-atoms-logger.js';
 import { isDevtoolsStore } from '../src/utils/get-internal-building-blocks.js';
 
 let mockDate: MockInstance;

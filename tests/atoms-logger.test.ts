@@ -13,12 +13,10 @@ import {
   vi,
 } from 'vitest';
 
-import {
-  bindAtomsLoggerToStore,
-  isAtomsLoggerBoundToStore,
-} from '../src/bind-atoms-logger-to-store.js';
+import { isAtomsLoggerBoundToStore } from '../src/bind-atoms-logger-to-store.js';
 import { ATOMS_LOGGER_SYMBOL } from '../src/consts/atom-logger-symbol.js';
-import type { AtomsLoggerOptions, Store } from '../src/types/atoms-logger.js';
+import { type AtomsLoggerOptions, bindAtomsLoggerToStore } from '../src/index.js';
+import type { Store } from '../src/types/atoms-logger.js';
 import { isDevtoolsStore } from '../src/utils/get-internal-building-blocks.js';
 
 let mockDate: MockInstance;
@@ -944,9 +942,7 @@ describe('bindAtomsLoggerToStore', () => {
 
       const testAtom = atom<unknown>(0);
 
-      store.sub(testAtom, () => {
-        // This is a no-op, but we need to call it to trigger the promise state change
-      });
+      store.sub(testAtom, vi.fn());
 
       // initial promise resolved
       const promise1 = Promise.resolve(1);
