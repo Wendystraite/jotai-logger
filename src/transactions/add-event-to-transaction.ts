@@ -1,9 +1,5 @@
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import type {
-  AtomsLoggerEventMap,
-  AtomsLoggerTransactionMap,
-  StoreWithAtomsLogger,
-} from '../types/atoms-logger.js';
+import type { AtomsLoggerEventMap, StoreWithAtomsLogger } from '../types/atoms-logger.js';
 import { endTransaction } from './end-transaction.js';
 import { startTransaction } from './start-transaction.js';
 
@@ -13,16 +9,7 @@ export function addEventToTransaction(
 ): void {
   if (!store[ATOMS_LOGGER_SYMBOL].currentTransaction) {
     // Execute the event in an independent "unknown" transaction if there is no current transaction.
-    let transactionMap: AtomsLoggerTransactionMap = { unknown: {} };
-    const event = Object.values(eventMap)[0];
-    if (event) {
-      if ('atom' in event) {
-        transactionMap = { unknown: { atom: event.atom } };
-      } else {
-        transactionMap = { unknown: { atomId: event.atomId } };
-      }
-    }
-    startTransaction(store, transactionMap);
+    startTransaction(store, { unknown: {} });
     addEventToTransaction(store, eventMap);
     endTransaction(store);
   } else {

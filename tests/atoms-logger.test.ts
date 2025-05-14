@@ -1438,6 +1438,25 @@ describe('bindAtomsLoggerToStore', () => {
         [`initialized value of ${publicAtom} to 1`, { value: 1 }],
       ]);
     });
+
+    it('should log changes made outside of transactions inside an unknown transaction', () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const testAtom = atom(0);
+      const setTestAtom = atom(null, (get, set) => {
+        setTimeout(() => {
+          set(testAtom, 42); // Outside of store.set transaction
+        }, 1000);
+      });
+      store.set(setTestAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1`], // No transaction name since it's an unknown transaction
+        [`initialized value of ${testAtom} to 42`, { value: 42 }],
+      ]);
+    });
   });
 
   describe('mounting', () => {

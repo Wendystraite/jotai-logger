@@ -99,7 +99,9 @@ export function logTransaction(
       transaction.stackTrace.filePath !== undefined ||
       transaction.stackTrace.fileName !== undefined);
 
-  const showAtom = !transaction.atom || shouldShowAtom(store, transaction.atom);
+  const showAtom =
+    'atomId' in transaction ||
+    (transaction.atom !== undefined && shouldShowAtom(store, transaction.atom));
 
   const showEvent = showAtom && !transactionMap.unknown;
 
