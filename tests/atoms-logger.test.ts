@@ -1203,6 +1203,23 @@ describe('bindAtomsLoggerToStore', () => {
         ],
       ]);
     });
+
+    it('should not crash when logging an atom with a circular value', () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const circularValue = {} as { self: unknown };
+      circularValue.self = circularValue;
+      const circularAtom = atom(circularValue);
+
+      store.get(circularAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of ${circularAtom}`],
+        [`initialized value of ${circularAtom} to [Circular]`, { value: circularValue }],
+      ]);
+    });
   });
 
   describe('dependencies', () => {
