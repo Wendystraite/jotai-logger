@@ -1,4 +1,9 @@
-import { type StackFrame, getSync as getSyncStackTrace } from 'stacktrace-js';
+import { getSync as getSyncStackTrace } from 'stacktrace-js';
+
+export interface StackFrame {
+  functionName?: string;
+  fileName?: string;
+}
 
 /**
  * Information about the stack trace of the event that triggered the logger.
@@ -36,8 +41,10 @@ export interface AtomsLoggerStackTrace {
   stackTrace: StackFrame[];
 }
 
-export function getAtomsLoggerStackTrace(): AtomsLoggerStackTrace | undefined {
-  const stackTrace = getSyncStackTrace();
+export function getAtomsLoggerStackTrace(
+  getStackTrace: () => StackFrame[] = getSyncStackTrace,
+): AtomsLoggerStackTrace | undefined {
+  const stackTrace = getStackTrace();
 
   // Retrieve the index of the first occurrence of `useAtomValue` or `useSetAtom` in the stack trace.
   // This is the point where the event was triggered for either `store.get` or `store.set`.
@@ -77,11 +84,11 @@ export function getAtomsLoggerStackTrace(): AtomsLoggerStackTrace | undefined {
 
     // Finally store the component name and file path.
     componentName = trace.functionName;
-    filePath = trace.fileName;
 
-    if (filePath) {
-      const fileNameWithExtension = filePath.split('/').pop() ?? filePath;
-      fileName = fileNameWithExtension.split('.').shift();
+    if (trace.fileName) {
+      filePath = trace.fileName;
+      const fileNameWithExtension = filePath.split('/').pop();
+      fileName = fileNameWithExtension?.split('.').shift();
 
       // If the file name is an index file, try to get the parent directory name.
       if (
@@ -90,7 +97,7 @@ export function getAtomsLoggerStackTrace(): AtomsLoggerStackTrace | undefined {
         fileName === 'index'
       ) {
         const parentFilePath = stackTrace[stackTraceIndex + 1]?.fileName;
-        const parentFileNameWithExtension = parentFilePath?.split('/').pop() ?? parentFilePath;
+        const parentFileNameWithExtension = parentFilePath?.split('/').pop();
         const parentFilePathWithoutExtension = parentFileNameWithExtension?.split('.').shift();
         if (parentFilePathWithoutExtension) {
           fileName = `${parentFilePathWithoutExtension}/${fileName}`;
@@ -99,6 +106,10 @@ export function getAtomsLoggerStackTrace(): AtomsLoggerStackTrace | undefined {
     }
 
     break;
+  }
+
+  if (!componentName) {
+    return { stackTrace };
   }
 
   return { stackTrace, filePath, fileName, hooks, componentName };
