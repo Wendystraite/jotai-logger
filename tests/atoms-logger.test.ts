@@ -1135,6 +1135,8 @@ describe('bindAtomsLoggerToStore', () => {
         set(valueAtom, 1);
         set(valueAtom, 2);
         set(valueAtom, 3);
+        set(valueAtom, 4);
+        set(valueAtom, 5);
       });
 
       store.set(valueSetAtom);
@@ -1144,7 +1146,10 @@ describe('bindAtomsLoggerToStore', () => {
       expect(consoleMock.log.mock.calls).toEqual([
         [`transaction 1 : called set of ${valueSetAtom}`],
         [`initialized value of ${valueAtom} to 1`, { value: 1 }],
-        [`changed value of ${valueAtom} 2 times from 1 to 3`, { oldValues: [1, 2], newValue: 3 }],
+        [
+          `changed value of ${valueAtom} 4 times from 1 to 5`,
+          { oldValues: [1, 2, 3, 4], newValue: 5 },
+        ],
       ]);
     });
   });

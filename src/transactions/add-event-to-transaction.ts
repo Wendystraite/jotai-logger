@@ -82,14 +82,10 @@ function mergeChangedEvents(store: StoreWithAtomsLogger, eventMap: AtomsLoggerEv
         const oldValues: unknown[] = [];
         if (previousChangedEvent.oldValues !== undefined) {
           oldValues.push(...previousChangedEvent.oldValues);
-        } else if ('oldValue' in previousChangedEvent) {
+        } else {
           oldValues.push(previousChangedEvent.oldValue);
         }
-        if (changedEvent.oldValues !== undefined) {
-          oldValues.push(...changedEvent.oldValues);
-        } else if ('oldValue' in changedEvent) {
-          oldValues.push(changedEvent.oldValue);
-        }
+        oldValues.push(changedEvent.oldValue);
         changedEvent.oldValues = oldValues;
         delete changedEvent.oldValue;
       }
