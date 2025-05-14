@@ -9,15 +9,26 @@ export function addAtomIdToLogs(
     colorScheme: 'default' | 'light' | 'dark';
   },
 ): void {
-  if (!options.formattedOutput) {
-    addToLogs(logs, options, {
-      plainText: () => atomId,
-      formatted: () => [`%c${atomId}`, 'default'],
-    });
+  const { formattedOutput, colorScheme } = options;
+
+  if (!formattedOutput) {
+    addToLogs(logs, { formattedOutput, colorScheme }, { plainText: () => atomId });
   } else {
     const atomNameMatch = /^atom(?<atomNumber>\d+)(?::(?<atomDebugLabel>.+))?$/.exec(atomId);
-    const atomNumber = atomNameMatch?.groups?.atomNumber ?? ''; // should be always defined
-    const atomDebugLabel = atomNameMatch?.groups?.atomDebugLabel;
+
+    if (!atomNameMatch) {
+      // Parsing can fail if the atom has a custom toString method
+      addToLogs(
+        logs,
+        { formattedOutput, colorScheme },
+        { formatted: () => [`%c${atomId}`, 'default'] },
+      );
+      return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- this group is always present due to the regex
+    const atomNumber = atomNameMatch.groups!.atomNumber!;
+    const atomDebugLabel = atomNameMatch.groups?.atomDebugLabel;
 
     if (atomDebugLabel) {
       const atomNameNamespaces = atomDebugLabel.split('/');
@@ -42,21 +53,25 @@ export function addAtomIdToLogs(
         }
       }
 
-      addToLogs(logs, options, {
-        plainText: () => `atom${atomNumber}:${atomDebugLabel}`,
-        formatted: () => [
-          `%catom%c${atomNumber}%c:${atomNameNamespacesStr}`,
-          'grey',
-          'default',
-          'grey',
-          ...atomNameNamespacesColors,
-        ],
-      });
+      addToLogs(
+        logs,
+        { formattedOutput, colorScheme },
+        {
+          formatted: () => [
+            `%catom%c${atomNumber}%c:${atomNameNamespacesStr}`,
+            'grey',
+            'default',
+            'grey',
+            ...atomNameNamespacesColors,
+          ],
+        },
+      );
     } else {
-      addToLogs(logs, options, {
-        plainText: () => `atom${atomNumber}`,
-        formatted: () => [`%catom%c${atomNumber}`, 'grey', 'default'],
-      });
+      addToLogs(
+        logs,
+        { formattedOutput, colorScheme },
+        { formatted: () => [`%catom%c${atomNumber}`, 'grey', 'default'] },
+      );
     }
   }
 }

@@ -10,6 +10,45 @@ const COLORS_BY_SCHEME = {
   dark: DEFAULT_ATOMS_LOGGER_DARK_COLORS,
 };
 
+export function addToLogs(
+  logs: unknown[],
+  options: { formattedOutput: false; colorScheme: 'default' | 'light' | 'dark' },
+  log: {
+    plainText: () => string | unknown[];
+  },
+): void;
+
+export function addToLogs(
+  logs: unknown[],
+  options: { formattedOutput: true; colorScheme: 'default' | 'light' | 'dark' },
+  log: {
+    formatted: () => readonly [
+      `%c${string}`,
+      ...(readonly (
+        | keyof typeof DEFAULT_ATOMS_LOGGER_COLORS
+        | readonly [keyof typeof DEFAULT_ATOMS_LOGGER_COLORS, 'normal' | 'light' | 'bold']
+        | { data: unknown }
+      )[]),
+    ];
+  },
+): void;
+
+export function addToLogs(
+  logs: unknown[],
+  options: { formattedOutput: boolean; colorScheme: 'default' | 'light' | 'dark' },
+  log: {
+    plainText: () => string | unknown[];
+    formatted: () => readonly [
+      `%c${string}`,
+      ...(readonly (
+        | keyof typeof DEFAULT_ATOMS_LOGGER_COLORS
+        | readonly [keyof typeof DEFAULT_ATOMS_LOGGER_COLORS, 'normal' | 'light' | 'bold']
+        | { data: unknown }
+      )[]),
+    ];
+  },
+): void;
+
 /**
  * Add a log to the logs array.
  *
@@ -43,7 +82,7 @@ export function addToLogs(
      *
      * The string should NOT contain any string substitutions like `%c` or `%o`.
      */
-    plainText: () => string | unknown[];
+    plainText?: () => string | unknown[];
 
     /**
      * Formatted output of the log.
@@ -60,7 +99,7 @@ export function addToLogs(
      *     and the second the font weight.
      *   - If the element is an object, it is a javascript object to be logged.
      */
-    formatted: () => readonly [
+    formatted?: () => readonly [
       `%c${string}`,
       ...(readonly (
         | keyof typeof DEFAULT_ATOMS_LOGGER_COLORS
@@ -73,6 +112,11 @@ export function addToLogs(
   const { formattedOutput, colorScheme } = options;
 
   if (!formattedOutput) {
+    /* v8 ignore next 3 -- should never happen with typescript override */
+    if (!log.plainText) {
+      return;
+    }
+
     // In plain text mode all logs are added one after the other since it can
     // contain raw data like objects or arrays in-between.
 
@@ -88,6 +132,11 @@ export function addToLogs(
       }
     }
   } else {
+    /* v8 ignore next 3 -- should never happen with typescript override */
+    if (!log.formatted) {
+      return;
+    }
+
     // In colored mode, the first log is always a string with substitution
     // strings like %c and the rest are the formatting options.
 

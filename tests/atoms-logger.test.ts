@@ -197,6 +197,57 @@ describe('bindAtomsLoggerToStore', () => {
         [`initialized value of atom${atomNumber}:Test Atom to 42`, { value: 42 }],
       ]);
     });
+
+    it('should log atoms with a custom toString method', () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const testAtom = atom(42);
+      testAtom.toString = () => 'Custom Atom';
+
+      store.get(testAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of Custom Atom`],
+        [`initialized value of Custom Atom to 42`, { value: 42 }],
+      ]);
+    });
+
+    it('should log atoms with a custom toString method in colors', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        formattedOutput: true,
+      });
+
+      const testAtom = atom(42);
+      testAtom.toString = () => 'Custom Atom';
+
+      store.get(testAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [
+          `%ctransaction %c1 %c: %cretrieved value %cof %cCustom Atom`,
+          'color: #757575; font-weight: normal;', // transaction
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // :
+          'color: #0072B2; font-weight: bold;', // retrieved value
+          'color: #757575; font-weight: normal;', // of
+          'color: default; font-weight: normal;', // Custom Atom
+        ],
+        [
+          `%cinitialized value %cof %cCustom Atom %cto %c42`,
+          'color: #0072B2; font-weight: bold;', // initialized value
+          'color: #757575; font-weight: normal;', // of
+          'color: default; font-weight: normal;', // Custom Atom
+          'color: #757575; font-weight: normal;', // to
+          'color: default; font-weight: normal;', // 42
+          { value: 42 },
+        ],
+      ]);
+    });
   });
 
   describe('options', () => {
