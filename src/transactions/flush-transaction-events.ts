@@ -8,6 +8,7 @@ export function flushTransactionEvents(store: StoreWithAtomsLogger): void {
     store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId = undefined;
   }
 
+  /* v8 ignore next 3 -- should never happen since flush is called after startTransaction */
   if (!store[ATOMS_LOGGER_SYMBOL].currentTransaction) {
     return;
   }
