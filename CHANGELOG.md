@@ -1,5 +1,26 @@
 # jotai-logger
 
+## 2.0.1
+
+### Patch Changes
+
+- 0f8a14c: fix: display atoms with custom toString method
+
+  Show the full string returned by toString instead of "atom" if an atom
+  has a custom .toString method.
+
+- fddaeb3: fix: do not show atom name in unknown transactions
+
+  Do not show the name of the atom in the transaction log if the atom was
+  updated outside of a normal transaction. This can happen for example if
+  an atom is set in a setTimeout inside an atom setter.
+
+- 13aafca: fix: log the previous value of an aborted promise
+
+  If a promise was aborted, the next promise was logged as an initial
+  promise and without the old settled value. Now it show that it wasn't an
+  initial promise and log correctly the old settled value.
+
 ## 2.0.0
 
 ### Major Changes
