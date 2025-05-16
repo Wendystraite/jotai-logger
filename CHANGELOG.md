@@ -1,5 +1,23 @@
 # jotai-logger
 
+## 2.1.0
+
+### Minor Changes
+
+- be06395: feat: add "stringify" option
+
+  - Add a "stringify" option to provide your own function to stringify
+    data in the logs. Document it in the README.
+  - Handle more complex objects with the built-in stringify function using
+    "toString" if present. Add more unit tests.
+
+### Patch Changes
+
+- 46376c1: fix: don't log dependents before they are mounted
+
+  - Don't log dependents atoms in a log before they are mounted.
+    This also prevent the incorrect data to be logged in a "mount" event.
+
 ## 2.0.1
 
 ### Patch Changes
