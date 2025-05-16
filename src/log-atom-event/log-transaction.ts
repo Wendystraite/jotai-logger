@@ -7,12 +7,13 @@ import type {
   AtomsLoggerTransactionMap,
   StoreWithAtomsLogger,
 } from '../types/atoms-logger.js';
+import { getEventMapEvent } from '../utils/get-event-map-event.js';
 import { hasAtomCustomWriteMethod } from '../utils/has-atom-custom-write-method.js';
 import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { stringifyValue } from '../utils/stringify-value.js';
+import { addAtomToLogs } from './add-atom-to-logs.js';
 import { addTimestampToLogs } from './add-timestamp-to-logs.js';
 import { addToLogs } from './add-to-logs.js';
-import { addAtomIdToLogs } from './log-atom-id.js';
 import { logEvent } from './log-event.js';
 
 export const TransactionLabelMapping: Record<
@@ -74,17 +75,16 @@ export function logTransaction(
   } = options;
   let { groupLogs } = options;
 
-  const [transactionType, transaction] = (Object.entries(transactionMap)[0] ?? []) as [
+  const [transactionType, transaction] = Object.entries(transactionMap)[0] as [
     keyof AtomsLoggerTransactionMap,
-    AtomsLoggerTransaction | undefined,
+    AtomsLoggerTransaction,
   ];
 
-  const eventsToShow = transaction?.events?.filter((eventMap) => {
-    const event = Object.values(eventMap)[0] ?? undefined;
-    return event !== undefined && (!('atom' in event) || shouldShowAtom(store, event.atom));
+  const eventsToShow = transaction.events?.filter((eventMap) => {
+    return shouldShowAtom(store, getEventMapEvent(eventMap).atom);
   });
 
-  if (!transaction || !eventsToShow || eventsToShow.length <= 0) {
+  if (!eventsToShow || eventsToShow.length <= 0) {
     return;
   }
 
@@ -99,9 +99,7 @@ export function logTransaction(
       transaction.stackTrace.filePath !== undefined ||
       transaction.stackTrace.fileName !== undefined);
 
-  const showAtom =
-    'atomId' in transaction ||
-    (transaction.atom !== undefined && shouldShowAtom(store, transaction.atom));
+  const showAtom = !transactionMap.unknown && shouldShowAtom(store, transaction.atom);
 
   const showEvent = showAtom && !transactionMap.unknown;
 
@@ -111,12 +109,12 @@ export function logTransaction(
   const showResult = showAtom && 'result' in transaction && transaction.result !== undefined;
 
   const hasDefaultWriteMethod =
-    transaction.atom !== undefined &&
+    typeof transaction.atom !== 'string' &&
     INTERNAL_isActuallyWritableAtom(transaction.atom) &&
     !hasAtomCustomWriteMethod(transaction.atom);
 
   const hasCustomWriteMethod =
-    transaction.atom !== undefined &&
+    typeof transaction.atom !== 'string' &&
     INTERNAL_isActuallyWritableAtom(transaction.atom) &&
     hasAtomCustomWriteMethod(transaction.atom);
 
@@ -227,10 +225,7 @@ export function logTransaction(
   }
 
   if (showAtom) {
-    const atomId = transaction.atomId ?? transaction.atom?.toString();
-    if (atomId) {
-      addAtomIdToLogs(logs, atomId, options);
-    }
+    addAtomToLogs(logs, transaction.atom, options);
   }
 
   if (showArgs) {
@@ -300,7 +295,7 @@ export function logTransaction(
     }
   }
 
-  if (Object.entries(additionalDataToLog).length > 0) {
+  if (Object.keys(additionalDataToLog).length > 0) {
     logs.push(additionalDataToLog);
   }
 

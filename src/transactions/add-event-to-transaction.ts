@@ -1,5 +1,12 @@
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import type { AtomsLoggerEventMap, StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import type {
+  AtomsLoggerEventBase,
+  AtomsLoggerEventMap,
+  StoreWithAtomsLogger,
+} from '../types/atoms-logger.js';
+import { convertAtomsToStrings } from '../utils/convert-atoms-to-strings.js';
+import { getEventMapEvent } from '../utils/get-event-map-event.js';
+import { getInternalBuildingBlocks } from '../utils/get-internal-building-blocks.js';
 import { endTransaction } from './end-transaction.js';
 import { startTransaction } from './start-transaction.js';
 
@@ -7,9 +14,12 @@ export function addEventToTransaction(
   store: StoreWithAtomsLogger,
   eventMap: AtomsLoggerEventMap,
 ): void {
+  const event = getEventMapEvent(eventMap);
+  setStateInEvent(store, event);
+
   if (!store[ATOMS_LOGGER_SYMBOL].currentTransaction) {
     // Execute the event in an independent "unknown" transaction if there is no current transaction.
-    startTransaction(store, { unknown: {} });
+    startTransaction(store, { unknown: { atom: event.atom } });
     addEventToTransaction(store, eventMap);
     endTransaction(store);
   } else {
@@ -25,6 +35,39 @@ export function addEventToTransaction(
     // Compute/reorder the events in the transaction.
     mergeChangedEvents(store, eventMap);
     reversePromiseAbortedAndPending(store, eventMap);
+  }
+}
+
+/**
+ * Set the state of the atom in the event.
+ */
+function setStateInEvent(store: StoreWithAtomsLogger, event: AtomsLoggerEventBase): void {
+  if (typeof event.atom === 'string') {
+    return;
+  }
+
+  const options = store[ATOMS_LOGGER_SYMBOL];
+
+  const { atomStateMap, getMounted } = getInternalBuildingBlocks(store);
+
+  const atomState = atomStateMap.get(event.atom);
+  if (atomState) {
+    if (atomState.d.size > 0) {
+      event.dependencies = convertAtomsToStrings(atomState.d.keys(), options);
+    }
+    if (atomState.p.size > 0) {
+      event.pendingPromises = convertAtomsToStrings(atomState.p.keys(), options);
+    }
+  }
+
+  const mountedState = getMounted(event.atom);
+  if (mountedState) {
+    if (mountedState.d.size > 0) {
+      event.mountedDependencies = convertAtomsToStrings(mountedState.d.values(), options);
+    }
+    if (mountedState.t.size > 0) {
+      event.mountedDependents = convertAtomsToStrings(mountedState.t.values(), options);
+    }
   }
 }
 
@@ -56,7 +99,7 @@ function reversePromiseAbortedAndPending(
  */
 function mergeChangedEvents(store: StoreWithAtomsLogger, eventMap: AtomsLoggerEventMap): void {
   if (eventMap.changed !== undefined) {
-    const changedEvent = Object.values(eventMap)[0] as NonNullable<AtomsLoggerEventMap['changed']>;
+    const changedEvent = getEventMapEvent(eventMap) as NonNullable<AtomsLoggerEventMap['changed']>;
     const events = store[ATOMS_LOGGER_SYMBOL].currentTransaction?.transaction.events;
     const previousChangedEventIndex = events?.findIndex(
       (previousEventMap) =>

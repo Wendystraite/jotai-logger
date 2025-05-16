@@ -1,6 +1,7 @@
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import type { AtomsLoggerTransactionMap, StoreWithAtomsLogger } from '../types/atoms-logger.js';
 import { getAtomsLoggerStackTrace } from '../utils/get-atoms-logger-stack-trace.js';
+import { getTransactionMapTransaction } from '../utils/get-transaction-map-transaction.js';
 import { flushTransactionEvents } from './flush-transaction-events.js';
 
 export function startTransaction(
@@ -12,10 +13,10 @@ export function startTransaction(
     flushTransactionEvents(store);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- should always have a transaction
-  const transaction = Object.values(transactionMap)[0]!;
+  const transaction = getTransactionMapTransaction(transactionMap);
 
   transaction.startTimestamp ??= performance.now();
   transaction.stackTrace ??= getAtomsLoggerStackTrace();
+
   store[ATOMS_LOGGER_SYMBOL].currentTransaction = { transactionMap, transaction };
 }

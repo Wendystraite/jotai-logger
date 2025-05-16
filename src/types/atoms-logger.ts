@@ -315,8 +315,7 @@ export interface AtomsLoggerOptions {
 }
 
 export interface AtomsLoggerTransactionBase {
-  atom?: Atom<unknown>;
-  atomId?: string;
+  atom: Atom<unknown> | ReturnType<Atom<unknown>['toString']>;
   stackTrace?: AtomsLoggerStackTrace | undefined;
   events?: AtomsLoggerEventMap[];
   startTimestamp?: ReturnType<typeof performance.now>;
@@ -337,28 +336,28 @@ export type AtomsLoggerTransaction = NonNullable<
   AtomsLoggerTransactionMap[keyof AtomsLoggerTransactionMap]
 >;
 
+export interface AtomsLoggerEventBase {
+  atom: Atom<unknown> | ReturnType<Atom<unknown>['toString']>;
+  dependencies?: string[];
+  pendingPromises?: string[];
+  mountedDependencies?: string[];
+  mountedDependents?: string[];
+}
+
 export type AtomsLoggerEventMap = Partial<{
-  initialized: { atom: Atom<unknown>; value: unknown };
-  initialPromisePending: { atom: Atom<unknown> };
-  initialPromiseResolved: { atom: Atom<unknown>; value: unknown };
-  initialPromiseRejected: { atom: Atom<unknown>; error: unknown };
-  initialPromiseAborted: { atom: Atom<unknown> };
-  changed: { atom: Atom<unknown>; oldValue?: unknown; oldValues?: unknown[]; newValue: unknown };
-  changedPromisePending: { atom: Atom<unknown>; oldValue: unknown };
-  changedPromiseResolved: {
-    atom: Atom<unknown>;
-    oldValue: unknown;
-    newValue: unknown;
-  };
-  changedPromiseRejected: {
-    atom: Atom<unknown>;
-    oldValue: unknown;
-    error: unknown;
-  };
-  changedPromiseAborted: { atom: Atom<unknown>; oldValue: unknown };
-  mounted: { atom: Atom<unknown> };
-  unmounted: { atom: Atom<unknown> };
-  destroyed: { atomId: string };
+  initialized: AtomsLoggerEventBase & { value: unknown };
+  initialPromisePending: AtomsLoggerEventBase;
+  initialPromiseResolved: AtomsLoggerEventBase & { value: unknown };
+  initialPromiseRejected: AtomsLoggerEventBase & { error: unknown };
+  initialPromiseAborted: AtomsLoggerEventBase;
+  changed: AtomsLoggerEventBase & { oldValue?: unknown; oldValues?: unknown[]; newValue: unknown };
+  changedPromisePending: AtomsLoggerEventBase & { oldValue: unknown };
+  changedPromiseResolved: AtomsLoggerEventBase & { oldValue: unknown; newValue: unknown };
+  changedPromiseRejected: AtomsLoggerEventBase & { oldValue: unknown; error: unknown };
+  changedPromiseAborted: AtomsLoggerEventBase & { oldValue: unknown };
+  mounted: AtomsLoggerEventBase & { value?: unknown };
+  unmounted: AtomsLoggerEventBase;
+  destroyed: AtomsLoggerEventBase;
 }>;
 
 export type AtomsLoggerEvent = NonNullable<AtomsLoggerEventMap[keyof AtomsLoggerEventMap]>;

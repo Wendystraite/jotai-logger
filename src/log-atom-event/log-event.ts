@@ -1,5 +1,3 @@
-import type { Atom } from 'jotai';
-
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import { DEFAULT_ATOMS_LOGGER_COLORS } from '../consts/colors.js';
 import {
@@ -8,9 +6,8 @@ import {
   type StoreWithAtomsLogger,
 } from '../types/atoms-logger.js';
 import { stringifyValue } from '../utils/stringify-value.js';
+import { addAtomToLogs } from './add-atom-to-logs.js';
 import { addToLogs } from './add-to-logs.js';
-import { getAdditionalDataToLog } from './get-additional-data-to-log.js';
-import { addAtomIdToLogs } from './log-atom-id.js';
 
 const AtomsLoggerEventLabelMap: Record<
   keyof AtomsLoggerEventMap,
@@ -91,32 +88,36 @@ const AtomsLoggerEventLabelMap: Record<
 };
 
 export function logEvent(store: StoreWithAtomsLogger, logEventMap: AtomsLoggerEventMap): void {
-  const { collapseEvents, logger, indentSpaces, indentSpacesDepth2 } = store[ATOMS_LOGGER_SYMBOL];
+  const { collapseEvents, logger, indentSpaces, indentSpacesDepth1, indentSpacesDepth2 } =
+    store[ATOMS_LOGGER_SYMBOL];
   let { groupLogs } = store[ATOMS_LOGGER_SYMBOL];
 
-  const toLog = getAtomEventMapLogs(store, logEventMap, store[ATOMS_LOGGER_SYMBOL]);
+  const toLog = getAtomEventMapLogs(logEventMap, store[ATOMS_LOGGER_SYMBOL]);
 
   if (!toLog) {
     return;
   }
 
-  const { logs, subLogsArray, subLogsObject, additionalDataToLog } = toLog;
+  const { logs, subLogsArray, subLogsObject } = toLog;
+
+  if (indentSpacesDepth1.length > 0) {
+    logs[0] = `${indentSpacesDepth1}${logs[0]}`;
+  }
 
   if (collapseEvents ? !logger.groupCollapsed : !logger.group) {
     groupLogs = false;
   } else if (!logger.groupEnd) {
     groupLogs = false;
-  } else if (subLogsArray.length <= 0 && Object.entries(additionalDataToLog).length <= 0) {
+  } else if (subLogsArray.length <= 0) {
     groupLogs = false;
   }
 
   try {
     if (!groupLogs) {
-      const allDataToLog = { ...subLogsObject, ...additionalDataToLog };
-      if (Object.entries(allDataToLog).length <= 0) {
+      if (Object.keys(subLogsObject).length <= 0) {
         logger.log(...logs);
       } else {
-        logger.log(...logs, allDataToLog);
+        logger.log(...logs, subLogsObject);
       }
     } else {
       if (collapseEvents) {
@@ -130,9 +131,6 @@ export function logEvent(store: StoreWithAtomsLogger, logEventMap: AtomsLoggerEv
         }
         logger.log(...subLogs);
       }
-      for (const [key, value] of Object.entries(additionalDataToLog)) {
-        logger.log(`${indentSpacesDepth2}${key}`, value);
-      }
     }
   } finally {
     if (groupLogs) {
@@ -143,11 +141,9 @@ export function logEvent(store: StoreWithAtomsLogger, logEventMap: AtomsLoggerEv
 
 // eslint-disable-next-line complexity -- TODO : to refactor
 export function getAtomEventMapLogs(
-  store: StoreWithAtomsLogger,
   logEventMap: AtomsLoggerEventMap,
   options: {
     stringifyValues: boolean;
-    indentSpacesDepth1: string;
     formattedOutput: boolean;
     stringifyLimit: number;
     colorScheme: 'default' | 'light' | 'dark';
@@ -157,29 +153,14 @@ export function getAtomEventMapLogs(
       logs: [string, ...unknown[]];
       subLogsArray: [string, ...unknown[]][];
       subLogsObject: Record<string, unknown>;
-      additionalDataToLog: Record<string, unknown>;
     }
   | undefined {
-  const { stringifyLimit: maxLength, indentSpacesDepth1, stringifyValues } = options;
+  const { stringifyLimit: maxLength, stringifyValues } = options;
 
-  const [eventType, event] = (Object.entries(logEventMap)[0] ?? []) as [
+  const [eventType, event] = Object.entries(logEventMap)[0] as [
     keyof AtomsLoggerEventMap,
-    AtomsLoggerEvent | undefined,
+    AtomsLoggerEvent,
   ];
-
-  if (!event) {
-    return undefined;
-  }
-
-  let atom: Atom<unknown> | undefined;
-  let atomId: string;
-
-  if ('atomId' in event) {
-    atomId = event.atomId;
-  } else {
-    atom = event.atom;
-    atomId = event.atom.toString();
-  }
 
   const {
     label: eventLabel,
@@ -210,6 +191,7 @@ export function getAtomEventMapLogs(
   let hasNewValue = false;
   let newValue: unknown;
   let isNewValueError = false;
+  const showNewValueInLog = !logEventMap.mounted;
 
   if ('newValue' in event) {
     hasNewValue = true;
@@ -232,7 +214,7 @@ export function getAtomEventMapLogs(
     formatted: () => [coloredEventLabel, ...eventColors],
   });
 
-  addAtomIdToLogs(logs, atomId, options);
+  addAtomToLogs(logs, event.atom, options);
 
   if (hasOldValues) {
     addToLogs(logs, options, {
@@ -264,7 +246,7 @@ export function getAtomEventMapLogs(
     });
   }
 
-  if (hasNewValue) {
+  if (showNewValueInLog && hasNewValue) {
     addToLogs(logs, options, {
       plainText: () => {
         if (stringifyValues) {
@@ -284,8 +266,6 @@ export function getAtomEventMapLogs(
       },
     });
   }
-
-  const additionalDataToLog = getAdditionalDataToLog(store, atom, logEventMap);
 
   const subLogsArray: [string, ...unknown[]][] = [];
   const subLogsObject: Record<string, unknown> = {};
@@ -312,9 +292,6 @@ export function getAtomEventMapLogs(
         subLogsArray.push(['error', newValue]);
         if (stringifyValues) subLogsObject.error = newValue;
       }
-      if (!stringifyValues || 'error' in additionalDataToLog) {
-        delete additionalDataToLog.error;
-      }
     } else {
       if (hasOldValue && !isOldValueError) {
         subLogsArray.push(['new value', newValue]);
@@ -323,15 +300,28 @@ export function getAtomEventMapLogs(
         subLogsArray.push(['value', newValue]);
         if (stringifyValues) subLogsObject.value = newValue;
       }
-      if (!stringifyValues || 'value' in additionalDataToLog) {
-        delete additionalDataToLog.value;
-      }
     }
   }
 
-  if (indentSpacesDepth1.length > 0) {
-    logs[0] = `${indentSpacesDepth1}${logs[0]}`;
+  // If the atom is unmounted or destroyed, we don't need to log anything else.
+  if (!logEventMap.unmounted && !logEventMap.destroyed) {
+    if (event.pendingPromises) {
+      subLogsArray.push(['pending promises', event.pendingPromises]);
+      subLogsObject.pendingPromises = event.pendingPromises;
+    }
+    if (event.dependencies) {
+      subLogsArray.push(['dependencies', event.dependencies]);
+      subLogsObject.dependencies = event.dependencies;
+    }
+    if (event.mountedDependencies) {
+      subLogsArray.push(['mounted dependencies', event.mountedDependencies]);
+      subLogsObject.mountedDependencies = event.mountedDependencies;
+    }
+    if (event.mountedDependents) {
+      subLogsArray.push(['mounted dependents', event.mountedDependents]);
+      subLogsObject.mountedDependents = event.mountedDependents;
+    }
   }
 
-  return { logs, subLogsArray, subLogsObject, additionalDataToLog };
+  return { logs, subLogsArray, subLogsObject };
 }

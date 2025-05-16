@@ -3,9 +3,15 @@ import type { Atom } from 'jotai';
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
 
-export function shouldShowAtom(store: StoreWithAtomsLogger, atom: Atom<unknown>): boolean {
+export function shouldShowAtom(
+  store: StoreWithAtomsLogger,
+  atom: Atom<unknown> | ReturnType<Atom<unknown>['toString']>,
+): boolean {
   if (!store[ATOMS_LOGGER_SYMBOL].enabled) {
     return false;
+  }
+  if (typeof atom === 'string') {
+    return true;
   }
   if (!store[ATOMS_LOGGER_SYMBOL].shouldShowPrivateAtoms && atom.debugPrivate === true) {
     return false;

@@ -140,27 +140,33 @@ describe('bindAtomsLoggerToStore', () => {
     const bAtom = atom((get) => get(aAtom) * 2);
 
     store.sub(bAtom, vi.fn()); // store.sub mounts the atom
+    store.set(aAtom, 2);
 
     vi.runAllTimers();
 
     expect(consoleMock.log.mock.calls).toEqual([
       [`transaction 1 : subscribed to ${bAtom}`],
-      [`initialized value of ${aAtom} to 1`, { value: 1, mountedDependents: [`${bAtom}`] }],
+      [`initialized value of ${aAtom} to 1`, { value: 1 }],
+      [`initialized value of ${bAtom} to 2`, { value: 2, dependencies: [`${aAtom}`] }],
+      [`mounted ${aAtom}`, { value: 1 }],
+      [`mounted ${bAtom}`, { value: 2, dependencies: [`${aAtom}`] }],
+
+      [`transaction 2 : set value of ${aAtom} to 2`, { value: 2 }],
       [
-        `initialized value of ${bAtom} to 2`,
+        `changed value of ${aAtom} from 1 to 2`,
         {
-          value: 2,
-          mountedDependencies: [`${aAtom}`],
-          dependencies: [`${aAtom}`],
+          mountedDependents: [`${bAtom}`], // OK
+          newValue: 2,
+          oldValue: 1,
         },
       ],
-      [`mounted ${aAtom}`, { value: 1, mountedDependents: [`${bAtom}`] }],
       [
-        `mounted ${bAtom}`,
+        `changed value of ${bAtom} from 2 to 4`,
         {
-          value: 2,
-          dependencies: [`${aAtom}`],
-          mountedDependencies: [`${aAtom}`],
+          dependencies: [`${aAtom}`], // OK
+          mountedDependencies: [`${aAtom}`], // OK
+          newValue: 4,
+          oldValue: 2,
         },
       ],
     ]);
