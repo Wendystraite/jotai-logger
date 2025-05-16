@@ -107,6 +107,8 @@ type AtomsLoggerOptions = {
   stringifyLimit?: number;
   /** Whether to stringify data in the logs (default: true) */
   stringifyValues?: boolean;
+  /** Custom function to stringify data in the logs (default: `toString` and `JSON.stringify`) */
+  stringify?: (value: unknown) => string;
   /** Whether to show transaction numbers (default: true) */
   showTransactionNumber?: boolean;
   /** Whether to show transaction timestamps (default: false) */
@@ -151,6 +153,36 @@ useAtomsLogger({ colorScheme: import.meta.env.VITE_ATOMS_LOGGER_COLOR_SCHEME });
 
 // If you want to disable colors
 useAtomsLogger({ formattedOutput: false });
+```
+
+### Stringification
+
+By default, the logger converts atom values to strings for console output using a combination of `toString` and `JSON.stringify`.
+
+You can control how values appear in logs with these options:
+
+- `stringifyValues`: Enable/disable string conversion (default: `true`)
+- `stringifyLimit`: Maximum length for stringified output (default: `50`)
+- `stringify`: Custom function for more advanced formatting
+
+For better formatting of complex objects, you can use libraries like [@vitest/pretty-format](https://www.npmjs.com/package/@vitest/pretty-format) or [pretty-format](https://www.npmjs.com/package/pretty-format):
+
+```tsx
+import { format as prettyFormat } from '@vitest/pretty-format';
+import { useAtomsLogger } from 'jotai-logger';
+
+useAtomsLogger({
+  stringifyValues: true,
+  stringifyLimit: 0,
+  stringify(value) {
+    return prettyFormat(value, {
+      min: true,
+      maxDepth: 3,
+      maxWidth: 5,
+      // See options in https://github.com/jestjs/jest/tree/main/packages/pretty-format#usage-with-options
+    });
+  },
+});
 ```
 
 ## Tree-shaking

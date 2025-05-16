@@ -66,7 +66,6 @@ export function logTransaction(
   const {
     domain,
     logger,
-    stringifyLimit: maxLength,
     showTransactionNumber,
     showTransactionLocaleTime,
     showTransactionElapsedTime,
@@ -246,14 +245,14 @@ export function logTransaction(
     addToLogs(logs, options, {
       plainText: () => {
         if (stringifyValues) {
-          return stringifyValue(argsToStringify, { maxLength });
+          return stringifyValue(argsToStringify, options);
         } else {
           return [argsToStringify];
         }
       },
       formatted: () => {
         if (stringifyValues) {
-          const stringifiedArgs = stringifyValue(argsToStringify, { maxLength });
+          const stringifiedArgs = stringifyValue(argsToStringify, options);
           return [`%c${stringifiedArgs}`, 'default'];
         } else {
           return [`%c%o`, 'default', { data: argsToStringify }];
@@ -274,7 +273,7 @@ export function logTransaction(
     addToLogs(logs, options, {
       plainText: () => {
         if (stringifyValues) {
-          const stringifiedResult = stringifyValue(transaction.result, { maxLength });
+          const stringifiedResult = stringifyValue(transaction.result, options);
           return `and returned ${stringifiedResult}`;
         } else {
           return [`and returned`, transaction.result];
@@ -282,7 +281,7 @@ export function logTransaction(
       },
       formatted: () => {
         if (stringifyValues) {
-          const stringifiedResult = stringifyValue(transaction.result, { maxLength });
+          const stringifiedResult = stringifyValue(transaction.result, options);
           return [`%cand returned %c${stringifiedResult}`, 'grey', 'default'];
         } else {
           return [`%cand returned %c%o`, 'grey', 'default', { data: transaction.result }];

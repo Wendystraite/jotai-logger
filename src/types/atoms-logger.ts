@@ -92,6 +92,9 @@ export interface AtomsLoggerOptionsInState {
   /** @see AtomsLoggerOptions.stringifyValues */
   stringifyValues: boolean;
 
+  /** @see AtomsLoggerOptions.stringify */
+  stringify: ((this: void, value: unknown) => string) | undefined;
+
   /** @see AtomsLoggerOptions.showTransactionNumber */
   showTransactionNumber: boolean;
 
@@ -258,12 +261,36 @@ export interface AtomsLoggerOptions {
    * This includes the state of atoms, the arguments and results of atoms
    * setter methods, etc.
    *
-   * - If set to `true`, the logged data will be stringified using `JSON.stringify` with a maximum length of `stringifyLimit`.
+   * - If set to `true`, the logged data will be stringified using `stringify` with a maximum length of `stringifyLimit`.
    * - If set to `false`, the logged data will be logged as is.
    *
    * @default true
    */
   stringifyValues?: boolean;
+
+  /**
+   * Custom function to stringify data in the logs.
+   *
+   * This includes the state of atoms, the arguments and results of atoms
+   * setter methods, etc.
+   *
+   * If not provided, a basic stringification using `toString()` and `JSON.stringify` will be used.
+   * This makes the logger library agnostic to the stringification library used.
+   *
+   * `stringifyLimit` is still applied to the output of this function.
+   *
+   * @example
+   * ```ts
+   * // Example using Jest's / Vitest's pretty-format:
+   * import { format as prettyFormat } from '@vitest/pretty-format';
+   * useAtomsLogger({
+   *   stringify(value) {
+   *     return prettyFormat(value, { min: true, maxDepth: 3, maxWidth: 5 });
+   *   }
+   * });
+   * ```
+   */
+  stringify?(this: void, value: unknown): string;
 
   /**
    * Whether to show the transaction number in the console.

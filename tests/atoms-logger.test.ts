@@ -790,6 +790,73 @@ describe('bindAtomsLoggerToStore', () => {
       });
     });
 
+    describe('stringify', () => {
+      it('should use stringify function when provided', () => {
+        const customStringify = (value: unknown) => {
+          if (typeof value === 'object' && value !== null) {
+            return JSON.stringify(value, null, 2);
+          }
+          return String(value);
+        };
+
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          stringify: customStringify,
+        });
+
+        const testAtom = atom({ foo: 'bar' });
+        store.get(testAtom);
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 : retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to {\n  "foo": "bar"\n}`, { value: { foo: 'bar' } }],
+        ]);
+      });
+
+      it('should catch errors of the custom stringify function', () => {
+        const customStringify = () => {
+          throw new Error('Custom stringify error');
+        };
+
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          stringify: customStringify,
+        });
+
+        const testAtom = atom({ foo: 'bar' });
+        store.get(testAtom);
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 : retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to [Unknown]`, { value: { foo: 'bar' } }],
+        ]);
+      });
+
+      it('should truncate values when using custom stringify function', () => {
+        const customStringify = String;
+
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          stringify: customStringify,
+          stringifyLimit: 5,
+        });
+
+        const testAtom = atom('1234567890');
+        store.get(testAtom);
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 : retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to 12345…`, { value: '1234567890' }],
+        ]);
+      });
+    });
+
     describe('domain', () => {
       it('should not log domain when empty', () => {
         bindAtomsLoggerToStore(store, {
@@ -872,7 +939,7 @@ describe('bindAtomsLoggerToStore', () => {
         [`transaction 1 : retrieved value of ${promiseAtom}`],
         [`pending initial promise of ${promiseAtom}`],
         [
-          `rejected initial promise of ${promiseAtom} to [Error: Promise rejected]`,
+          `rejected initial promise of ${promiseAtom} to Error: Promise rejected`,
           { error: myError },
         ],
       ]);
@@ -958,11 +1025,11 @@ describe('bindAtomsLoggerToStore', () => {
         [`initialized value of ${testAtom} to 0`, { value: 0 }],
         [`mounted ${testAtom}`, { value: 0 }],
 
-        [`transaction 2 : set value of ${testAtom} to [Promise]`, { value: promise1 }],
+        [`transaction 2 : set value of ${testAtom} to [object Promise]`, { value: promise1 }],
         [`pending promise of ${testAtom} from 0`, { oldValue: 0 }],
         [`resolved promise of ${testAtom} from 0 to 1`, { newValue: 1, oldValue: 0 }],
 
-        [`transaction 3 : set value of ${testAtom} to [Promise]`, { value: promise2 }],
+        [`transaction 3 : set value of ${testAtom} to [object Promise]`, { value: promise2 }],
         [`pending promise of ${testAtom} from 1`, { oldValue: 1 }],
         [`resolved promise of ${testAtom} from 1 to 2`, { newValue: 2, oldValue: 1 }],
       ]);
@@ -1080,7 +1147,7 @@ describe('bindAtomsLoggerToStore', () => {
         [`transaction 1 : retrieved value of ${promiseAtom}`],
         [`pending initial promise of ${promiseAtom}`],
         [
-          `rejected initial promise of ${promiseAtom} to [RangeError: Custom error message]`,
+          `rejected initial promise of ${promiseAtom} to RangeError: Custom error message`,
           { error: customError },
         ],
       ]);
@@ -1184,15 +1251,15 @@ describe('bindAtomsLoggerToStore', () => {
         ['transaction 3'],
         [`pending promise of ${promiseAtom} from 2`, { oldValue: 2 }],
         [
-          `rejected promise of ${promiseAtom} from 2 to [Error: 3]`,
+          `rejected promise of ${promiseAtom} from 2 to Error: 3`,
           { oldValue: 2, error: new Error('3') },
         ],
 
         // promise reject -> promise resolve
         ['transaction 4'],
-        [`pending promise of ${promiseAtom} from [Error: 3]`, { oldError: new Error('3') }],
+        [`pending promise of ${promiseAtom} from Error: 3`, { oldError: new Error('3') }],
         [
-          `resolved promise of ${promiseAtom} from [Error: 3] to 4`,
+          `resolved promise of ${promiseAtom} from Error: 3 to 4`,
           { oldError: new Error('3'), value: 4 },
         ],
 
@@ -1205,15 +1272,15 @@ describe('bindAtomsLoggerToStore', () => {
         ['transaction 6'],
         [`pending promise of ${promiseAtom} from 5`, { oldValue: 5 }],
         [
-          `rejected promise of ${promiseAtom} from 5 to [Error: 6]`,
+          `rejected promise of ${promiseAtom} from 5 to Error: 6`,
           { oldValue: 5, error: new Error('6') },
         ],
 
         // promise reject -> value
         ['transaction 7'],
-        [`pending promise of ${promiseAtom} from [Error: 6]`, { oldError: new Error('6') }],
+        [`pending promise of ${promiseAtom} from Error: 6`, { oldError: new Error('6') }],
         [
-          `resolved promise of ${promiseAtom} from [Error: 6] to 7`,
+          `resolved promise of ${promiseAtom} from Error: 6 to 7`,
           { oldError: new Error('6'), value: 7 },
         ],
       ]);

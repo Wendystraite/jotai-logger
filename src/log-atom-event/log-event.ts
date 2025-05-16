@@ -143,9 +143,10 @@ export function logEvent(store: StoreWithAtomsLogger, logEventMap: AtomsLoggerEv
 export function getAtomEventMapLogs(
   logEventMap: AtomsLoggerEventMap,
   options: {
+    stringify: ((this: void, value: unknown) => string) | undefined;
     stringifyValues: boolean;
-    formattedOutput: boolean;
     stringifyLimit: number;
+    formattedOutput: boolean;
     colorScheme: 'default' | 'light' | 'dark';
   },
 ):
@@ -155,8 +156,6 @@ export function getAtomEventMapLogs(
       subLogsObject: Record<string, unknown>;
     }
   | undefined {
-  const { stringifyLimit: maxLength, stringifyValues } = options;
-
   const [eventType, event] = Object.entries(logEventMap)[0] as [
     keyof AtomsLoggerEventMap,
     AtomsLoggerEvent,
@@ -226,8 +225,8 @@ export function getAtomEventMapLogs(
   if (hasOldValue) {
     addToLogs(logs, options, {
       plainText: () => {
-        if (stringifyValues) {
-          const stringifiedState = stringifyValue(oldValue, { maxLength });
+        if (options.stringifyValues) {
+          const stringifiedState = stringifyValue(oldValue, options);
           return `from ${stringifiedState}`;
         } else if (hasOldValues) {
           return [`from`, oldValues];
@@ -236,8 +235,8 @@ export function getAtomEventMapLogs(
         }
       },
       formatted: () => {
-        if (stringifyValues) {
-          const stringifiedState = stringifyValue(oldValue, { maxLength });
+        if (options.stringifyValues) {
+          const stringifiedState = stringifyValue(oldValue, options);
           return [`%cfrom %c${stringifiedState}`, 'grey', 'default'];
         } else {
           return [`%cfrom %c%o`, 'grey', 'default', { data: oldValue }];
@@ -249,16 +248,16 @@ export function getAtomEventMapLogs(
   if (showNewValueInLog && hasNewValue) {
     addToLogs(logs, options, {
       plainText: () => {
-        if (stringifyValues) {
-          const stringifiedState = stringifyValue(newValue, { maxLength });
+        if (options.stringifyValues) {
+          const stringifiedState = stringifyValue(newValue, options);
           return `to ${stringifiedState}`;
         } else {
           return [`to`, newValue];
         }
       },
       formatted: () => {
-        if (stringifyValues) {
-          const stringifiedState = stringifyValue(newValue, { maxLength });
+        if (options.stringifyValues) {
+          const stringifiedState = stringifyValue(newValue, options);
           return [`%cto %c${stringifiedState}`, 'grey', 'default'];
         } else {
           return [`%cto %c%o`, 'grey', 'default', { data: newValue }];
@@ -272,14 +271,14 @@ export function getAtomEventMapLogs(
 
   if (hasOldValues) {
     subLogsArray.push(['old values', oldValues]);
-    if (stringifyValues) subLogsObject.oldValues = oldValues;
+    if (options.stringifyValues) subLogsObject.oldValues = oldValues;
   } else if (hasOldValue) {
     if (isOldValueError) {
       subLogsArray.push(['old error', oldValue]);
-      if (stringifyValues) subLogsObject.oldError = oldValue;
+      if (options.stringifyValues) subLogsObject.oldError = oldValue;
     } else {
       subLogsArray.push(['old value', oldValue]);
-      if (stringifyValues) subLogsObject.oldValue = oldValue;
+      if (options.stringifyValues) subLogsObject.oldValue = oldValue;
     }
   }
 
@@ -287,18 +286,18 @@ export function getAtomEventMapLogs(
     if (isNewValueError) {
       if (hasOldValue && isOldValueError) {
         subLogsArray.push(['new error', newValue]);
-        if (stringifyValues) subLogsObject.newError = newValue;
+        if (options.stringifyValues) subLogsObject.newError = newValue;
       } else {
         subLogsArray.push(['error', newValue]);
-        if (stringifyValues) subLogsObject.error = newValue;
+        if (options.stringifyValues) subLogsObject.error = newValue;
       }
     } else {
       if (hasOldValue && !isOldValueError) {
         subLogsArray.push(['new value', newValue]);
-        if (stringifyValues) subLogsObject.newValue = newValue;
+        if (options.stringifyValues) subLogsObject.newValue = newValue;
       } else {
         subLogsArray.push(['value', newValue]);
-        if (stringifyValues) subLogsObject.value = newValue;
+        if (options.stringifyValues) subLogsObject.value = newValue;
       }
     }
   }

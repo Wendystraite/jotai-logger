@@ -15,34 +15,42 @@
  * stringifyState({ name: 'John' }, { maxLength: 100 });
  *
  * @example
- * // Returns "[Promise]"
+ * // Returns "[object Promise]"
  * stringifyState(Promise.resolve(), { maxLength: 100 });
  *
  * @example
- * // Returns "[Error: Something went wrong]"
+ * // Returns "Error: Something went wrong"
  * stringifyState(new Error('Something went wrong'), { maxLength: 100 });
  */
-export function stringifyValue(value: unknown, options: { maxLength: number }): string {
-  const { maxLength } = options;
+export function stringifyValue(
+  value: unknown,
+  options: {
+    stringify: ((this: void, value: unknown) => string) | undefined;
+    stringifyLimit: number;
+  },
+): string {
+  const { stringify, stringifyLimit } = options;
   let stateString: string | undefined;
   try {
-    if (value instanceof Promise) {
-      stateString = '[Promise]';
-    } else if (value instanceof Error) {
-      const errorName = value.name.includes('Error') ? value.name : 'Error';
-      if (value.message) {
-        stateString = `[${errorName}: ${value.message}]`;
-      } else {
-        stateString = `[${errorName}]`;
-      }
-    } else if (value instanceof Symbol) {
-      if (value.description) {
-        stateString = `Symbol(${value.description})`;
-      } else {
-        stateString = 'Symbol()';
-      }
+    if (stringify) {
+      stateString = stringify(value);
     } else {
-      stateString = JSON.stringify(value) as string | undefined; // can return undefined if value is not serializable
+      if (value instanceof Date) {
+        stateString = value.toISOString();
+      } else if (
+        typeof value === 'object' &&
+        value &&
+        !Array.isArray(value) &&
+        'toString' in value &&
+        typeof value.toString === 'function'
+      ) {
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string
+        stateString = value.toString();
+        if (stateString === '[object Object]') {
+          stateString = undefined;
+        }
+      }
+      stateString ??= JSON.stringify(value) as string | undefined; // can return undefined if value is not serializable
       stateString ??= String(value);
     }
   } catch (error: unknown) {
@@ -52,8 +60,8 @@ export function stringifyValue(value: unknown, options: { maxLength: number }): 
       stateString = '[Unknown]';
     }
   }
-  if (maxLength > 0 && stateString.length > maxLength) {
-    stateString = stateString.slice(0, maxLength) + '…';
+  if (stringifyLimit > 0 && stateString.length > stringifyLimit) {
+    stateString = stateString.slice(0, stringifyLimit) + '…';
   }
   return stateString;
 }
