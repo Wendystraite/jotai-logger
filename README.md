@@ -319,14 +319,9 @@ userDataAsyncAtom.debugLabel = "userDataAsync";
 
 Just like promises, these transactions can be either pending, resolved, rejected or aborted.
 
-### Lifecycle Events
+### Mount and Unmount
 
-The logger also tracks atom lifecycle events.
-
-When an atom is `mounted` this means that something is subscribed to its value.
-This is usually a React component using either `useAtom` or `useAtomValue` or the dependency of another mounted atom.
-
-When an atom is `unmounted` this means that all subscriber are gone.
+When an atom is mounted or unmounted, you'll see logs like this:
 
 ```ts
 // Vanilla style : counter is mounted when calling store.sub
@@ -334,7 +329,7 @@ const unsub = store.sub(counterAtom, () => {
   console.log('counterAtom value is changed to', store.get(counterAtom));
 });
 
-// React style : counter is mounted when calling useAtomValue (useAtomValue call store.get / store.sub for you)
+// React style : counter is mounted when calling useAtomValue
 function MyCounter() {
   const count = useAtomValue(counterAtom);
   // ..
@@ -358,3 +353,31 @@ This can fail but if found the log look like this :
 ▶ transaction 9 : [my-component-file-name] MyComponent.useMyAtomValue retrieved value of atom5
   ▶ initialized value of atom5 to false
 ```
+
+## Lifecycle of atoms
+
+Here's a brief overview of the lifecycle of atoms in Jotai and how they relate to the logger:
+
+- When an atom is **initialized** this means that the atom is created and its value is set for the first time.
+- When an atom is **changed** this means that the atom value changed.
+- When an atom is **mounted** this means that something is subscribed to its value or one of its dependents.
+- When an atom is **unmounted** this means that all subscribers are gone.
+- When an atom is **destroyed** this means that the atom is no longer used and its value is removed from memory.
+- When an async atom is used, its state will either be **pending**, **resolved**, **rejected** or **aborted**.
+
+In Jotai :
+
+- When using `store.get`, `store.set` or `store.sub`, the atom is **initialized**.
+- When using `store.sub`, the atom is **mounted** when `store.sub` is called and **unmounted** when the `unsubscribe` method is called.
+- When using `store.set`, the atom is **changed**.
+
+In React :
+
+- When using `useAtom` or `useAtomValue`, the atom is **initialized** and then **mounted** (it uses `store.get` and `store.sub`).
+- When all components are not using `useAtom` and `useAtomValue` on an atom, it is **unmounted**.
+- When calling `useAtom` or `useSetAtom`'s setter function, the atom is **changed** (it uses `store.set`).
+
+Memory management :
+
+Jotai uses a `WeakMap` to store the atom state, so when the atom is no longer referenced, it will be removed from memory by the garbage collector.
+The logger uses [FinalizationRegistry](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/FinalizationRegistry) to track when the atom is destroyed.

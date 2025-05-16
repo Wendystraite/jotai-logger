@@ -2219,5 +2219,63 @@ describe('bindAtomsLoggerToStore', () => {
     });
   });
 
-  it.todo('should log destroyed atoms'); // Don't really know how to test this since it is based on FinalizationRegistry
+  describe('destroyed atoms', () => {
+    it('should register atoms with FinalizationRegistry for garbage collection tracking', () => {
+      const mockRegister = vi.fn();
+      vi.spyOn(global, 'FinalizationRegistry').mockImplementation(
+        (): FinalizationRegistry<string> => {
+          return {
+            register: mockRegister,
+            unregister: vi.fn(),
+            [Symbol.toStringTag]: 'FinalizationRegistry',
+          };
+        },
+      );
+
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      expect(mockRegister).not.toHaveBeenCalled();
+
+      const testAtom = atom(42);
+      store.get(testAtom);
+
+      expect(mockRegister).toHaveBeenCalled();
+      expect(mockRegister.mock.calls).toEqual([[testAtom, testAtom.toString()]]);
+    });
+
+    it('should log when an atom is garbage collected', () => {
+      let registeredCallback: ((heldValue: string) => void) | null = null;
+      vi.spyOn(global, 'FinalizationRegistry').mockImplementation(
+        (callback): FinalizationRegistry<string> => {
+          registeredCallback = callback as (heldValue: string) => void;
+          return {
+            register: vi.fn(),
+            unregister: vi.fn(),
+            [Symbol.toStringTag]: 'FinalizationRegistry',
+          };
+        },
+      );
+
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      expect(registeredCallback).not.toBeNull();
+
+      const testAtom = atom(42);
+      store.get(testAtom);
+
+      vi.runAllTimers();
+
+      registeredCallback!(testAtom.toString());
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of ${testAtom}`],
+        [`initialized value of ${testAtom} to 42`, { value: 42 }],
+
+        [`transaction 2`],
+        [`destroyed ${testAtom}`],
+      ]);
+    });
+  });
 });
