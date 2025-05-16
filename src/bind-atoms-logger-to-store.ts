@@ -11,6 +11,7 @@ import { getOnStoreGet } from './callbacks/on-store-get.js';
 import { getOnStoreSet } from './callbacks/on-store-set.js';
 import { getOnStoreSub } from './callbacks/on-store-sub.js';
 import { ATOMS_LOGGER_SYMBOL } from './consts/atom-logger-symbol.js';
+import { createLogTransactionsScheduler } from './log-transactions-scheduler.js';
 import type { AtomsLoggerOptions, Store, StoreWithAtomsLogger } from './types/atoms-logger.js';
 import { getInternalBuildingBlocks } from './utils/get-internal-building-blocks.js';
 import { atomsLoggerOptionsToState } from './utils/logger-options-to-state.js';
@@ -62,6 +63,8 @@ export function bindAtomsLoggerToStore(
     devtoolsMountedAtoms.delete = getOnDevtoolsMountedDelete(storeWithAtomsLogger);
   }
 
+  const logTransactionsScheduler = createLogTransactionsScheduler(storeWithAtomsLogger);
+
   storeWithAtomsLogger[ATOMS_LOGGER_SYMBOL] = {
     ...newStateOptions,
     prevStoreGet,
@@ -70,6 +73,7 @@ export function bindAtomsLoggerToStore(
     prevAtomStateMapSet,
     prevDevtoolsMountedAtomsAdd,
     prevDevtoolsMountedAtomsDelete,
+    logTransactionsScheduler,
     transactionNumber: 0,
     currentTransaction: undefined,
     atomsFinalizationRegistry,

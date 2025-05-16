@@ -4,6 +4,9 @@ import type { INTERNAL_AtomStateMap } from 'jotai/vanilla/internals';
 import type { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import type { AtomsLoggerStackTrace } from '../utils/get-atoms-logger-stack-trace.js';
 
+/**
+ * Jotai's store.
+ */
 export type Store = ReturnType<typeof useStore>;
 
 /**
@@ -34,6 +37,17 @@ export type AtomsLoggerState = AtomsLoggerOptionsInState & {
   promisesResultsMap: WeakMap<PromiseLike<unknown>, unknown>;
   /** Timeout id of the current transaction if started independently (not triggered by a store update) */
   transactionsDebounceTimeoutId: ReturnType<typeof setTimeout> | undefined;
+  /** Scheduler for logging queued transactions */
+  logTransactionsScheduler: {
+    /** Queue of transactions to be logged */
+    queue: AtomsLoggerTransactionMap[];
+    /** Flag to indicate if the scheduler is currently processing */
+    isProcessing: boolean;
+    /** Process the next transaction in the queue */
+    process: () => void;
+    /** Add a transaction to the queue and process it */
+    add: (transactionMap: AtomsLoggerTransactionMap) => void;
+  };
   /** Previous overridden store.get method */
   prevStoreGet: StoreWithAtomsLogger['get'];
   /** Previous overridden store.set method */

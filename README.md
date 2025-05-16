@@ -354,6 +354,13 @@ This can fail but if found the log look like this :
   ▶ initialized value of atom5 to false
 ```
 
+## Logging performances
+
+The logger logs all transactions asynchronously to avoid blocking the main thread.
+
+Internally, the logger uses a debounce mechanism (250ms) to group multiple events into transactions.
+Then, it uses [requestIdleCallback](https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback) to log these transactions one by one when the browser is idle (with a limit of 250ms for each transaction).
+
 ## Lifecycle of atoms
 
 Here's a brief overview of the lifecycle of atoms in Jotai and how they relate to the logger:

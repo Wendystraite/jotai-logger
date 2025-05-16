@@ -970,7 +970,7 @@ describe('bindAtomsLoggerToStore', () => {
 
       const afterPromise = store.get(promiseAtom);
 
-      await vi.advanceTimersByTimeAsync(1250);
+      await vi.advanceTimersByTimeAsync(1500);
 
       await expect(beforePromise).rejects.toEqual(new Error('Promise aborted'));
       await expect(afterPromise).resolves.toBe('second');
@@ -1059,7 +1059,7 @@ describe('bindAtomsLoggerToStore', () => {
       // Initial promise aborted
       await vi.advanceTimersByTimeAsync(250);
       store.set(dependencyAtom, (prev) => prev + 1); // Change the dependency before the promise resolves
-      await vi.advanceTimersByTimeAsync(1250);
+      await vi.advanceTimersByTimeAsync(1500);
 
       expect(consoleMock.log.mock.calls).toEqual([
         [`transaction 1 : subscribed to ${promiseAtom}`],
@@ -1101,7 +1101,7 @@ describe('bindAtomsLoggerToStore', () => {
       store.set(dependencyAtom, (prev) => prev + 1);
       await vi.advanceTimersByTimeAsync(250);
       store.set(dependencyAtom, (prev) => prev + 1); // Change the dependency before the promise resolves
-      await vi.advanceTimersByTimeAsync(1250);
+      await vi.advanceTimersByTimeAsync(1500);
 
       expect(consoleMock.log.mock.calls).toEqual([
         [`transaction 1 : subscribed to ${promiseAtom}`],
@@ -1544,6 +1544,119 @@ describe('bindAtomsLoggerToStore', () => {
         [`transaction 1`], // No transaction name since it's an unknown transaction
         [`initialized value of ${testAtom} to 42`, { value: 42 }],
       ]);
+    });
+
+    it('should debounce events in the same transaction', () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const testAtom = atom('trans-1.0');
+      const setTestAtom = atom(null, (get, set) => {
+        setTimeout(() => {
+          // This is a new unknown transaction
+          set(testAtom, 'trans-1.1');
+          vi.advanceTimersByTime(50); // debounce
+          set(testAtom, 'trans-1.2');
+          vi.advanceTimersByTime(50); // debounce
+          set(testAtom, 'trans-1.3');
+
+          // Will be in another transaction if >= 250ms
+          vi.advanceTimersByTime(250);
+          set(testAtom, 'trans-2.1');
+        }, 1000);
+      });
+      store.set(setTestAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1`],
+        [`initialized value of ${testAtom} to "trans-1.1"`, { value: 'trans-1.1' }],
+        [
+          `changed value of ${testAtom} 2 times from "trans-1.1" to "trans-1.3"`,
+          {
+            newValue: 'trans-1.3',
+            oldValues: ['trans-1.1', 'trans-1.2'],
+          },
+        ],
+
+        [`transaction 2`],
+        [
+          `changed value of ${testAtom} from "trans-1.3" to "trans-2.1"`,
+          { newValue: 'trans-2.1', oldValue: 'trans-1.3' },
+        ],
+      ]);
+    });
+
+    describe('requestIdleCallback', () => {
+      let originalRequestIdleCallback: typeof globalThis.requestIdleCallback;
+
+      beforeEach(() => {
+        originalRequestIdleCallback = globalThis.requestIdleCallback;
+      });
+
+      afterEach(() => {
+        globalThis.requestIdleCallback = originalRequestIdleCallback;
+        vi.clearAllMocks();
+      });
+
+      it('should schedule and log transactions one by one using requestIdleCallback', () => {
+        const transactionCallbacks: (() => void)[] = [];
+        const requestIdleCallbackMockFn = vi.fn((cb: IdleRequestCallback) => {
+          transactionCallbacks.push(() => {
+            cb({ didTimeout: false, timeRemaining: () => 50 } as IdleDeadline);
+          });
+          return 1;
+        });
+        globalThis.requestIdleCallback = requestIdleCallbackMockFn;
+
+        bindAtomsLoggerToStore(store, defaultOptions);
+
+        const testAtom = atom(0);
+
+        expect(requestIdleCallbackMockFn).not.toHaveBeenCalled();
+        expect(consoleMock.log.mock.calls).toEqual([]);
+
+        // Run all transactions
+        store.get(testAtom);
+        store.set(testAtom, 1);
+        store.set(testAtom, 2);
+        vi.runAllTimers();
+
+        expect(requestIdleCallbackMockFn).toHaveBeenCalledOnce(); // First transaction scheduled
+        expect(consoleMock.log.mock.calls).toEqual([]);
+        requestIdleCallbackMockFn.mockClear();
+
+        transactionCallbacks.shift()!(); // Run the first transaction
+        vi.runAllTimers();
+
+        expect(requestIdleCallbackMockFn).toHaveBeenCalledOnce(); // Second transaction scheduled
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 : retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to 0`, { value: 0 }],
+        ]);
+        requestIdleCallbackMockFn.mockClear();
+        consoleMock.log.mockClear();
+
+        transactionCallbacks.shift()!(); // Run the second transaction
+        vi.runAllTimers();
+
+        expect(requestIdleCallbackMockFn).toHaveBeenCalledOnce(); // Third transaction scheduled
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 2 : set value of ${testAtom} to 1`, { value: 1 }],
+          [`changed value of ${testAtom} from 0 to 1`, { newValue: 1, oldValue: 0 }],
+        ]);
+        requestIdleCallbackMockFn.mockClear();
+        consoleMock.log.mockClear();
+
+        transactionCallbacks.shift()!(); // Run the third transaction
+        vi.runAllTimers();
+
+        expect(requestIdleCallbackMockFn).not.toHaveBeenCalled(); // No more transactions scheduled
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 3 : set value of ${testAtom} to 2`, { value: 2 }],
+          [`changed value of ${testAtom} from 1 to 2`, { newValue: 2, oldValue: 1 }],
+        ]);
+      });
     });
   });
 

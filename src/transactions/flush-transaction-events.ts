@@ -1,5 +1,4 @@
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import { logTransaction } from '../log-atom-event/log-transaction.js';
 import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
 
 export function flushTransactionEvents(store: StoreWithAtomsLogger): void {
@@ -17,5 +16,6 @@ export function flushTransactionEvents(store: StoreWithAtomsLogger): void {
   transaction.endTimestamp ??= performance.now();
   store[ATOMS_LOGGER_SYMBOL].currentTransaction = undefined;
 
-  logTransaction(store, transactionMap);
+  // Add current transaction to scheduler instead of executing immediately
+  store[ATOMS_LOGGER_SYMBOL].logTransactionsScheduler.add(transactionMap);
 }
