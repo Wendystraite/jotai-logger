@@ -14,6 +14,7 @@ Logging utility for [Jotai](https://github.com/pmndrs/jotai) that helps you debu
 - 🔍 Stack trace support for debugging
 - 🛠️ Customizable with various configuration options
 - 🐞 Compatible with [jotai-devtools](https://github.com/jotaijs/jotai-devtools)
+- 📦 No dependencies, lightweight and tree-shakable
 
 ## Installation
 
@@ -119,6 +120,8 @@ type AtomsLoggerOptions = {
   collapseTransactions?: boolean;
   /** Whether to collapse event logs (default: true) */
   collapseEvents?: boolean;
+  /** Custom function to retrieve calling React components' names from stack traces */
+  getStackTrace?: () => { functionName?: string; fileName?: string }[] | undefined;
 };
 
 const options: AtomsLoggerOptions = {
@@ -181,6 +184,29 @@ useAtomsLogger({
       maxWidth: 5,
       // See options in https://github.com/jestjs/jest/tree/main/packages/pretty-format#usage-with-options
     });
+  },
+});
+```
+
+### Stack traces
+
+This is an experimental feature that may not work in all cases.
+
+If defined, the logger will try to find the React component that triggered a transaction by calling the `getStackTrace` function and, if found, will log its name and file name in the console.
+
+Here's an example using [stacktrace-js](https://github.com/stacktracejs/stacktrace.js/) library:
+
+```tsx
+import { useAtomsLogger } from 'jotai-logger';
+import StackTrace from 'stacktrace-js';
+
+useAtomsLogger({
+  getStackTrace() {
+    try {
+      throw new Error('Stack trace');
+    } catch (error) {
+      return StackTrace.fromError(error as Error, { offline: true });
+    }
   },
 });
 ```
@@ -346,8 +372,9 @@ function MyCounter() {
 
 ### React components
 
-The logger try to use [stacktrace.js](https://github.com/stacktracejs/stacktrace.js) to find the React component name that triggered a transaction.
-This can fail but if found the log look like this :
+If the `getStackTrace` option is used, the logger will try to find the React component that triggered the transaction.
+
+This can fail in some cases like calling from an `useEffect` but, if found, the log look like this :
 
 ```
 ▶ transaction 9 : [my-component-file-name] MyComponent.useMyAtomValue retrieved value of atom5

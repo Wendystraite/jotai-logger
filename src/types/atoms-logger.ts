@@ -2,7 +2,6 @@ import type { Atom, useStore } from 'jotai';
 import type { INTERNAL_AtomStateMap } from 'jotai/vanilla/internals';
 
 import type { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import type { AtomsLoggerStackTrace } from '../utils/get-atoms-logger-stack-trace.js';
 
 /**
  * Jotai's store.
@@ -123,6 +122,9 @@ export interface AtomsLoggerOptionsInState {
 
   /** @see AtomsLoggerOptions.collapseEvents */
   collapseEvents: boolean;
+
+  /** @see AtomsLoggerOptions.getStackTrace */
+  getStackTrace?(): StackFrame[] | undefined | Promise<StackFrame[] | undefined>;
 }
 
 /**
@@ -353,11 +355,36 @@ export interface AtomsLoggerOptions {
    * @default true
    */
   collapseEvents?: boolean;
+
+  /**
+   * Custom function to get a stack trace.
+   *
+   * If not provided, stack traces will not be included in the logs.
+   * The returned stack trace will be used to identify the component and the hooks that triggered the event.
+   * Promises are supported and will be resolved before logging the transaction.
+   *
+   * This makes the logger library agnostic to the stack trace library used and in which ways to retrieve it.
+   *
+   * @example
+   * ```ts
+   * // Example using stacktrace-js library:
+   * useAtomsLogger({
+   *   getStackTrace() {
+   *     try {
+   *       throw new Error('Stack trace');
+   *     } catch (error) {
+   *       return StackTrace.fromError(error as Error, { offline: true });
+   *     }
+   *   },
+   * });
+   * ```
+   */
+  getStackTrace?(this: void): StackFrame[] | undefined | Promise<StackFrame[] | undefined>;
 }
 
 export interface AtomsLoggerTransactionBase {
   atom: Atom<unknown> | ReturnType<Atom<unknown>['toString']>;
-  stackTrace?: AtomsLoggerStackTrace | undefined;
+  stackTrace?: AtomsLoggerStackTrace | Promise<AtomsLoggerStackTrace | undefined> | undefined;
   events?: AtomsLoggerEventMap[];
   startTimestamp?: ReturnType<typeof performance.now>;
   endTimestamp?: ReturnType<typeof performance.now>;
@@ -402,3 +429,69 @@ export type AtomsLoggerEventMap = Partial<{
 }>;
 
 export type AtomsLoggerEvent = NonNullable<AtomsLoggerEventMap[keyof AtomsLoggerEventMap]>;
+
+/**
+ * Stack frame information for the logger to identify the component and the hooks that triggered the event.
+ * The function names are required but the file names are optional.
+ */
+export interface StackFrame {
+  /**
+   * Name of the function that triggered the event.
+   * This is used to identify the component and the hooks that triggered the event.
+   * Required.
+   */
+  functionName?: string;
+
+  /**
+   * Full path of the file where the event was triggered.
+   * The file name is extracted from this path.
+   * Optional.
+   */
+  fileName?: string;
+}
+
+/**
+ * Information about the stack trace of the event that triggered the logger.
+ * This information is used to identify the component and the hooks that triggered the event.
+ */
+export interface AtomsLoggerStackTrace {
+  /**
+   * All the stack frames of the event.
+   * Retrieved using the logger's `getStackTrace` option.
+   */
+  stackFrames: StackFrame[];
+
+  /**
+   * Parsed file information.
+   */
+  file?: {
+    /**
+     * Full path of the file where the event was triggered.
+     * The file name is extracted from the stack trace.
+     */
+    path: string;
+
+    /**
+     * Name of the file where the event was triggered.
+     * The file name is extracted from the stack trace.
+     * The file name is the last part of the path, without the extension.
+     */
+    name: string;
+  };
+
+  /**
+   * Parsed React information.
+   */
+  react?: {
+    /**
+     * Name of the hooks that triggered the event.
+     * `useAtomValue`, `useSetAtom` and `useAtom` are ignored.
+     */
+    hooks: string[] | undefined;
+
+    /**
+     * Name of the React component that triggered the event.
+     */
+    component: string;
+  };
+}

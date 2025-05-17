@@ -2168,6 +2168,123 @@ describe('bindAtomsLoggerToStore', () => {
         ],
       ]);
     });
+
+    it('should log colored stack traces', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        formattedOutput: true,
+        getStackTrace() {
+          return [
+            {
+              functionName: 'useAtomValue',
+              fileName: 'atoms.ts',
+            },
+            {
+              functionName: 'MyComponent',
+              fileName: 'myComponent.tsx',
+            },
+          ];
+        },
+      });
+
+      const testAtom = atom(0);
+
+      const atomNumber = /atom(\d+)(.*)/.exec(testAtom.toString())?.[1];
+
+      expect(Number.isInteger(parseInt(atomNumber!))).toBeTruthy();
+
+      store.get(testAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [
+          `%ctransaction %c1 %c: %c[myComponent] %cMyComponent %cretrieved value %cof %catom%c${atomNumber}`,
+          'color: #757575; font-weight: normal;', // transaction
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // :
+          'color: #757575; font-weight: normal;', // [myComponent]
+          'color: default; font-weight: normal;', // MyComponent
+          'color: #0072B2; font-weight: bold;', // retrieved value
+          'color: #757575; font-weight: normal;', // of
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
+        ],
+        [
+          `%cinitialized value %cof %catom%c${atomNumber} %cto %c0`,
+          'color: #0072B2; font-weight: bold;', // initialized value
+          'color: #757575; font-weight: normal;', // of
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // to
+          'color: default; font-weight: normal;', // 0
+          { value: 0 },
+        ],
+      ]);
+    });
+
+    it('should log colored stack traces with hooks', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        formattedOutput: true,
+        getStackTrace() {
+          return [
+            {
+              functionName: 'useAtomValue',
+              fileName: 'atoms.ts',
+            },
+            {
+              functionName: 'useMyOtherHook',
+              fileName: 'myOtherHook.tsx',
+            },
+            {
+              functionName: 'useMyHook',
+              fileName: 'myHook.ts',
+            },
+            {
+              functionName: 'MyComponent',
+              fileName: 'myComponent.tsx',
+            },
+          ];
+        },
+      });
+
+      const testAtom = atom(0);
+
+      const atomNumber = /atom(\d+)(.*)/.exec(testAtom.toString())?.[1];
+
+      expect(Number.isInteger(parseInt(atomNumber!))).toBeTruthy();
+
+      store.get(testAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [
+          `%ctransaction %c1 %c: %c[myComponent] %cMyComponent%c.useMyHook.useMyOtherHook %cretrieved value %cof %catom%c${atomNumber}`,
+          'color: #757575; font-weight: normal;', // transaction
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // :
+          'color: #757575; font-weight: normal;', // [myComponent]
+          'color: default; font-weight: normal;', // MyComponent
+          'color: #757575; font-weight: normal;', // .useMyHook.useMyOtherHook
+          'color: #0072B2; font-weight: bold;', // retrieved value
+          'color: #757575; font-weight: normal;', // of
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
+        ],
+        [
+          `%cinitialized value %cof %catom%c${atomNumber} %cto %c0`,
+          'color: #0072B2; font-weight: bold;', // initialized value
+          'color: #757575; font-weight: normal;', // of
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // to
+          'color: default; font-weight: normal;', // 0
+          { value: 0 },
+        ],
+      ]);
+    });
   });
 
   describe('groups', () => {
@@ -2388,6 +2505,240 @@ describe('bindAtomsLoggerToStore', () => {
 
         [`transaction 2`],
         [`destroyed ${testAtom}`],
+      ]);
+    });
+  });
+
+  describe('stack traces', () => {
+    it('should handle synchronous getStackTrace', async () => {
+      let stackId = 0;
+
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        getStackTrace: () => {
+          const currentStackId = ++stackId;
+          return [
+            {
+              functionName: 'useAtomValue',
+              fileName: 'atoms.ts',
+            },
+            {
+              functionName: `MyCounter${currentStackId}`,
+              fileName: 'myComponent.ts',
+            },
+          ];
+        },
+      });
+
+      const countAtom = atom(0);
+      store.get(countAtom);
+
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(stackId).toBe(1);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : [myComponent] MyCounter1 retrieved value of ${countAtom}`],
+        [`initialized value of ${countAtom} to 0`, { value: 0 }],
+      ]);
+    });
+
+    it('should handle asynchronous getStackTrace', async () => {
+      let stackId = 0;
+
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        getStackTrace: () => {
+          const currentStackId = ++stackId;
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              resolve([
+                {
+                  functionName: 'useAtomValue',
+                  fileName: 'atoms.ts',
+                },
+                {
+                  functionName: `MyCounter${currentStackId}`,
+                  fileName: 'myComponent.ts',
+                },
+              ]);
+            }, 100);
+          });
+        },
+      });
+
+      const countAtom = atom(0);
+      store.get(countAtom);
+
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(stackId).toBe(1);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : [myComponent] MyCounter1 retrieved value of ${countAtom}`],
+        [`initialized value of ${countAtom} to 0`, { value: 0 }],
+      ]);
+    });
+
+    it('should not log a stack trace before the previous one is settled', async () => {
+      let stackId = 0;
+
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        getStackTrace: () => {
+          const currentStackId = ++stackId;
+          if (currentStackId === 1) {
+            return new Promise((resolve) => {
+              setTimeout(() => {
+                resolve([
+                  {
+                    functionName: 'useAtomValue',
+                    fileName: 'atoms.ts',
+                  },
+                  {
+                    functionName: `MyCounter${currentStackId}`,
+                    fileName: 'myComponent.ts',
+                  },
+                ]);
+              }, 5000); // Simulate a long delay for the first stack trace
+            });
+          } else {
+            return [
+              {
+                functionName: 'useAtomValue',
+                fileName: 'atoms.ts',
+              },
+              {
+                functionName: `MyCounter${currentStackId}`,
+                fileName: 'myComponent.ts',
+              },
+            ];
+          }
+        },
+      });
+
+      const countAtom = atom(0);
+      store.get(countAtom);
+      store.set(countAtom, 1);
+
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(stackId).toBe(2); // The two stack traces are pending
+
+      await vi.advanceTimersByTimeAsync(4000);
+      expect(consoleMock.log.mock.calls).toEqual([]); // The first stack trace is still pending
+
+      await vi.advanceTimersByTimeAsync(6000);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : [myComponent] MyCounter1 retrieved value of ${countAtom}`],
+        [`initialized value of ${countAtom} to 0`, { value: 0 }],
+
+        [`transaction 2 : [myComponent] MyCounter2 set value of ${countAtom} to 1`, { value: 1 }],
+        [`changed value of ${countAtom} from 0 to 1`, { newValue: 1, oldValue: 0 }],
+      ]);
+    });
+
+    it('should ignore crashes in getStackTrace', async () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        getStackTrace: () => {
+          throw new Error('Error in getStackTrace');
+        },
+      });
+
+      const countAtom = atom(0);
+      store.get(countAtom);
+
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of ${countAtom}`],
+        [`initialized value of ${countAtom} to 0`, { value: 0 }],
+      ]);
+    });
+
+    it('should ignore rejected promises in getStackTrace', async () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        getStackTrace: () => {
+          return new Promise((resolve, reject) => {
+            setTimeout(() => {
+              reject(new Error('Error in getStackTrace'));
+            }, 100);
+          });
+        },
+      });
+
+      const countAtom = atom(0);
+      store.get(countAtom);
+
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of ${countAtom}`],
+        [`initialized value of ${countAtom} to 0`, { value: 0 }],
+      ]);
+    });
+
+    it('should ignore instantly rejected promises in getStackTrace', async () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        getStackTrace: () => {
+          return Promise.reject(new Error('Error in getStackTrace'));
+        },
+      });
+
+      const countAtom = atom(0);
+      store.get(countAtom);
+
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of ${countAtom}`],
+        [`initialized value of ${countAtom} to 0`, { value: 0 }],
+      ]);
+    });
+
+    it('should ignore undefined stack traces', async () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        getStackTrace: () => {
+          return undefined;
+        },
+      });
+
+      const countAtom = atom(0);
+      store.get(countAtom);
+
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of ${countAtom}`],
+        [`initialized value of ${countAtom} to 0`, { value: 0 }],
+      ]);
+    });
+
+    it('should ignore promise undefined stack traces', async () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        getStackTrace: () => {
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              resolve(undefined);
+            }, 100);
+          });
+        },
+      });
+
+      const countAtom = atom(0);
+      store.get(countAtom);
+
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of ${countAtom}`],
+        [`initialized value of ${countAtom} to 0`, { value: 0 }],
       ]);
     });
   });

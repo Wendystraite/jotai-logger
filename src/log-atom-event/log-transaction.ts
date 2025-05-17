@@ -3,7 +3,9 @@ import { INTERNAL_isActuallyWritableAtom } from 'jotai/vanilla/internals';
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import { DEFAULT_ATOMS_LOGGER_COLORS } from '../consts/colors.js';
 import type {
+  AtomsLoggerStackTrace,
   AtomsLoggerTransaction,
+  AtomsLoggerTransactionBase,
   AtomsLoggerTransactionMap,
   StoreWithAtomsLogger,
 } from '../types/atoms-logger.js';
@@ -91,12 +93,13 @@ export function logTransaction(
 
   const showDomain = domain !== undefined && domain.length > 0;
 
+  const stackTrace = transaction.stackTrace as Exclude<
+    AtomsLoggerTransactionBase['stackTrace'],
+    Promise<AtomsLoggerStackTrace | undefined> // Promise was resolved in log scheduler
+  >;
+
   const showStackTrace =
-    transaction.stackTrace !== undefined &&
-    (transaction.stackTrace.componentName !== undefined ||
-      transaction.stackTrace.hooks !== undefined ||
-      transaction.stackTrace.filePath !== undefined ||
-      transaction.stackTrace.fileName !== undefined);
+    stackTrace !== undefined && (stackTrace.react !== undefined || stackTrace.file !== undefined);
 
   const showAtom = !transactionMap.unknown && shouldShowAtom(store, transaction.atom);
 
@@ -160,33 +163,25 @@ export function logTransaction(
     });
   }
 
-  if (showStackTrace && transaction.stackTrace) {
-    const { componentName, hooks, filePath, fileName } = transaction.stackTrace;
-    const fileNameOrPath = fileName ?? filePath;
-    if (fileNameOrPath) {
+  if (showStackTrace) {
+    const { react, file } = stackTrace;
+    if (file) {
       addToLogs(logs, options, {
-        plainText: () => `[${fileNameOrPath}]`,
-        formatted: () => [`%c[${fileNameOrPath}]`, 'grey'],
+        plainText: () => `[${file.name}]`,
+        formatted: () => [`%c[${file.name}]`, 'grey'],
       });
     }
-    if (componentName && hooks) {
-      const hooksNames = hooks.join('.');
-      addToLogs(logs, options, {
-        plainText: () => `${componentName}.${hooksNames}`,
-        formatted: () => [`%c${componentName}%c.${hooksNames}`, 'default', 'grey'],
-      });
-    } else {
-      if (componentName) {
+    if (react) {
+      if (react.hooks && react.hooks.length > 0) {
+        const hooksNames = react.hooks.join('.');
         addToLogs(logs, options, {
-          plainText: () => componentName,
-          formatted: () => [`%c${componentName}`, 'default'],
+          plainText: () => `${react.component}.${hooksNames}`,
+          formatted: () => [`%c${react.component}%c.${hooksNames}`, 'default', 'grey'],
         });
-      }
-      if (hooks) {
-        const hooksNames = hooks.join('.');
+      } else {
         addToLogs(logs, options, {
-          plainText: () => hooksNames,
-          formatted: () => [`%c${hooksNames}`, 'grey'],
+          plainText: () => react.component,
+          formatted: () => [`%c${react.component}`, 'default'],
         });
       }
     }

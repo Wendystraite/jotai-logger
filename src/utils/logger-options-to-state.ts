@@ -21,6 +21,7 @@ export function atomsLoggerOptionsToState(
     showTransactionElapsedTime = true,
     collapseTransactions = false,
     collapseEvents = true,
+    getStackTrace,
   } = options;
 
   return {
@@ -45,5 +46,6 @@ export function atomsLoggerOptionsToState(
     showTransactionElapsedTime,
     collapseTransactions,
     collapseEvents,
+    getStackTrace,
   };
 }

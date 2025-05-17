@@ -1,5 +1,12 @@
+import { INTERNAL_isPromiseLike } from 'jotai/vanilla/internals';
+
 import { logTransaction } from './log-atom-event/log-transaction.js';
-import type { AtomsLoggerState, StoreWithAtomsLogger } from './types/atoms-logger.js';
+import type {
+  AtomsLoggerStackTrace,
+  AtomsLoggerState,
+  StoreWithAtomsLogger,
+} from './types/atoms-logger.js';
+import { getTransactionMapTransaction } from './utils/get-transaction-map-transaction.js';
 
 /**
  * Timeout for requestIdleCallback in ms.
@@ -18,15 +25,19 @@ export function createLogTransactionsScheduler(
       this.isProcessing = true;
 
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- should exist
-      const nextTransaction = this.queue.shift()!;
+      const nextTransactionMap = this.queue.shift()!;
+      const nextTransaction = getTransactionMapTransaction(nextTransactionMap);
 
       schedule(() => {
-        try {
-          logTransaction(store, nextTransaction);
-        } finally {
-          this.isProcessing = false;
-          this.process();
-        }
+        waitForStackTrace(nextTransaction.stackTrace, (stackTrace) => {
+          nextTransaction.stackTrace = stackTrace;
+          try {
+            logTransaction(store, nextTransactionMap);
+          } finally {
+            this.isProcessing = false;
+            this.process();
+          }
+        });
       });
     },
     add(transactionMap) {
@@ -42,5 +53,16 @@ function schedule(cb: () => void) {
     globalThis.requestIdleCallback(cb, { timeout: REQUEST_IDLE_CALLBACK_TIMEOUT_MS });
   } else {
     setTimeout(cb, 0);
+  }
+}
+
+function waitForStackTrace(
+  stackTrace: AtomsLoggerStackTrace | Promise<AtomsLoggerStackTrace | undefined> | undefined,
+  callback: (stackTrace: AtomsLoggerStackTrace | undefined) => void,
+): void {
+  if (stackTrace && INTERNAL_isPromiseLike(stackTrace)) {
+    stackTrace.then(callback, callback);
+  } else {
+    callback(stackTrace);
   }
 }
