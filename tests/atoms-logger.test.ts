@@ -385,6 +385,25 @@ describe('bindAtomsLoggerToStore', () => {
           [`initialized value of ${testAtom} to 0`, { value: 0 }],
         ]);
       });
+
+      it('should not log transaction when showTransactionNumber, showTransactionElapsedTime and showTransactionLocaleTime are disabled', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          showTransactionNumber: false,
+          showTransactionElapsedTime: false,
+          showTransactionLocaleTime: false,
+        });
+
+        const testAtom = atom(0);
+        store.get(testAtom);
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to 0`, { value: 0 }],
+        ]);
+      });
     });
 
     describe('showTransactionElapsedTime', () => {
@@ -473,6 +492,50 @@ describe('bindAtomsLoggerToStore', () => {
         expect(consoleMock.log.mock.calls).toEqual([
           [`transaction 1 - 00:00:00 - 250.00 ms : retrieved value of ${testAtom}`],
           [`initialized value of ${testAtom} to 0`, { value: 0 }],
+        ]);
+      });
+
+      it('should log timestamps and elapsed time with colors', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          showTransactionElapsedTime: true,
+          showTransactionLocaleTime: true,
+          formattedOutput: true,
+        });
+
+        const testAtom = atom(0);
+        store.get(testAtom);
+
+        const atomNumber = /atom(\d+)(.*)/.exec(testAtom.toString())?.[1];
+        expect(Number.isInteger(parseInt(atomNumber!))).toBeTruthy();
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [
+            `%ctransaction %c1 %c- %c00:00:00 %c- %c250.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // transaction
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 00:00:00
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 250.00 ms
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // 1
+          ],
+          [
+            `%cinitialized value %cof %catom%c${atomNumber} %cto %c0`,
+            'color: #0072B2; font-weight: bold;', // initialized value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // to
+            'color: default; font-weight: normal;', // 0
+            { value: 0 },
+          ],
         ]);
       });
     });
@@ -891,6 +954,47 @@ describe('bindAtomsLoggerToStore', () => {
           [`initialized value of ${testAtom} to 42`, { value: 42 }],
         ]);
       });
+
+      it('should log domain with colors when set', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          formattedOutput: true,
+          domain: 'test-domain',
+        });
+
+        const testAtom = atom(42);
+        store.get(testAtom);
+
+        const atomNumber = /atom(\d+)(.*)/.exec(testAtom.toString())?.[1];
+        expect(Number.isInteger(parseInt(atomNumber!))).toBeTruthy();
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [
+            `%ctest-domain %c- %ctransaction %c1 %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // test-domain
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // transaction
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // 1
+          ],
+          [
+            `%cinitialized value %cof %catom%c${atomNumber} %cto %c42`,
+            'color: #0072B2; font-weight: bold;', // initialized value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // to
+            'color: default; font-weight: normal;', // 42
+            { value: 42 },
+          ],
+        ]);
+      });
     });
   });
 
@@ -1276,7 +1380,7 @@ describe('bindAtomsLoggerToStore', () => {
     it('should log atom value and promise changes', async () => {
       bindAtomsLoggerToStore(store, defaultOptions);
 
-      const valueTypeAtom = atom<'value' | 'resolve' | 'reject'>('resolve');
+      const valueTypeAtom = atom<'value' | 'resolve' | 'reject' | 'reject2'>('resolve');
       valueTypeAtom.debugPrivate = true;
 
       let count = 0;
@@ -1285,7 +1389,7 @@ describe('bindAtomsLoggerToStore', () => {
         const type = get(valueTypeAtom);
         if (type === 'value') {
           return count;
-        } else if (type === 'reject') {
+        } else if (type === 'reject' || type === 'reject2') {
           return new Promise((_, reject) => {
             setTimeout(() => {
               reject(new Error(`${count}`));
@@ -1323,6 +1427,10 @@ describe('bindAtomsLoggerToStore', () => {
 
       // value -> promise reject
       store.set(valueTypeAtom, 'reject');
+      await vi.advanceTimersByTimeAsync(250);
+
+      // promise reject -> promise reject
+      store.set(valueTypeAtom, 'reject2');
       await vi.advanceTimersByTimeAsync(250);
 
       // promise reject -> value
@@ -1372,12 +1480,20 @@ describe('bindAtomsLoggerToStore', () => {
           { oldValue: 5, error: new Error('6') },
         ],
 
-        // promise reject -> value
+        // promise reject -> promise reject
         ['transaction 7'],
         [`pending promise of ${promiseAtom} from Error: 6`, { oldError: new Error('6') }],
         [
-          `resolved promise of ${promiseAtom} from Error: 6 to 7`,
-          { oldError: new Error('6'), value: 7 },
+          `rejected promise of ${promiseAtom} from Error: 6 to Error: 7`,
+          { oldError: new Error('6'), newError: new Error('7') },
+        ],
+
+        // promise reject -> value
+        ['transaction 8'],
+        [`pending promise of ${promiseAtom} from Error: 7`, { oldError: new Error('7') }],
+        [
+          `resolved promise of ${promiseAtom} from Error: 7 to 8`,
+          { oldError: new Error('7'), value: 8 },
         ],
       ]);
     });
@@ -1405,6 +1521,97 @@ describe('bindAtomsLoggerToStore', () => {
         [
           `changed value of ${valueAtom} 4 times from 1 to 5`,
           { oldValues: [1, 2, 3, 4], newValue: 5 },
+        ],
+      ]);
+    });
+
+    it('should log merged atom value changes as is', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        formattedOutput: false,
+        stringifyValues: false,
+      });
+
+      const valueAtom = atom(0);
+
+      const valueSetAtom = atom(null, (get, set) => {
+        set(valueAtom, 1);
+        set(valueAtom, 2);
+        set(valueAtom, 3);
+        set(valueAtom, 4);
+        set(valueAtom, 5);
+      });
+
+      store.set(valueSetAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : called set of ${valueSetAtom}`],
+        [`initialized value of ${valueAtom} to`, 1],
+        [`changed value of ${valueAtom} 4 times from`, [1, 2, 3, 4], `to`, 5],
+      ]);
+    });
+
+    it('should log merged atom value changes in colors', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        formattedOutput: true,
+      });
+
+      const valueAtom = atom(0);
+
+      const valueSetAtom = atom(null, (get, set) => {
+        set(valueAtom, 1);
+        set(valueAtom, 2);
+        set(valueAtom, 3);
+        set(valueAtom, 4);
+        set(valueAtom, 5);
+      });
+
+      const valueAtomNumber = /atom(\d+)(.*)/.exec(valueAtom.toString())?.[1];
+      const valueSetAtomNumber = /atom(\d+)(.*)/.exec(valueSetAtom.toString())?.[1];
+      expect(Number.isInteger(parseInt(valueAtomNumber!))).toBeTruthy();
+      expect(Number.isInteger(parseInt(valueSetAtomNumber!))).toBeTruthy();
+
+      store.set(valueSetAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [
+          `%ctransaction %c1 %c: %ccalled set %cof %catom%c${valueSetAtomNumber}`,
+          'color: #757575; font-weight: normal;', // transaction
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // :
+          'color: #E69F00; font-weight: bold;', // called set
+          'color: #757575; font-weight: normal;', // of
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
+        ],
+        [
+          `%cinitialized value %cof %catom%c${valueAtomNumber} %cto %c1`,
+          'color: #0072B2; font-weight: bold;', // initialized value
+          'color: #757575; font-weight: normal;', // of
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // to
+          'color: default; font-weight: normal;', // 1
+          { value: 1 },
+        ],
+        [
+          `%cchanged value %cof %catom%c${valueAtomNumber} %c4 %ctimes %cfrom %c1 %cto %c5`,
+          'color: #56B4E9; font-weight: bold;', // changed value
+          'color: #757575; font-weight: normal;', // of
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
+          'color: default; font-weight: normal;', // 4
+          'color: #757575; font-weight: normal;', // times
+          'color: #757575; font-weight: normal;', // from
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // to
+          'color: default; font-weight: normal;', // 5
+          { newValue: 5, oldValues: [1, 2, 3, 4] },
         ],
       ]);
     });
@@ -1845,6 +2052,47 @@ describe('bindAtomsLoggerToStore', () => {
       expect(consoleMock.log.mock.calls).toEqual([
         [`transaction 1 : set value of ${simpleAtom} to 1`, { value: 1 }],
         [`initialized value of ${simpleAtom} to 1`, { value: 1 }],
+      ]);
+    });
+
+    it('should log default atom setter in colors', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        formattedOutput: true,
+      });
+
+      const simpleAtom = atom(0);
+      store.set(simpleAtom, 1);
+
+      const atomNumber = /atom(\d+)(.*)/.exec(simpleAtom.toString())?.[1];
+      expect(Number.isInteger(parseInt(atomNumber!))).toBeTruthy();
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [
+          `%ctransaction %c1 %c: %cset value %cof %catom%c${atomNumber} %cto %c1`,
+          'color: #757575; font-weight: normal;', // transaction
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // :
+          'color: #E69F00; font-weight: bold;', // set value
+          'color: #757575; font-weight: normal;', // of
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // to
+          'color: default; font-weight: normal;', // 1
+          { value: 1 },
+        ],
+        [
+          `%cinitialized value %cof %catom%c${atomNumber} %cto %c1`,
+          'color: #0072B2; font-weight: bold;', // initialized value
+          'color: #757575; font-weight: normal;', // of
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // to
+          'color: default; font-weight: normal;', // 1
+          { value: 1 },
+        ],
       ]);
     });
 
@@ -2528,6 +2776,62 @@ describe('bindAtomsLoggerToStore', () => {
           groupCollapsed: consoleMock.groupCollapsed,
           groupEnd: undefined,
         },
+      });
+
+      const testAtom = atom(0);
+      store.get(testAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.group.mock.calls).toEqual([]);
+      expect(consoleMock.groupCollapsed.mock.calls).toEqual([]);
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of ${testAtom}`],
+        [`initialized value of ${testAtom} to 0`, { value: 0 }],
+      ]);
+      expect(consoleMock.groupEnd.mock.calls).toEqual([]);
+    });
+
+    it('should not log collapsed transaction groups if logger.groupCollapsed is not defined', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        groupLogs: true,
+        logger: {
+          log: consoleMock.log,
+          group: consoleMock.group,
+          groupCollapsed: undefined,
+          groupEnd: consoleMock.groupEnd,
+        },
+        collapseTransactions: true,
+        collapseEvents: true,
+      });
+
+      const testAtom = atom(0);
+      store.get(testAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.group.mock.calls).toEqual([]);
+      expect(consoleMock.groupCollapsed.mock.calls).toEqual([]);
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of ${testAtom}`],
+        [`initialized value of ${testAtom} to 0`, { value: 0 }],
+      ]);
+      expect(consoleMock.groupEnd.mock.calls).toEqual([]);
+    });
+
+    it('should not log event group if logger.group is not defined', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        groupLogs: true,
+        logger: {
+          log: consoleMock.log,
+          group: undefined,
+          groupCollapsed: consoleMock.groupCollapsed,
+          groupEnd: consoleMock.groupEnd,
+        },
+        collapseTransactions: false,
+        collapseEvents: false,
       });
 
       const testAtom = atom(0);

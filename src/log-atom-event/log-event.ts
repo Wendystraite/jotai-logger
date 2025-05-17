@@ -92,13 +92,10 @@ export function logEvent(store: StoreWithAtomsLogger, logEventMap: AtomsLoggerEv
     store[ATOMS_LOGGER_SYMBOL];
   let { groupLogs } = store[ATOMS_LOGGER_SYMBOL];
 
-  const toLog = getAtomEventMapLogs(logEventMap, store[ATOMS_LOGGER_SYMBOL]);
-
-  if (!toLog) {
-    return;
-  }
-
-  const { logs, subLogsArray, subLogsObject } = toLog;
+  const { logs, subLogsArray, subLogsObject } = getAtomEventMapLogs(
+    logEventMap,
+    store[ATOMS_LOGGER_SYMBOL],
+  );
 
   if (indentSpacesDepth1.length > 0) {
     logs[0] = `${indentSpacesDepth1}${logs[0]}`;
@@ -149,13 +146,11 @@ export function getAtomEventMapLogs(
     formattedOutput: boolean;
     colorScheme: 'default' | 'light' | 'dark';
   },
-):
-  | {
-      logs: [string, ...unknown[]];
-      subLogsArray: [string, ...unknown[]][];
-      subLogsObject: Record<string, unknown>;
-    }
-  | undefined {
+): {
+  logs: [string, ...unknown[]];
+  subLogsArray: [string, ...unknown[]][];
+  subLogsObject: Record<string, unknown>;
+} {
   const [eventType, event] = Object.entries(logEventMap)[0] as [
     keyof AtomsLoggerEventMap,
     AtomsLoggerEvent,
