@@ -906,7 +906,19 @@ describe('bindAtomsLoggerToStore', () => {
         );
       });
 
+      const otherPromiseAtom = atom(() => {
+        return new Promise((resolve, reject) =>
+          setTimeout(() => {
+            reject(new Error('Promise rejected'));
+          }, 0),
+        );
+      });
+
       void store.get(promiseAtom);
+
+      await vi.advanceTimersByTimeAsync(1000);
+
+      void store.get(otherPromiseAtom);
 
       await vi.advanceTimersByTimeAsync(1000);
 
@@ -914,6 +926,13 @@ describe('bindAtomsLoggerToStore', () => {
         [`transaction 1 : retrieved value of ${promiseAtom}`],
         [`pending initial promise of ${promiseAtom}`],
         [`resolved initial promise of ${promiseAtom} to 42`, { value: 42 }],
+
+        [`transaction 2 : retrieved value of ${otherPromiseAtom}`],
+        [`pending initial promise of ${otherPromiseAtom}`],
+        [
+          `rejected initial promise of ${otherPromiseAtom} to Error: Promise rejected`,
+          { error: new Error('Promise rejected') },
+        ],
       ]);
     });
 
@@ -925,22 +944,99 @@ describe('bindAtomsLoggerToStore', () => {
         return new Promise((_, reject) =>
           setTimeout(() => {
             reject(myError);
-          }, 0),
+          }, 1000),
         );
       });
 
       const promise = store.get(promiseAtom);
 
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(2000);
 
       await expect(promise).rejects.toThrow('Promise rejected');
 
       expect(consoleMock.log.mock.calls).toEqual([
         [`transaction 1 : retrieved value of ${promiseAtom}`],
         [`pending initial promise of ${promiseAtom}`],
+
+        [`transaction 2 : rejected promise of ${promiseAtom}`],
         [
           `rejected initial promise of ${promiseAtom} to Error: Promise rejected`,
           { error: myError },
+        ],
+      ]);
+    });
+
+    it('should show promise resolved and rejected in the same transaction if they resolve before the debounce', async () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const instantPromiseAtom = atom(() => {
+        return new Promise((resolve) =>
+          setTimeout(() => {
+            resolve(42);
+          }, 0),
+        );
+      });
+
+      const instantPromiseRejectedAtom = atom(() => {
+        return new Promise((_, reject) =>
+          setTimeout(() => {
+            reject(new Error('Promise rejected'));
+          }, 0),
+        );
+      });
+
+      const slowerPromiseAtom = atom(() => {
+        return new Promise((resolve) =>
+          setTimeout(() => {
+            resolve(42);
+          }, 1000),
+        );
+      });
+
+      const slowerPromiseRejectedAtom = atom(() => {
+        return new Promise((resolve, reject) =>
+          setTimeout(() => {
+            reject(new Error('Promise rejected'));
+          }, 1000),
+        );
+      });
+
+      void store.get(instantPromiseAtom);
+      await vi.advanceTimersByTimeAsync(200);
+
+      void store.get(instantPromiseRejectedAtom);
+      await vi.advanceTimersByTimeAsync(200);
+
+      void store.get(slowerPromiseAtom);
+      void store.get(slowerPromiseRejectedAtom);
+
+      await vi.advanceTimersByTimeAsync(2000);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of ${instantPromiseAtom}`],
+        [`pending initial promise of ${instantPromiseAtom}`],
+        [`resolved initial promise of ${instantPromiseAtom} to 42`, { value: 42 }], // In first transaction
+
+        [`transaction 2 : retrieved value of ${instantPromiseRejectedAtom}`],
+        [`pending initial promise of ${instantPromiseRejectedAtom}`],
+        [
+          `rejected initial promise of ${instantPromiseRejectedAtom} to Error: Promise rejected`, // In second transaction
+          { error: new Error('Promise rejected') },
+        ],
+
+        [`transaction 3 : retrieved value of ${slowerPromiseAtom}`],
+        [`pending initial promise of ${slowerPromiseAtom}`],
+
+        [`transaction 4 : retrieved value of ${slowerPromiseRejectedAtom}`],
+        [`pending initial promise of ${slowerPromiseRejectedAtom}`],
+
+        [`transaction 5 : resolved promise of ${slowerPromiseAtom}`], // In another transaction
+        [`resolved initial promise of ${slowerPromiseAtom} to 42`, { value: 42 }],
+
+        [`transaction 6 : rejected promise of ${slowerPromiseRejectedAtom}`], // In another transaction AND not in the previous promise resolved transaction
+        [
+          `rejected initial promise of ${slowerPromiseRejectedAtom} to Error: Promise rejected`,
+          { error: new Error('Promise rejected') },
         ],
       ]);
     });

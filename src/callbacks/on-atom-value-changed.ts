@@ -4,7 +4,7 @@ import { INTERNAL_isPromiseLike, INTERNAL_registerAbortHandler } from 'jotai/van
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import { addEventToTransaction } from '../transactions/add-event-to-transaction.js';
 import { endTransaction } from '../transactions/end-transaction.js';
-import { maybeStartTransaction } from '../transactions/maybe-start-transaction.js';
+import { startTransaction } from '../transactions/start-transaction.js';
 import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
 
 export function onAtomValueChanged(
@@ -68,29 +68,45 @@ export function onAtomValueChanged(
     }
   });
 
+  const transactionWhenPending = store[ATOMS_LOGGER_SYMBOL].currentTransaction;
+
   newPromise.then(
     (newValue: unknown) => {
       if (!isAborted) {
         store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.set(newPromise, newValue);
-        const startedTransaction = maybeStartTransaction(store, { promiseResolved: { atom } });
+
+        const hasStartedTransaction =
+          store[ATOMS_LOGGER_SYMBOL].currentTransaction === undefined ||
+          transactionWhenPending !== store[ATOMS_LOGGER_SYMBOL].currentTransaction;
+
+        if (hasStartedTransaction) startTransaction(store, { promiseResolved: { atom } });
+
         if (isInitialValue) {
           addEventToTransaction(store, { initialPromiseResolved: { atom, value: newValue } });
         } else {
           addEventToTransaction(store, { changedPromiseResolved: { atom, oldValue, newValue } });
         }
-        if (startedTransaction) endTransaction(store);
+
+        if (hasStartedTransaction) endTransaction(store);
       }
     },
     (error: unknown) => {
       if (!isAborted) {
+        const hasStartedTransaction =
+          store[ATOMS_LOGGER_SYMBOL].currentTransaction === undefined ||
+          transactionWhenPending !== store[ATOMS_LOGGER_SYMBOL].currentTransaction;
+
+        if (hasStartedTransaction) startTransaction(store, { promiseRejected: { atom } });
+
         store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.set(newPromise, error);
-        const startedTransaction = maybeStartTransaction(store, { promiseRejected: { atom } });
+
         if (isInitialValue) {
           addEventToTransaction(store, { initialPromiseRejected: { atom, error } });
         } else {
           addEventToTransaction(store, { changedPromiseRejected: { atom, oldValue, error } });
         }
-        if (startedTransaction) endTransaction(store);
+
+        if (hasStartedTransaction) endTransaction(store);
       }
     },
   );
