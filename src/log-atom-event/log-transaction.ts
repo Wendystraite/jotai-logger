@@ -14,7 +14,9 @@ import { hasAtomCustomWriteMethod } from '../utils/has-atom-custom-write-method.
 import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { stringifyValue } from '../utils/stringify-value.js';
 import { addAtomToLogs } from './add-atom-to-logs.js';
-import { addTimestampToLogs } from './add-timestamp-to-logs.js';
+import { addDashToLogs } from './add-dash-to-logs.js';
+import { addElapsedTimeToLogs } from './add-elapsed-time-to-logs.js';
+import { addLocaleTimeToLogs } from './add-locale-time-to-logs.js';
 import { addToLogs } from './add-to-logs.js';
 import { logEvent } from './log-event.js';
 
@@ -65,15 +67,7 @@ export function logTransaction(
 ): void {
   const options = store[ATOMS_LOGGER_SYMBOL];
 
-  const {
-    domain,
-    logger,
-    showTransactionNumber,
-    showTransactionLocaleTime,
-    showTransactionElapsedTime,
-    collapseTransactions,
-    stringifyValues,
-  } = options;
+  const { domain, logger, showTransactionNumber, collapseTransactions, stringifyValues } = options;
   let { groupLogs } = options;
 
   const [transactionType, transaction] = Object.entries(transactionMap)[0] as [
@@ -92,6 +86,15 @@ export function logTransaction(
   const transactionNumber = (store[ATOMS_LOGGER_SYMBOL].transactionNumber += 1);
 
   const showDomain = domain !== undefined && domain.length > 0;
+
+  const showTransactionLocaleTime =
+    options.showTransactionLocaleTime && transaction.startTimestamp !== undefined;
+
+  const showTransactionElapsedTime =
+    options.showTransactionElapsedTime &&
+    transaction.startTimestamp !== undefined &&
+    transaction.endTimestamp !== undefined &&
+    transaction.startTimestamp !== transaction.endTimestamp;
 
   const stackTrace = transaction.stackTrace as Exclude<
     AtomsLoggerTransactionBase['stackTrace'],
@@ -134,9 +137,10 @@ export function logTransaction(
 
   if (showDomain) {
     addToLogs(logs, options, {
-      plainText: () => `${domain} -`,
-      formatted: () => [`%c${domain} %c-`, 'grey', 'default'],
+      plainText: () => domain,
+      formatted: () => [`%c${domain}`, 'grey'],
     });
+    addDashToLogs(logs, options);
   }
 
   if (showTransactionNumber) {
@@ -147,7 +151,23 @@ export function logTransaction(
   }
 
   if (showTransactionLocaleTime || showTransactionElapsedTime) {
-    addTimestampToLogs(logs, transaction.startTimestamp, transaction.endTimestamp, options);
+    addDashToLogs(logs, options);
+  }
+
+  if (showTransactionLocaleTime && transaction.startTimestamp !== undefined) {
+    addLocaleTimeToLogs(logs, transaction.startTimestamp, options);
+  }
+
+  if (showTransactionLocaleTime && showTransactionElapsedTime) {
+    addDashToLogs(logs, options);
+  }
+
+  if (
+    showTransactionElapsedTime &&
+    transaction.startTimestamp !== undefined &&
+    transaction.endTimestamp !== undefined
+  ) {
+    addElapsedTimeToLogs(logs, transaction.startTimestamp, transaction.endTimestamp, options);
   }
 
   if (
