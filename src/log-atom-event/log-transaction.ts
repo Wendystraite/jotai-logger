@@ -1,16 +1,14 @@
 import { INTERNAL_isActuallyWritableAtom } from 'jotai/vanilla/internals';
 
-import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import { DEFAULT_ATOMS_LOGGER_COLORS } from '../consts/colors.js';
 import type {
   AtomsLoggerStackTrace,
+  AtomsLoggerState,
   AtomsLoggerTransaction,
   AtomsLoggerTransactionBase,
   AtomsLoggerTransactionMap,
-  StoreWithAtomsLogger,
 } from '../types/atoms-logger.js';
 import { hasAtomCustomWriteMethod } from '../utils/has-atom-custom-write-method.js';
-import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { stringifyValue } from '../utils/stringify-value.js';
 import { addAtomToLogs } from './add-atom-to-logs.js';
 import { addDashToLogs } from './add-dash-to-logs.js';
@@ -61,12 +59,11 @@ export const TransactionLabelMapping: Record<
 
 // eslint-disable-next-line complexity -- TODO : to refactor
 export function logTransaction(
-  store: StoreWithAtomsLogger,
   transactionMap: AtomsLoggerTransactionMap,
+  options: AtomsLoggerState,
 ): void {
-  const options = store[ATOMS_LOGGER_SYMBOL];
-
   const { domain, logger, collapseTransactions, stringifyValues } = options;
+
   let { groupLogs } = options;
 
   const [transactionType, transaction] = Object.entries(transactionMap)[0] as [
@@ -97,7 +94,9 @@ export function logTransaction(
   const showStackTrace =
     stackTrace !== undefined && (stackTrace.react !== undefined || stackTrace.file !== undefined);
 
-  const showAtom = !transactionMap.unknown && shouldShowAtom(store, transaction.atom);
+  const atom = transaction.atom;
+
+  const showAtom = !transactionMap.unknown && atom !== undefined;
 
   const showEvent = showAtom && !transactionMap.unknown;
 
@@ -107,14 +106,16 @@ export function logTransaction(
   const showResult = showAtom && 'result' in transaction && transaction.result !== undefined;
 
   const hasDefaultWriteMethod =
-    typeof transaction.atom !== 'string' &&
-    INTERNAL_isActuallyWritableAtom(transaction.atom) &&
-    !hasAtomCustomWriteMethod(transaction.atom);
+    atom !== undefined &&
+    typeof atom !== 'string' &&
+    INTERNAL_isActuallyWritableAtom(atom) &&
+    !hasAtomCustomWriteMethod(atom);
 
   const hasCustomWriteMethod =
-    typeof transaction.atom !== 'string' &&
-    INTERNAL_isActuallyWritableAtom(transaction.atom) &&
-    hasAtomCustomWriteMethod(transaction.atom);
+    atom !== undefined &&
+    typeof atom !== 'string' &&
+    INTERNAL_isActuallyWritableAtom(atom) &&
+    hasAtomCustomWriteMethod(atom);
 
   if (
     // Don't show the arguments if the atom is a primitive atom with a previous
@@ -232,7 +233,7 @@ export function logTransaction(
   }
 
   if (showAtom) {
-    addAtomToLogs(logs, transaction.atom, options);
+    addAtomToLogs(logs, atom, options);
   }
 
   if (showArgs) {
@@ -323,7 +324,7 @@ export function logTransaction(
       }
     }
     for (const event of transaction.events ?? []) {
-      logEvent(store, event);
+      logEvent(event, options);
     }
   } finally {
     if (logs.length > 0 && groupLogs) {

@@ -386,7 +386,7 @@ export interface AtomsLoggerOptions {
 }
 
 export interface AtomsLoggerTransactionBase {
-  atom: Atom<unknown> | ReturnType<Atom<unknown>['toString']>;
+  atom: Atom<unknown> | ReturnType<Atom<unknown>['toString']> | undefined;
   transactionNumber?: number;
   stackTrace?: AtomsLoggerStackTrace | Promise<AtomsLoggerStackTrace | undefined> | undefined;
   events?: AtomsLoggerEventMap[];

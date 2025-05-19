@@ -2,6 +2,7 @@ import { createStore } from 'jotai';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { bindAtomsLoggerToStore } from '../src/bind-atoms-logger-to-store.js';
+import { ATOMS_LOGGER_SYMBOL } from '../src/consts/atom-logger-symbol.js';
 import * as logTransactionModule from '../src/log-atom-event/log-transaction.js';
 import { createLogTransactionsScheduler } from '../src/log-transactions-scheduler.js';
 import type { StoreWithAtomsLogger } from '../src/types/atoms-logger.js';
@@ -39,7 +40,7 @@ describe('logTransactionsScheduler', () => {
     scheduler.add(transactionMap);
 
     expect(requestIdleCallbackMockFn).toHaveBeenCalledWith(expect.any(Function), { timeout: 250 });
-    expect(logTransactionSpy).toHaveBeenCalledWith(store, transactionMap);
+    expect(logTransactionSpy).toHaveBeenCalledWith(transactionMap, store[ATOMS_LOGGER_SYMBOL]);
     expect(setTimeoutSpy).not.toHaveBeenCalled();
   });
 
@@ -65,7 +66,7 @@ describe('logTransactionsScheduler', () => {
     const transactionMap = { unknown: { atom: 'test' } };
     scheduler.add(transactionMap);
 
-    expect(logTransactionSpy).toHaveBeenCalledWith(store, transactionMap);
+    expect(logTransactionSpy).toHaveBeenCalledWith(transactionMap, store[ATOMS_LOGGER_SYMBOL]);
     expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 0);
   });
 });

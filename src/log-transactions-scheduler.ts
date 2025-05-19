@@ -1,5 +1,6 @@
 import { INTERNAL_isPromiseLike } from 'jotai/vanilla/internals';
 
+import { ATOMS_LOGGER_SYMBOL } from './consts/atom-logger-symbol.js';
 import { logTransaction } from './log-atom-event/log-transaction.js';
 import type {
   AtomsLoggerStackTrace,
@@ -32,7 +33,7 @@ export function createLogTransactionsScheduler(
         waitForStackTrace(nextTransaction.stackTrace, (stackTrace) => {
           nextTransaction.stackTrace = stackTrace;
           try {
-            logTransaction(store, nextTransactionMap);
+            logTransaction(nextTransactionMap, store[ATOMS_LOGGER_SYMBOL]);
           } finally {
             this.isProcessing = false;
             this.process();

@@ -10,6 +10,7 @@ import type {
 } from '../types/atoms-logger.js';
 import { getTransactionMapTransaction } from '../utils/get-transaction-map-transaction.js';
 import { parseStackFrames } from '../utils/parse-stack-frames.js';
+import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { endTransaction } from './end-transaction.js';
 
 export function startTransaction(
@@ -36,6 +37,10 @@ export function startTransaction(
     } catch {
       transaction.stackTrace = undefined;
     }
+  }
+
+  if (transaction.atom && !shouldShowAtom(store, transaction.atom)) {
+    transaction.atom = undefined;
   }
 
   store[ATOMS_LOGGER_SYMBOL].currentTransaction = transactionMap;

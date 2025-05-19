@@ -1,9 +1,8 @@
-import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import { DEFAULT_ATOMS_LOGGER_COLORS } from '../consts/colors.js';
 import {
   type AtomsLoggerEvent,
   type AtomsLoggerEventMap,
-  type StoreWithAtomsLogger,
+  type AtomsLoggerState,
 } from '../types/atoms-logger.js';
 import { stringifyValue } from '../utils/stringify-value.js';
 import { addAtomToLogs } from './add-atom-to-logs.js';
@@ -87,15 +86,12 @@ const AtomsLoggerEventLabelMap: Record<
   },
 };
 
-export function logEvent(store: StoreWithAtomsLogger, logEventMap: AtomsLoggerEventMap): void {
-  const { collapseEvents, logger, indentSpaces, indentSpacesDepth1, indentSpacesDepth2 } =
-    store[ATOMS_LOGGER_SYMBOL];
-  let { groupLogs } = store[ATOMS_LOGGER_SYMBOL];
+export function logEvent(logEventMap: AtomsLoggerEventMap, options: AtomsLoggerState): void {
+  const { collapseEvents, logger, indentSpaces, indentSpacesDepth1, indentSpacesDepth2 } = options;
 
-  const { logs, subLogsArray, subLogsObject } = getEventLogs(
-    logEventMap,
-    store[ATOMS_LOGGER_SYMBOL],
-  );
+  let { groupLogs } = options;
+
+  const { logs, subLogsArray, subLogsObject } = getEventLogs(logEventMap, options);
 
   if (indentSpacesDepth1.length > 0) {
     logs[0] = `${indentSpacesDepth1}${logs[0]}`;
@@ -138,13 +134,7 @@ export function logEvent(store: StoreWithAtomsLogger, logEventMap: AtomsLoggerEv
 
 export function getEventLogs(
   logEventMap: AtomsLoggerEventMap,
-  options: {
-    stringify: ((this: void, value: unknown) => string) | undefined;
-    stringifyValues: boolean;
-    stringifyLimit: number;
-    formattedOutput: boolean;
-    colorScheme: 'default' | 'light' | 'dark';
-  },
+  options: AtomsLoggerState,
 ): {
   logs: [string, ...unknown[]];
   subLogsArray: [string, ...unknown[]][];
@@ -225,13 +215,7 @@ function addOldValuesToLogs({
   logs: [string, ...unknown[]];
   subLogsArray: [string, ...unknown[]][];
   subLogsObject: Record<string, unknown>;
-  options: {
-    stringify: ((this: void, value: unknown) => string) | undefined;
-    stringifyValues: boolean;
-    stringifyLimit: number;
-    formattedOutput: boolean;
-    colorScheme: 'default' | 'light' | 'dark';
-  };
+  options: AtomsLoggerState;
 }): {
   hasOldValue: boolean;
   oldValue: unknown;
@@ -320,13 +304,7 @@ function addNewValuesToLogs({
   logEventMap: AtomsLoggerEventMap;
   subLogsArray: [string, ...unknown[]][];
   subLogsObject: Record<string, unknown>;
-  options: {
-    stringify: ((this: void, value: unknown) => string) | undefined;
-    stringifyValues: boolean;
-    stringifyLimit: number;
-    formattedOutput: boolean;
-    colorScheme: 'default' | 'light' | 'dark';
-  };
+  options: AtomsLoggerState;
   hasOldValue: boolean;
   isOldValueError: boolean;
 }) {
