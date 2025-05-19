@@ -26,6 +26,20 @@ beforeEach(() => {
   vi.useFakeTimers({ now: 0 });
   vi.stubEnv('TZ', 'UTC');
   mockDate = vi.spyOn(Date.prototype, 'toLocaleTimeString').mockImplementation(() => '00:00:00');
+  vi.spyOn(console, 'warn').mockImplementation((warning) => {
+    // Ignore Please install/enable Redux devtools extension
+    if (
+      typeof warning === 'string' &&
+      warning.includes('Please install/enable Redux devtools extension')
+    ) {
+      return;
+    }
+
+    // Use the actual console.warn for other errors
+    void vi.importActual('console').then((originalConsole) => {
+      (originalConsole as unknown as typeof console).warn(warning);
+    });
+  });
 });
 
 afterEach(() => {

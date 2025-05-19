@@ -29,7 +29,7 @@ describe('logTransactionsScheduler', () => {
     globalThis.requestIdleCallback = requestIdleCallbackMockFn;
 
     const store = createStore() as StoreWithAtomsLogger;
-    bindAtomsLoggerToStore(store);
+    bindAtomsLoggerToStore(store, { logger: { log: vi.fn() } });
     const scheduler = createLogTransactionsScheduler(store);
 
     expect(logTransactionSpy).not.toHaveBeenCalled();
@@ -56,7 +56,7 @@ describe('logTransactionsScheduler', () => {
     delete globalThis.requestIdleCallback;
 
     const store = createStore() as StoreWithAtomsLogger;
-    bindAtomsLoggerToStore(store);
+    bindAtomsLoggerToStore(store, { logger: { log: vi.fn() } });
     const scheduler = createLogTransactionsScheduler(store);
 
     expect(logTransactionSpy).not.toHaveBeenCalled();
