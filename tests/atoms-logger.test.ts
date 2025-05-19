@@ -117,6 +117,37 @@ describe('bindAtomsLoggerToStore', () => {
       expect(bindAtomsLoggerToStore(customStore, defaultOptions)).toBe(true);
     });
 
+    it("should still work if the bound store doesn't have its internal building blocks", () => {
+      const customSymbol = Symbol();
+      const store = INTERNAL_buildStoreRev1();
+      const buildingBlocks = INTERNAL_getBuildingBlocksRev1(store);
+      const customStore = { ...store, [customSymbol]: buildingBlocks };
+
+      // INTERNAL_getBuildingBlocksRev1 should not work with the custom symbol
+      expect(INTERNAL_getBuildingBlocksRev1(store)).toBeDefined();
+      expect(INTERNAL_getBuildingBlocksRev1(customStore)).toEqual(undefined);
+
+      // But bindAtomsLoggerToStore should work
+      expect(bindAtomsLoggerToStore(customStore, defaultOptions)).toBe(true);
+
+      // Removes the building blocks from the store
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+      delete (customStore as Partial<typeof customStore>)[customSymbol];
+
+      // Should still work
+      const testAtom = atom(42);
+      store.get(testAtom);
+      store.set(testAtom, 43);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1`],
+        [`initialized value of ${testAtom} to 42`, { value: 42 }],
+        [`changed value of ${testAtom} from 42 to 43`, { newValue: 43, oldValue: 42 }],
+      ]);
+    });
+
     it('should override store methods', () => {
       const originalGet = store.get;
       const originalSet = store.set;

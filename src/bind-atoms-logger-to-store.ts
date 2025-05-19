@@ -73,6 +73,8 @@ export function bindAtomsLoggerToStore(
     prevAtomStateMapSet,
     prevDevtoolsMountedAtomsAdd,
     prevDevtoolsMountedAtomsDelete,
+    getState: buildingBlocks.getState,
+    getMounted: buildingBlocks.getMounted,
     logTransactionsScheduler,
     transactionNumber: 0,
     currentTransaction: undefined,

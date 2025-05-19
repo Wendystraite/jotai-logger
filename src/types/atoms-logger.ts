@@ -1,5 +1,9 @@
 import type { Atom, useStore } from 'jotai';
-import type { INTERNAL_AtomStateMap } from 'jotai/vanilla/internals';
+import type {
+  INTERNAL_AtomState,
+  INTERNAL_AtomStateMap,
+  INTERNAL_Mounted,
+} from 'jotai/vanilla/internals';
 
 import type { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 
@@ -54,6 +58,10 @@ export type AtomsLoggerState = AtomsLoggerOptionsInState & {
   prevDevtoolsMountedAtomsAdd: Set<Atom<unknown>>['add'] | undefined;
   /** Previous overridden jotai dev store mounted atoms delete method */
   prevDevtoolsMountedAtomsDelete: Set<Atom<unknown>>['delete'] | undefined;
+  /** Return the state of an atom */
+  getState(this: void, atom: Atom<unknown>): INTERNAL_AtomState | undefined;
+  /** Return the mounted state of an atom */
+  getMounted(this: void, atom: Atom<unknown>): INTERNAL_Mounted | undefined;
 };
 
 /**

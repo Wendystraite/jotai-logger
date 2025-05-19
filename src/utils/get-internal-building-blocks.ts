@@ -1,5 +1,6 @@
 import type { Atom } from 'jotai';
 import {
+  type INTERNAL_AtomState,
   type INTERNAL_AtomStateMap,
   type INTERNAL_Mounted,
   INTERNAL_getBuildingBlocksRev1,
@@ -23,11 +24,13 @@ interface DevStore {
  */
 export function getInternalBuildingBlocks(store: Store): {
   atomStateMap: INTERNAL_AtomStateMap;
+  getState(this: void, atom: Atom<unknown>): INTERNAL_AtomState | undefined;
   getMounted(this: void, atom: Atom<unknown>): INTERNAL_Mounted | undefined;
   storeHooks: ReturnType<typeof INTERNAL_getBuildingBlocksRev1>[6] | undefined;
   devtoolsMountedAtoms: Set<Atom<unknown>> | undefined;
 } {
   let atomStateMap: INTERNAL_AtomStateMap | undefined;
+  let getState: ((atom: Atom<unknown>) => INTERNAL_AtomState | undefined) | undefined;
   let getMounted: ((atom: Atom<unknown>) => INTERNAL_Mounted | undefined) | undefined;
   let storeHooks: ReturnType<typeof INTERNAL_getBuildingBlocksRev1>[6] | undefined;
   let devtoolsMountedAtoms: Set<Atom<unknown>> | undefined;
@@ -66,6 +69,10 @@ export function getInternalBuildingBlocks(store: Store): {
      */
     atomStateMap = store.get_internal_weak_map();
     devtoolsMountedAtoms = store.get_mounted_atoms();
+    getState = (atom) => {
+      const atomState = store.get_internal_weak_map().get(atom);
+      return atomState;
+    };
     getMounted = (atom) => {
       const atomState = store.get_internal_weak_map().get(atom);
       if (atomState && 'm' in atomState) {
@@ -76,11 +83,12 @@ export function getInternalBuildingBlocks(store: Store): {
   } else {
     atomStateMap = buildingBlocks[0];
     const mountedMap = buildingBlocks[1];
+    getState = atomStateMap.get.bind(atomStateMap);
     getMounted = mountedMap.get.bind(mountedMap);
     storeHooks = buildingBlocks[6];
   }
 
-  return { atomStateMap, storeHooks, devtoolsMountedAtoms, getMounted };
+  return { atomStateMap, storeHooks, devtoolsMountedAtoms, getState, getMounted };
 }
 
 function isBuildingBlocks(

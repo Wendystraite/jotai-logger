@@ -7,7 +7,6 @@ import type {
 } from '../types/atoms-logger.js';
 import { convertAtomsToStrings } from '../utils/convert-atoms-to-strings.js';
 import { getEventMapEvent } from '../utils/get-event-map-event.js';
-import { getInternalBuildingBlocks } from '../utils/get-internal-building-blocks.js';
 import { getTransactionMapTransaction } from '../utils/get-transaction-map-transaction.js';
 import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { endTransaction } from './end-transaction.js';
@@ -60,9 +59,7 @@ function setStateInEvent(store: StoreWithAtomsLogger, event: AtomsLoggerEventBas
 
   const options = store[ATOMS_LOGGER_SYMBOL];
 
-  const { atomStateMap, getMounted } = getInternalBuildingBlocks(store);
-
-  const atomState = atomStateMap.get(event.atom);
+  const atomState = store[ATOMS_LOGGER_SYMBOL].getState(event.atom);
   if (atomState) {
     if (atomState.d.size > 0) {
       event.dependencies = convertAtomsToStrings(atomState.d.keys(), options);
@@ -72,7 +69,7 @@ function setStateInEvent(store: StoreWithAtomsLogger, event: AtomsLoggerEventBas
     }
   }
 
-  const mountedState = getMounted(event.atom);
+  const mountedState = store[ATOMS_LOGGER_SYMBOL].getMounted(event.atom);
   if (mountedState) {
     if (mountedState.d.size > 0) {
       event.mountedDependencies = convertAtomsToStrings(mountedState.d.values(), options);
