@@ -1863,6 +1863,29 @@ describe('bindAtomsLoggerToStore', () => {
       ]);
     });
 
+    it('should not log transactions with only private atoms', () => {
+      bindAtomsLoggerToStore(store, { ...defaultOptions, shouldShowPrivateAtoms: false });
+      const privateAtom = atom(0);
+      privateAtom.debugPrivate = true;
+      const privateSetAtom = atom(null, (get, set) => {
+        set(privateAtom, 1);
+      });
+      privateSetAtom.debugPrivate = true;
+      store.set(privateSetAtom);
+      vi.runAllTimers();
+      expect(consoleMock.log.mock.calls).toEqual([]);
+    });
+
+    it('should not log transactions without events', () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+      const testSetAtom = atom(null, () => {
+        // No events
+      });
+      store.set(testSetAtom);
+      vi.runAllTimers();
+      expect(consoleMock.log.mock.calls).toEqual([]);
+    });
+
     it('should log changes made outside of transactions inside an unknown transaction', () => {
       bindAtomsLoggerToStore(store, defaultOptions);
 
