@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { renderHook } from '@testing-library/react';
-import { createStore } from 'jotai';
+import { createStore, getDefaultStore } from 'jotai';
 import { useEffect, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -23,6 +23,14 @@ describe('useAtomsLogger', () => {
       useAtomsLogger({ store });
     });
     expect(isAtomsLoggerBoundToStore(store)).toBeTruthy();
+  });
+
+  it('should bind logger to default store if store is not provided', () => {
+    expect(isAtomsLoggerBoundToStore(getDefaultStore())).toBeFalsy();
+    renderHook(() => {
+      useAtomsLogger();
+    });
+    expect(isAtomsLoggerBoundToStore(getDefaultStore())).toBeTruthy();
   });
 
   it('should not bind logger to store when disabled', () => {
