@@ -1,4 +1,5 @@
 import { atom } from 'jotai';
+import { atomFamily } from 'jotai/utils';
 import { type Atom, createStore } from 'jotai/vanilla';
 import { INTERNAL_buildStoreRev1, INTERNAL_getBuildingBlocksRev1 } from 'jotai/vanilla/internals';
 import { loadable } from 'jotai/vanilla/utils';
@@ -1217,12 +1218,78 @@ describe('bindAtomsLoggerToStore', () => {
 
         [`transaction 5 : resolved promise of ${slowerPromiseAtom}`], // In another transaction
         [`resolved initial promise of ${slowerPromiseAtom} to 42`, { value: 42 }],
-
-        [`transaction 6 : rejected promise of ${slowerPromiseRejectedAtom}`], // In another transaction AND not in the previous promise resolved transaction
         [
           `rejected initial promise of ${slowerPromiseRejectedAtom} to Error: Promise rejected`,
           { error: new Error('Promise rejected') },
         ],
+      ]);
+    });
+
+    it('should show promise resolved in the same transaction if they are waiting for the same async dependency', async () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const otherAtom = atom(0);
+      const doGetOtherAtom = () => {
+        store.set(otherAtom, (prev) => prev + 1); // Should not be merged with the previous transaction
+      };
+
+      const dep = atom<Promise<number>>(async () => {
+        return new Promise((resolve) =>
+          setTimeout(() => {
+            resolve(42);
+
+            doGetOtherAtom(); // Should not be merged BEFORE the promise transaction
+            setTimeout(() => {
+              doGetOtherAtom(); // Should not be merged AFTER the promise transaction
+            }, 0);
+          }, 1000),
+        );
+      });
+
+      const prom = atomFamily((id: string) =>
+        atom((get) => {
+          const dependency = get(dep);
+          if (dependency instanceof Promise) {
+            return dependency;
+          }
+          return `${id}:${dependency}`;
+        }),
+      );
+
+      void store.get(prom('1'));
+      void store.get(prom('2'));
+      void store.get(prom('3'));
+
+      await vi.advanceTimersByTimeAsync(2000);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        // All pending
+        [`transaction 1 : retrieved value of ${prom('1')}`],
+        [`pending initial promise of ${dep}`],
+        [`pending initial promise of ${prom('1')}`, { dependencies: [`${dep}`] }],
+        [`transaction 2 : retrieved value of ${prom('2')}`],
+        [`pending initial promise of ${prom('2')}`, { dependencies: [`${dep}`] }],
+        [`transaction 3 : retrieved value of ${prom('3')}`],
+        [`pending initial promise of ${prom('3')}`, { dependencies: [`${dep}`] }],
+
+        // Other atom in another transaction
+        [`transaction 4 : set value of ${otherAtom}`],
+        [`initialized value of ${otherAtom} to 0`, { value: 0 }],
+        [`changed value of ${otherAtom} from 0 to 1`, { newValue: 1, oldValue: 0 }],
+
+        // All resolved
+        [`transaction 5 : resolved promise of ${dep}`],
+        [
+          `resolved initial promise of ${dep} to 42`,
+          { pendingPromises: [`${prom('1')}`, `${prom('2')}`, `${prom('3')}`], value: 42 },
+        ],
+        [`resolved initial promise of ${prom('1')} to 42`, { dependencies: [`${dep}`], value: 42 }],
+        [`resolved initial promise of ${prom('2')} to 42`, { dependencies: [`${dep}`], value: 42 }],
+        [`resolved initial promise of ${prom('3')} to 42`, { dependencies: [`${dep}`], value: 42 }],
+
+        // Other atom in another transaction
+        [`transaction 6 : set value of ${otherAtom}`],
+        [`changed value of ${otherAtom} from 1 to 2`, { newValue: 2, oldValue: 1 }],
       ]);
     });
 

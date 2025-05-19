@@ -70,16 +70,39 @@ export function onAtomValueChanged(
 
   const transactionWhenPending = store[ATOMS_LOGGER_SYMBOL].currentTransaction;
 
+  const canStartNewTransaction = () => {
+    const currentTransaction = store[ATOMS_LOGGER_SYMBOL].currentTransaction;
+
+    // No transaction started : start a new one
+    if (currentTransaction === undefined) {
+      return true;
+    }
+
+    // Current transaction is the same as the one when the promise was created :
+    // keep the current transaction
+    if (transactionWhenPending === currentTransaction) {
+      return false;
+    }
+
+    // Current transaction is a promise resolved or rejected : This can means
+    // that these promises were waiting for the previous pending transaction to
+    // be settled so merge them into the current transaction.
+    if (currentTransaction.promiseResolved || currentTransaction.promiseRejected) {
+      return false;
+    }
+
+    // Else, we can start a new transaction
+    return true;
+  };
+
   newPromise.then(
     (newValue: unknown) => {
       if (!isAborted) {
         store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.set(newPromise, newValue);
 
-        const hasStartedTransaction =
-          store[ATOMS_LOGGER_SYMBOL].currentTransaction === undefined ||
-          transactionWhenPending !== store[ATOMS_LOGGER_SYMBOL].currentTransaction;
+        const doStartTransaction = canStartNewTransaction();
 
-        if (hasStartedTransaction) startTransaction(store, { promiseResolved: { atom } });
+        if (doStartTransaction) startTransaction(store, { promiseResolved: { atom } });
 
         if (isInitialValue) {
           addEventToTransaction(store, { initialPromiseResolved: { atom, value: newValue } });
@@ -87,16 +110,14 @@ export function onAtomValueChanged(
           addEventToTransaction(store, { changedPromiseResolved: { atom, oldValue, newValue } });
         }
 
-        if (hasStartedTransaction) endTransaction(store);
+        if (doStartTransaction) endTransaction(store);
       }
     },
     (error: unknown) => {
       if (!isAborted) {
-        const hasStartedTransaction =
-          store[ATOMS_LOGGER_SYMBOL].currentTransaction === undefined ||
-          transactionWhenPending !== store[ATOMS_LOGGER_SYMBOL].currentTransaction;
+        const doStartTransaction = canStartNewTransaction();
 
-        if (hasStartedTransaction) startTransaction(store, { promiseRejected: { atom } });
+        if (doStartTransaction) startTransaction(store, { promiseRejected: { atom } });
 
         store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.set(newPromise, error);
 
@@ -106,7 +127,7 @@ export function onAtomValueChanged(
           addEventToTransaction(store, { changedPromiseRejected: { atom, oldValue, error } });
         }
 
-        if (hasStartedTransaction) endTransaction(store);
+        if (doStartTransaction) endTransaction(store);
       }
     },
   );
