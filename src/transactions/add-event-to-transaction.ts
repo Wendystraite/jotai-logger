@@ -2,11 +2,13 @@ import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import type {
   AtomsLoggerEventBase,
   AtomsLoggerEventMap,
+  AtomsLoggerTransaction,
   StoreWithAtomsLogger,
 } from '../types/atoms-logger.js';
 import { convertAtomsToStrings } from '../utils/convert-atoms-to-strings.js';
 import { getEventMapEvent } from '../utils/get-event-map-event.js';
 import { getInternalBuildingBlocks } from '../utils/get-internal-building-blocks.js';
+import { getTransactionMapTransaction } from '../utils/get-transaction-map-transaction.js';
 import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { endTransaction } from './end-transaction.js';
 import { startTransaction } from './start-transaction.js';
@@ -23,25 +25,29 @@ export function addEventToTransaction(
 
   setStateInEvent(store, event);
 
-  if (!store[ATOMS_LOGGER_SYMBOL].currentTransaction) {
+  const currentTransactionMap = store[ATOMS_LOGGER_SYMBOL].currentTransaction;
+
+  if (!currentTransactionMap) {
     // Execute the event in an independent "unknown" transaction if there is no current transaction.
     startTransaction(store, { unknown: { atom: event.atom } });
     addEventToTransaction(store, eventMap);
     endTransaction(store);
-  } else {
-    // Debounce the transaction if a new event is added to it.
-    if (store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId !== undefined) {
-      clearTimeout(store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId);
-      endTransaction(store);
-    }
-
-    // Add the event to the current transaction.
-    (store[ATOMS_LOGGER_SYMBOL].currentTransaction.transaction.events ??= []).push(eventMap);
-
-    // Compute/reorder the events in the transaction.
-    mergeChangedEvents(store, eventMap);
-    reversePromiseAbortedAndPending(store, eventMap);
+    return;
   }
+
+  const transaction = getTransactionMapTransaction(currentTransactionMap);
+
+  // Debounce the transaction since a new event is added to it.
+  if (store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId !== undefined) {
+    endTransaction(store);
+  }
+
+  // Add the event to the current transaction.
+  (transaction.events ??= []).push(eventMap);
+
+  // Compute/reorder the events in the transaction.
+  mergeChangedEvents(transaction, eventMap);
+  reversePromiseAbortedAndPending(transaction, eventMap);
 }
 
 /**
@@ -85,11 +91,11 @@ function setStateInEvent(store: StoreWithAtomsLogger, event: AtomsLoggerEventBas
  * This hack just swap their order to make the log more readable.
  */
 function reversePromiseAbortedAndPending(
-  store: StoreWithAtomsLogger,
+  transaction: AtomsLoggerTransaction,
   eventMap: AtomsLoggerEventMap,
 ): void {
   if (eventMap.initialPromiseAborted || eventMap.changedPromiseAborted) {
-    const events = store[ATOMS_LOGGER_SYMBOL].currentTransaction?.transaction.events;
+    const events = transaction.events;
     if (events && events.length > 1) {
       const eventBeforeAbort = events[events.length - 2];
       if (eventBeforeAbort?.initialPromisePending || eventBeforeAbort?.changedPromisePending) {
@@ -103,10 +109,13 @@ function reversePromiseAbortedAndPending(
 /**
  * Merge multiple "changed" events that occurs in the same transaction to prevent spam.
  */
-function mergeChangedEvents(store: StoreWithAtomsLogger, eventMap: AtomsLoggerEventMap): void {
+function mergeChangedEvents(
+  transaction: AtomsLoggerTransaction,
+  eventMap: AtomsLoggerEventMap,
+): void {
   if (eventMap.changed !== undefined) {
     const changedEvent = getEventMapEvent(eventMap) as NonNullable<AtomsLoggerEventMap['changed']>;
-    const events = store[ATOMS_LOGGER_SYMBOL].currentTransaction?.transaction.events;
+    const events = transaction.events;
     const previousChangedEventIndex = events?.findIndex(
       (previousEventMap) =>
         previousEventMap !== eventMap && previousEventMap.changed?.atom === changedEvent.atom,

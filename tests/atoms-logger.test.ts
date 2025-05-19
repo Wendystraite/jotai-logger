@@ -24,7 +24,11 @@ let mockDate: MockInstance;
 beforeEach(() => {
   vi.useFakeTimers({ now: 0 });
   vi.stubEnv('TZ', 'UTC');
-  mockDate = vi.spyOn(Date.prototype, 'toLocaleTimeString').mockImplementation(() => '00:00:00');
+  mockDate = vi
+    .spyOn(Date.prototype, 'toLocaleTimeString')
+    .mockImplementation(function toLocaleTimeStringMock(this: Date) {
+      return this.toISOString();
+    });
 });
 
 afterEach(() => {
@@ -413,13 +417,16 @@ describe('bindAtomsLoggerToStore', () => {
           showTransactionElapsedTime: true,
         });
 
-        const testAtom = atom(0);
+        const testAtom = atom(() => {
+          vi.advanceTimersByTime(123); // Fake the delay of the transaction
+          return 0;
+        });
         store.get(testAtom);
 
         vi.runAllTimers();
 
         expect(consoleMock.log.mock.calls).toEqual([
-          [`transaction 1 - 250.00 ms : retrieved value of ${testAtom}`],
+          [`transaction 1 - 123.00 ms : retrieved value of ${testAtom}`],
           [`initialized value of ${testAtom} to 0`, { value: 0 }],
         ]);
       });
@@ -431,6 +438,26 @@ describe('bindAtomsLoggerToStore', () => {
         });
 
         const testAtom = atom(0);
+        store.get(testAtom);
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 : retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to 0`, { value: 0 }],
+        ]);
+      });
+
+      it('should not log elapsed time if endTimestamp is equal to startTimestamp', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          showTransactionElapsedTime: true,
+        });
+
+        const testAtom = atom(() => {
+          vi.advanceTimersByTime(0); // No delay here (with fake timers)
+          return 0;
+        });
         store.get(testAtom);
 
         vi.runAllTimers();
@@ -455,7 +482,7 @@ describe('bindAtomsLoggerToStore', () => {
         vi.runAllTimers();
 
         expect(consoleMock.log.mock.calls).toEqual([
-          [`transaction 1 - 00:00:00 : retrieved value of ${testAtom}`],
+          [`transaction 1 - 1970-01-01T00:00:00.000Z : retrieved value of ${testAtom}`],
           [`initialized value of ${testAtom} to 0`, { value: 0 }],
         ]);
       });
@@ -484,13 +511,16 @@ describe('bindAtomsLoggerToStore', () => {
           showTransactionLocaleTime: true,
         });
 
-        const testAtom = atom(0);
+        const testAtom = atom(() => {
+          vi.advanceTimersByTime(234); // Fake the delay of the transaction
+          return 0;
+        });
         store.get(testAtom);
 
         vi.runAllTimers();
 
         expect(consoleMock.log.mock.calls).toEqual([
-          [`transaction 1 - 00:00:00 - 250.00 ms : retrieved value of ${testAtom}`],
+          [`transaction 1 - 1970-01-01T00:00:00.000Z - 234.00 ms : retrieved value of ${testAtom}`],
           [`initialized value of ${testAtom} to 0`, { value: 0 }],
         ]);
       });
@@ -503,7 +533,10 @@ describe('bindAtomsLoggerToStore', () => {
           formattedOutput: true,
         });
 
-        const testAtom = atom(0);
+        const testAtom = atom(() => {
+          vi.advanceTimersByTime(456); // Fake the delay of the transaction
+          return 0;
+        });
         store.get(testAtom);
 
         const atomNumber = /atom(\d+)(.*)/.exec(testAtom.toString())?.[1];
@@ -513,13 +546,13 @@ describe('bindAtomsLoggerToStore', () => {
 
         expect(consoleMock.log.mock.calls).toEqual([
           [
-            `%ctransaction %c1 %c- %c00:00:00 %c- %c250.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            `%ctransaction %c1 %c- %c1970-01-01T00:00:00.000Z %c- %c456.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
             'color: #757575; font-weight: normal;', // transaction
             'color: default; font-weight: normal;', // 1
             'color: #757575; font-weight: normal;', // -
-            'color: #757575; font-weight: normal;', // 00:00:00
+            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
             'color: #757575; font-weight: normal;', // -
-            'color: #757575; font-weight: normal;', // 250.00 ms
+            'color: #757575; font-weight: normal;', // 456.00 ms
             'color: #757575; font-weight: normal;', // :
             'color: #0072B2; font-weight: bold;', // retrieved value
             'color: #757575; font-weight: normal;', // of

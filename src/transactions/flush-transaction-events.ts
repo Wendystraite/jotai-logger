@@ -1,26 +1,18 @@
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import { getTransactionMapTransaction } from '../utils/get-transaction-map-transaction.js';
 
 export function flushTransactionEvents(store: StoreWithAtomsLogger): void {
-  if (store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId !== undefined) {
-    clearTimeout(store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId);
-    store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId = undefined;
-  }
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- should never happen since it is called in endTransaction
+  const transactionMap = store[ATOMS_LOGGER_SYMBOL].currentTransaction!;
+  const transaction = getTransactionMapTransaction(transactionMap);
 
-  /* v8 ignore next 3 -- should never happen since flush is called after startTransaction */
-  if (!store[ATOMS_LOGGER_SYMBOL].currentTransaction) {
-    return;
-  }
-
-  const { transaction, transactionMap } = store[ATOMS_LOGGER_SYMBOL].currentTransaction;
   store[ATOMS_LOGGER_SYMBOL].currentTransaction = undefined;
 
   // If the transaction has no events, we don't need to log it.
   if (!transaction.events?.length) {
     return;
   }
-
-  transaction.endTimestamp ??= performance.now();
 
   // Add current transaction to scheduler instead of executing immediately
   store[ATOMS_LOGGER_SYMBOL].logTransactionsScheduler.add(transactionMap);

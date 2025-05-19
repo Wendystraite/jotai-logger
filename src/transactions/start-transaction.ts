@@ -10,15 +10,15 @@ import type {
 } from '../types/atoms-logger.js';
 import { getTransactionMapTransaction } from '../utils/get-transaction-map-transaction.js';
 import { parseStackFrames } from '../utils/parse-stack-frames.js';
-import { flushTransactionEvents } from './flush-transaction-events.js';
+import { endTransaction } from './end-transaction.js';
 
 export function startTransaction(
   store: StoreWithAtomsLogger,
   transactionMap: AtomsLoggerTransactionMap,
 ): void {
   if (store[ATOMS_LOGGER_SYMBOL].currentTransaction) {
-    // Flush the previous transaction immediately to start a new one.
-    flushTransactionEvents(store);
+    // Finish the previous transaction immediately to start a new one.
+    endTransaction(store, { immediate: true });
   }
 
   const transaction = getTransactionMapTransaction(transactionMap);
@@ -38,7 +38,7 @@ export function startTransaction(
     }
   }
 
-  store[ATOMS_LOGGER_SYMBOL].currentTransaction = { transactionMap, transaction };
+  store[ATOMS_LOGGER_SYMBOL].currentTransaction = transactionMap;
 }
 
 function parseStackFramesPromise(

@@ -24,12 +24,7 @@ export type AtomsLoggerState = AtomsLoggerOptionsInState & {
   /** Incremental counter for transactions */
   transactionNumber: number;
   /** The currently active transaction being tracked, if any */
-  currentTransaction:
-    | {
-        transactionMap: AtomsLoggerTransactionMap;
-        transaction: AtomsLoggerTransaction;
-      }
-    | undefined;
+  currentTransaction: AtomsLoggerTransactionMap | undefined;
   /** FinalizationRegistry that register atoms garbage collection */
   atomsFinalizationRegistry: FinalizationRegistry<string>;
   /** Map to track the values of promises */

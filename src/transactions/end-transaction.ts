@@ -1,5 +1,6 @@
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import { getTransactionMapTransaction } from '../utils/get-transaction-map-transaction.js';
 import { flushTransactionEvents } from './flush-transaction-events.js';
 
 /**
@@ -10,7 +11,29 @@ import { flushTransactionEvents } from './flush-transaction-events.js';
  */
 const TRANSACTION_DEBOUNCE_MS = 250;
 
-export function endTransaction(store: StoreWithAtomsLogger): void {
+export function endTransaction(
+  store: StoreWithAtomsLogger,
+  { immediate } = { immediate: false },
+): void {
+  // Stop the previous transaction debounce timeout if it exists.
+  if (store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId !== undefined) {
+    clearTimeout(store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId);
+    store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId = undefined;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- should never happen since it is called after startTransaction
+  const transaction = getTransactionMapTransaction(store[ATOMS_LOGGER_SYMBOL].currentTransaction!);
+
+  // Store the transaction end timestamp BEFORE debouncing
+  transaction.endTimestamp = performance.now();
+
+  // Flush the transaction events immediately (useful when starting a new transaction).
+  if (immediate) {
+    flushTransactionEvents(store);
+    return;
+  }
+
+  // Start a new transaction debounce timeout.
   store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId = setTimeout(() => {
     store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId = undefined;
     flushTransactionEvents(store);
