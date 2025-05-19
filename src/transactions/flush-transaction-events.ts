@@ -13,8 +13,14 @@ export function flushTransactionEvents(store: StoreWithAtomsLogger): void {
   }
 
   const { transaction, transactionMap } = store[ATOMS_LOGGER_SYMBOL].currentTransaction;
-  transaction.endTimestamp ??= performance.now();
   store[ATOMS_LOGGER_SYMBOL].currentTransaction = undefined;
+
+  // If the transaction has no events, we don't need to log it.
+  if (!transaction.events?.length) {
+    return;
+  }
+
+  transaction.endTimestamp ??= performance.now();
 
   // Add current transaction to scheduler instead of executing immediately
   store[ATOMS_LOGGER_SYMBOL].logTransactionsScheduler.add(transactionMap);

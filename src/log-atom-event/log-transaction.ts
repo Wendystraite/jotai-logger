@@ -9,7 +9,6 @@ import type {
   AtomsLoggerTransactionMap,
   StoreWithAtomsLogger,
 } from '../types/atoms-logger.js';
-import { getEventMapEvent } from '../utils/get-event-map-event.js';
 import { hasAtomCustomWriteMethod } from '../utils/has-atom-custom-write-method.js';
 import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { stringifyValue } from '../utils/stringify-value.js';
@@ -74,14 +73,6 @@ export function logTransaction(
     keyof AtomsLoggerTransactionMap,
     AtomsLoggerTransaction,
   ];
-
-  const eventsToShow = transaction.events?.filter((eventMap) => {
-    return shouldShowAtom(store, getEventMapEvent(eventMap).atom);
-  });
-
-  if (!eventsToShow || eventsToShow.length <= 0) {
-    return;
-  }
 
   const transactionNumber = (store[ATOMS_LOGGER_SYMBOL].transactionNumber += 1);
 
@@ -329,7 +320,7 @@ export function logTransaction(
         logger.group?.(...logs);
       }
     }
-    for (const event of eventsToShow) {
+    for (const event of transaction.events ?? []) {
       logEvent(store, event);
     }
   } finally {

@@ -7,6 +7,7 @@ import type {
 import { convertAtomsToStrings } from '../utils/convert-atoms-to-strings.js';
 import { getEventMapEvent } from '../utils/get-event-map-event.js';
 import { getInternalBuildingBlocks } from '../utils/get-internal-building-blocks.js';
+import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { endTransaction } from './end-transaction.js';
 import { startTransaction } from './start-transaction.js';
 
@@ -15,6 +16,11 @@ export function addEventToTransaction(
   eventMap: AtomsLoggerEventMap,
 ): void {
   const event = getEventMapEvent(eventMap);
+
+  if (!shouldShowAtom(store, event.atom)) {
+    return;
+  }
+
   setStateInEvent(store, event);
 
   if (!store[ATOMS_LOGGER_SYMBOL].currentTransaction) {
