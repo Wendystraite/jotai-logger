@@ -92,7 +92,7 @@ export function logEvent(store: StoreWithAtomsLogger, logEventMap: AtomsLoggerEv
     store[ATOMS_LOGGER_SYMBOL];
   let { groupLogs } = store[ATOMS_LOGGER_SYMBOL];
 
-  const { logs, subLogsArray, subLogsObject } = getAtomEventMapLogs(
+  const { logs, subLogsArray, subLogsObject } = getEventLogs(
     logEventMap,
     store[ATOMS_LOGGER_SYMBOL],
   );
@@ -136,8 +136,7 @@ export function logEvent(store: StoreWithAtomsLogger, logEventMap: AtomsLoggerEv
   }
 }
 
-// eslint-disable-next-line complexity -- TODO : to refactor
-export function getAtomEventMapLogs(
+export function getEventLogs(
   logEventMap: AtomsLoggerEventMap,
   options: {
     stringify: ((this: void, value: unknown) => string) | undefined;
@@ -162,6 +161,84 @@ export function getAtomEventMapLogs(
     colors: eventColors,
   } = AtomsLoggerEventLabelMap[eventType];
 
+  const logs = [] as unknown[] as [string, ...unknown[]];
+  const subLogsArray: [string, ...unknown[]][] = [];
+  const subLogsObject: Record<string, unknown> = {};
+
+  addToLogs(logs, options, {
+    plainText: () => eventLabel,
+    formatted: () => [coloredEventLabel, ...eventColors],
+  });
+
+  addAtomToLogs(logs, event.atom, options);
+
+  const { hasOldValue, isOldValueError } = addOldValuesToLogs({
+    event,
+    logs,
+    subLogsArray,
+    subLogsObject,
+    options,
+  });
+
+  addNewValuesToLogs({
+    logEventMap,
+    event,
+    logs,
+    subLogsArray,
+    subLogsObject,
+    options,
+    hasOldValue,
+    isOldValueError,
+  });
+
+  // If the atom is unmounted or destroyed, we don't need to log anything else.
+  if (!logEventMap.unmounted && !logEventMap.destroyed) {
+    if (event.pendingPromises) {
+      subLogsArray.push(['pending promises', event.pendingPromises]);
+      subLogsObject.pendingPromises = event.pendingPromises;
+    }
+    if (event.dependencies) {
+      subLogsArray.push(['dependencies', event.dependencies]);
+      subLogsObject.dependencies = event.dependencies;
+    }
+    if (event.mountedDependencies) {
+      subLogsArray.push(['mounted dependencies', event.mountedDependencies]);
+      subLogsObject.mountedDependencies = event.mountedDependencies;
+    }
+    if (event.mountedDependents) {
+      subLogsArray.push(['mounted dependents', event.mountedDependents]);
+      subLogsObject.mountedDependents = event.mountedDependents;
+    }
+  }
+
+  return { logs, subLogsArray, subLogsObject };
+}
+
+function addOldValuesToLogs({
+  event,
+  logs,
+  subLogsArray,
+  subLogsObject,
+  options,
+}: {
+  event: AtomsLoggerEvent;
+  logs: [string, ...unknown[]];
+  subLogsArray: [string, ...unknown[]][];
+  subLogsObject: Record<string, unknown>;
+  options: {
+    stringify: ((this: void, value: unknown) => string) | undefined;
+    stringifyValues: boolean;
+    stringifyLimit: number;
+    formattedOutput: boolean;
+    colorScheme: 'default' | 'light' | 'dark';
+  };
+}): {
+  hasOldValue: boolean;
+  oldValue: unknown;
+  isOldValueError: boolean;
+  hasOldValues: boolean;
+  oldValues: unknown[];
+} {
   let hasOldValue = false;
   let oldValue: unknown;
   let isOldValueError = false;
@@ -181,34 +258,6 @@ export function getAtomEventMapLogs(
     oldValue = oldValues[0];
     isOldValueError = oldValue instanceof Error;
   }
-
-  let hasNewValue = false;
-  let newValue: unknown;
-  let isNewValueError = false;
-  const showNewValueInLog = !logEventMap.mounted;
-
-  if ('newValue' in event) {
-    hasNewValue = true;
-    newValue = event.newValue;
-    isNewValueError = false;
-  } else if ('value' in event) {
-    hasNewValue = true;
-    newValue = event.value;
-    isNewValueError = false;
-  } else if ('error' in event) {
-    hasNewValue = true;
-    newValue = event.error;
-    isNewValueError = true;
-  }
-
-  const logs = [] as unknown[] as [string, ...unknown[]];
-
-  addToLogs(logs, options, {
-    plainText: () => eventLabel,
-    formatted: () => [coloredEventLabel, ...eventColors],
-  });
-
-  addAtomToLogs(logs, event.atom, options);
 
   if (hasOldValues) {
     addToLogs(logs, options, {
@@ -240,6 +289,66 @@ export function getAtomEventMapLogs(
     });
   }
 
+  if (hasOldValues) {
+    subLogsArray.push(['old values', oldValues]);
+    if (options.stringifyValues) subLogsObject.oldValues = oldValues;
+  } else if (hasOldValue) {
+    if (isOldValueError) {
+      subLogsArray.push(['old error', oldValue]);
+      if (options.stringifyValues) subLogsObject.oldError = oldValue;
+    } else {
+      subLogsArray.push(['old value', oldValue]);
+      if (options.stringifyValues) subLogsObject.oldValue = oldValue;
+    }
+  }
+
+  return { hasOldValue, oldValue, isOldValueError, hasOldValues, oldValues };
+}
+
+function addNewValuesToLogs({
+  event,
+  logs,
+  logEventMap,
+  subLogsArray,
+  subLogsObject,
+  options,
+  hasOldValue,
+  isOldValueError,
+}: {
+  event: AtomsLoggerEvent;
+  logs: [string, ...unknown[]];
+  logEventMap: AtomsLoggerEventMap;
+  subLogsArray: [string, ...unknown[]][];
+  subLogsObject: Record<string, unknown>;
+  options: {
+    stringify: ((this: void, value: unknown) => string) | undefined;
+    stringifyValues: boolean;
+    stringifyLimit: number;
+    formattedOutput: boolean;
+    colorScheme: 'default' | 'light' | 'dark';
+  };
+  hasOldValue: boolean;
+  isOldValueError: boolean;
+}) {
+  let hasNewValue = false;
+  let newValue: unknown;
+  let isNewValueError = false;
+  const showNewValueInLog = !logEventMap.mounted;
+
+  if ('newValue' in event) {
+    hasNewValue = true;
+    newValue = event.newValue;
+    isNewValueError = false;
+  } else if ('value' in event) {
+    hasNewValue = true;
+    newValue = event.value;
+    isNewValueError = false;
+  } else if ('error' in event) {
+    hasNewValue = true;
+    newValue = event.error;
+    isNewValueError = true;
+  }
+
   if (showNewValueInLog && hasNewValue) {
     addToLogs(logs, options, {
       plainText: () => {
@@ -261,22 +370,6 @@ export function getAtomEventMapLogs(
     });
   }
 
-  const subLogsArray: [string, ...unknown[]][] = [];
-  const subLogsObject: Record<string, unknown> = {};
-
-  if (hasOldValues) {
-    subLogsArray.push(['old values', oldValues]);
-    if (options.stringifyValues) subLogsObject.oldValues = oldValues;
-  } else if (hasOldValue) {
-    if (isOldValueError) {
-      subLogsArray.push(['old error', oldValue]);
-      if (options.stringifyValues) subLogsObject.oldError = oldValue;
-    } else {
-      subLogsArray.push(['old value', oldValue]);
-      if (options.stringifyValues) subLogsObject.oldValue = oldValue;
-    }
-  }
-
   if (hasNewValue) {
     if (isNewValueError) {
       if (hasOldValue && isOldValueError) {
@@ -296,26 +389,4 @@ export function getAtomEventMapLogs(
       }
     }
   }
-
-  // If the atom is unmounted or destroyed, we don't need to log anything else.
-  if (!logEventMap.unmounted && !logEventMap.destroyed) {
-    if (event.pendingPromises) {
-      subLogsArray.push(['pending promises', event.pendingPromises]);
-      subLogsObject.pendingPromises = event.pendingPromises;
-    }
-    if (event.dependencies) {
-      subLogsArray.push(['dependencies', event.dependencies]);
-      subLogsObject.dependencies = event.dependencies;
-    }
-    if (event.mountedDependencies) {
-      subLogsArray.push(['mounted dependencies', event.mountedDependencies]);
-      subLogsObject.mountedDependencies = event.mountedDependencies;
-    }
-    if (event.mountedDependents) {
-      subLogsArray.push(['mounted dependents', event.mountedDependents]);
-      subLogsObject.mountedDependents = event.mountedDependents;
-    }
-  }
-
-  return { logs, subLogsArray, subLogsObject };
 }
