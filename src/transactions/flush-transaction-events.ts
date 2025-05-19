@@ -14,6 +14,8 @@ export function flushTransactionEvents(store: StoreWithAtomsLogger): void {
     return;
   }
 
+  transaction.transactionNumber = store[ATOMS_LOGGER_SYMBOL].transactionNumber += 1;
+
   // Add current transaction to scheduler instead of executing immediately
   store[ATOMS_LOGGER_SYMBOL].logTransactionsScheduler.add(transactionMap);
 }

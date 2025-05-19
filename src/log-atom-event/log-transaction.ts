@@ -66,7 +66,7 @@ export function logTransaction(
 ): void {
   const options = store[ATOMS_LOGGER_SYMBOL];
 
-  const { domain, logger, showTransactionNumber, collapseTransactions, stringifyValues } = options;
+  const { domain, logger, collapseTransactions, stringifyValues } = options;
   let { groupLogs } = options;
 
   const [transactionType, transaction] = Object.entries(transactionMap)[0] as [
@@ -74,7 +74,9 @@ export function logTransaction(
     AtomsLoggerTransaction,
   ];
 
-  const transactionNumber = (store[ATOMS_LOGGER_SYMBOL].transactionNumber += 1);
+  const transactionNumber = transaction.transactionNumber;
+
+  const showTransactionNumber = options.showTransactionNumber && transactionNumber !== undefined;
 
   const showDomain = domain !== undefined && domain.length > 0;
 
