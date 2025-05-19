@@ -1,5 +1,42 @@
 # jotai-logger
 
+## 2.3.1
+
+### Patch Changes
+
+- 77616b7: fix: invalid transactions elapsed time
+
+  - Some transaction elapsed time were incorrect due to the internal
+    debouncing of transaction events. Now store the end timestamp before
+    debouncing.
+  - Fix some tests that were clearly showing the debouncing time in the
+    transaction elapsed time.
+  - Cleanup internal code to always call flushTransactionEvents inside
+    endTransaction. Also cleanup / simplify how the current transaction is
+    stored.
+
+- a6c4df9: fix: prevent crashes if bound store is changed
+
+  Change internal code to prevent crashes if Jotai internals are not
+  exposed anymore after the store is bound.
+
+- 5554d19: fix: don't merge promise in invalid transactions
+
+  Only merge a promise resolved or rejected in the promise pending
+  transaction. Add tests.
+
+- a858bb2: perf: better perfs when not logging some atoms
+
+  Do not add a transaction in the logging scheduler if it don't need to be
+  logged because either there are no events to log or all atoms are
+  private/ignored. The scheduler doesn't need to schedule these
+  transactions resulting in a more fluid output. This also prevents
+  useless calculations when adding it and trying to log it.
+
+- 48e3e20: fix: no crash if stringify don't returns a string
+
+  Fix a potential crash if the stringify option returns invalid data.
+
 ## 2.3.0
 
 ### Minor Changes
