@@ -982,6 +982,23 @@ describe('bindAtomsLoggerToStore', () => {
           [`initialized value of ${testAtom} to 12345…`, { value: '1234567890' }],
         ]);
       });
+
+      it("should not crash if stringify doesn't returns a string", () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          stringify: () => ({ foo: 'bar' }) as unknown as string,
+        });
+
+        const testAtom = atom(42);
+        store.get(testAtom);
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 : retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to [Unknown]`, { value: 42 }],
+        ]);
+      });
     });
 
     describe('domain', () => {

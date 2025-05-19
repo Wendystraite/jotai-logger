@@ -53,6 +53,9 @@ export function stringifyValue(
       stateString ??= JSON.stringify(value) as string | undefined; // can return undefined if value is not serializable
       stateString ??= String(value);
     }
+    if (typeof stateString !== 'string') {
+      throw new TypeError('stringified value is not a string');
+    }
   } catch (error: unknown) {
     if (error instanceof TypeError && error.message.includes('circular')) {
       stateString = '[Circular]';
