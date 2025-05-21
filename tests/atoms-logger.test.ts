@@ -1470,6 +1470,351 @@ describe('bindAtomsLoggerToStore', () => {
         [`resolved promise of ${promiseAtom} from 0 to 2`, { oldValue: 0, newValue: 2 }],
       ]);
     });
+
+    it('should log promises in colors', async () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        formattedOutput: true,
+      });
+
+      const refreshPromisesAtom = atom(0);
+      refreshPromisesAtom.debugPrivate = true;
+
+      const promiseResolvedAtom = atom(async (get) => {
+        get(refreshPromisesAtom);
+        return Promise.resolve(42);
+      });
+      const promiseRejectedAtom = atom(async (get) => {
+        get(refreshPromisesAtom);
+        return Promise.reject(new Error('Promise rejected'));
+      });
+
+      const promiseAbortedDependencyAtom = atom(0);
+      promiseAbortedDependencyAtom.debugPrivate = true;
+      const promiseAbortedAtom = atom(async (get, { signal }) => {
+        get(refreshPromisesAtom);
+        const dependency = get(promiseAbortedDependencyAtom);
+        return new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            if (dependency <= 1) {
+              resolve(dependency);
+            } else {
+              reject(new Error('Rejected because of dependency higher than 1'));
+            }
+          }, 1000);
+          signal.addEventListener('abort', () => {
+            clearTimeout(timeoutId);
+            reject(new Error('Promise aborted'));
+          });
+        });
+      });
+
+      const resolvedPromiseNumber = /atom(\d+)(.*)/.exec(promiseResolvedAtom.toString())?.[1];
+      const rejectedPromiseNumber = /atom(\d+)(.*)/.exec(promiseRejectedAtom.toString())?.[1];
+      const abortedPromiseNumber = /atom(\d+)(.*)/.exec(promiseAbortedAtom.toString())?.[1];
+
+      expect(Number.isInteger(parseInt(resolvedPromiseNumber!))).toBeTruthy();
+      expect(Number.isInteger(parseInt(rejectedPromiseNumber!))).toBeTruthy();
+      expect(Number.isInteger(parseInt(abortedPromiseNumber!))).toBeTruthy();
+
+      // Initial promise resolved
+      store.sub(promiseResolvedAtom, vi.fn());
+
+      // Initial promise rejected
+      store.sub(promiseRejectedAtom, vi.fn());
+
+      // Initial promise aborted
+      store.sub(promiseAbortedAtom, vi.fn());
+      await vi.advanceTimersByTimeAsync(250);
+      store.set(promiseAbortedDependencyAtom, (prev) => prev + 1); // Change the dependency before the promise resolves
+
+      await vi.advanceTimersByTimeAsync(1500);
+
+      // promise resolved
+      // promise rejected
+      // promise aborted
+      store.set(refreshPromisesAtom, (prev) => prev + 1);
+      await vi.advanceTimersByTimeAsync(250);
+      store.set(promiseAbortedDependencyAtom, (prev) => prev + 1); // Change the dependency before the promise resolves
+
+      await vi.advanceTimersByTimeAsync(1500);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        // pending initial promise (1)
+        [
+          `%ctransaction %c1 %c: %csubscribed %cto %catom%c${resolvedPromiseNumber}`,
+          `color: #757575; font-weight: normal;`, // transaction
+          `color: default; font-weight: normal;`, // 1
+          `color: #757575; font-weight: normal;`, // :
+          `color: #009E73; font-weight: bold;`, // subscribed
+          `color: #757575; font-weight: normal;`, // to
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 1
+        ],
+        [
+          `%cpending initial promise %cof %catom%c${resolvedPromiseNumber}`,
+          `color: #CC79A7; font-weight: bold;`, // pending initial promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 1
+        ],
+        [
+          `%cmounted %catom%c${resolvedPromiseNumber}`,
+          `color: #009E73; font-weight: bold;`, // mounted
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 1
+        ],
+
+        // pending initial promise (2)
+        [
+          `%ctransaction %c2 %c: %csubscribed %cto %catom%c${rejectedPromiseNumber}`,
+          `color: #757575; font-weight: normal;`, // transaction
+          `color: default; font-weight: normal;`, // 2
+          `color: #757575; font-weight: normal;`, // :
+          `color: #009E73; font-weight: bold;`, // subscribed
+          `color: #757575; font-weight: normal;`, // to
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 2
+        ],
+        [
+          `%cpending initial promise %cof %catom%c${rejectedPromiseNumber}`,
+          `color: #CC79A7; font-weight: bold;`, // pending initial promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 2
+        ],
+        [
+          `%cmounted %catom%c${rejectedPromiseNumber}`,
+          `color: #009E73; font-weight: bold;`, // mounted
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 2
+        ],
+
+        // pending initial promise (3)
+        [
+          `%ctransaction %c3 %c: %csubscribed %cto %catom%c${abortedPromiseNumber}`,
+          `color: #757575; font-weight: normal;`, // transaction
+          `color: default; font-weight: normal;`, // 3
+          `color: #757575; font-weight: normal;`, // :
+          `color: #009E73; font-weight: bold;`, // subscribed
+          `color: #757575; font-weight: normal;`, // to
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 3
+        ],
+        [
+          `%cpending initial promise %cof %catom%c${abortedPromiseNumber}`,
+          `color: #CC79A7; font-weight: bold;`, // pending initial promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 3
+        ],
+        [
+          `%cmounted %catom%c${abortedPromiseNumber}`,
+          `color: #009E73; font-weight: bold;`, // mounted
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 3
+        ],
+
+        // resolved initial promise (1)
+        [
+          `%ctransaction %c4 %c: %cresolved %cpromise %cof %catom%c${resolvedPromiseNumber}`,
+          `color: #757575; font-weight: normal;`, // transaction
+          `color: default; font-weight: normal;`, // 4
+          `color: #757575; font-weight: normal;`, // :
+          `color: #009E73; font-weight: bold;`, // resolved
+          `color: #CC79A7; font-weight: bold;`, // promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 1
+        ],
+        [
+          `%cresolved %cinitial promise %cof %catom%c${resolvedPromiseNumber} %cto %c42`,
+          `color: #009E73; font-weight: bold;`, // resolved
+          `color: #CC79A7; font-weight: bold;`, // initial promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 1
+          `color: #757575; font-weight: normal;`, // to
+          `color: default; font-weight: normal;`, // 42
+          { value: 42 },
+        ],
+        // rejected initial promise (2)
+        [
+          `%crejected %cinitial promise %cof %catom%c${rejectedPromiseNumber} %cto %cError: Promise rejected`,
+          `color: #D55E00; font-weight: bold;`, // rejected
+          `color: #CC79A7; font-weight: bold;`, // initial promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 6
+          `color: #757575; font-weight: normal;`, // to
+          `color: default; font-weight: normal;`, // Error: Promise rejected
+          { error: new Error(`Promise rejected`) },
+        ],
+
+        // aborted initial promise (3)
+        [
+          `%ctransaction %c5`,
+          `color: #757575; font-weight: normal;`, // transaction
+          `color: default; font-weight: normal;`, // 5
+        ],
+        [
+          `%caborted %cinitial promise %cof %catom%c${abortedPromiseNumber}`,
+          `color: #D55E00; font-weight: bold;`, // aborted
+          `color: #CC79A7; font-weight: bold;`, // initial promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 3
+        ],
+        [
+          `%cpending initial promise %cof %catom%c${abortedPromiseNumber}`,
+          `color: #CC79A7; font-weight: bold;`, // pending initial promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 3
+        ],
+
+        // resolved initial promise (3)
+        [
+          `%ctransaction %c6 %c: %cresolved %cpromise %cof %catom%c${abortedPromiseNumber}`,
+          `color: #757575; font-weight: normal;`, // transaction
+          `color: default; font-weight: normal;`, // 6
+          `color: #757575; font-weight: normal;`, // :
+          `color: #009E73; font-weight: bold;`, // resolved
+          `color: #CC79A7; font-weight: bold;`, // promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 3
+        ],
+        [
+          `%cresolved %cinitial promise %cof %catom%c${abortedPromiseNumber} %cto %c1`,
+          `color: #009E73; font-weight: bold;`, // resolved
+          `color: #CC79A7; font-weight: bold;`, // initial promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 3
+          `color: #757575; font-weight: normal;`, // to
+          `color: default; font-weight: normal;`, // 1
+          { value: 1 },
+        ],
+
+        // pending promise 1 + pending promise 2 + resolved promise 1 + rejected promise 2
+        [
+          `%ctransaction %c7`,
+          `color: #757575; font-weight: normal;`, // transaction
+          `color: default; font-weight: normal;`, // 7
+        ],
+        [
+          `%cpending promise %cof %catom%c${resolvedPromiseNumber} %cfrom %c42`,
+          `color: #CC79A7; font-weight: bold;`, // pending promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 1
+          `color: #757575; font-weight: normal;`, // from
+          `color: default; font-weight: normal;`, // 42
+          { oldValue: 42 },
+        ],
+        [
+          `%cpending promise %cof %catom%c${rejectedPromiseNumber} %cfrom %cError: Promise rejected`,
+          `color: #CC79A7; font-weight: bold;`, // pending promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 2
+          `color: #757575; font-weight: normal;`, // from
+          `color: default; font-weight: normal;`, // Error: Promise rejected
+          { oldError: new Error(`Promise rejected`) },
+        ],
+        [
+          `%cpending promise %cof %catom%c${abortedPromiseNumber} %cfrom %c1`,
+          `color: #CC79A7; font-weight: bold;`, // pending promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 3
+          `color: #757575; font-weight: normal;`, // from
+          `color: default; font-weight: normal;`, // 1
+          { oldValue: 1 },
+        ],
+        [
+          `%cresolved %cpromise %cof %catom%c${resolvedPromiseNumber} %cfrom %c42 %cto %c42`,
+          `color: #009E73; font-weight: bold;`, // resolved
+          `color: #CC79A7; font-weight: bold;`, // promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 1
+          `color: #757575; font-weight: normal;`, // from
+          `color: default; font-weight: normal;`, // 42
+          `color: #757575; font-weight: normal;`, // to
+          `color: default; font-weight: normal;`, // 42
+          { newValue: 42, oldValue: 42 },
+        ],
+        [
+          `%crejected %cpromise %cof %catom%c${rejectedPromiseNumber} %cfrom %cError: Promise rejected %cto %cError: Promise rejected`,
+          `color: #D55E00; font-weight: bold;`, // rejected
+          `color: #CC79A7; font-weight: bold;`, // promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 2
+          `color: #757575; font-weight: normal;`, // from
+          `color: default; font-weight: normal;`, // Error: Promise rejected
+          `color: #757575; font-weight: normal;`, // to
+          `color: default; font-weight: normal;`, // Error: Promise rejected
+          { newError: new Error(`Promise rejected`), oldError: new Error(`Promise rejected`) },
+        ],
+
+        // pending promise 3 + aborted promise 3
+        [
+          `%ctransaction %c8`,
+          `color: #757575; font-weight: normal;`, // transaction
+          `color: default; font-weight: normal;`, // 8
+        ],
+        [
+          `%caborted %cpromise %cof %catom%c${abortedPromiseNumber} %cfrom %c1`,
+          `color: #D55E00; font-weight: bold;`, // aborted
+          `color: #CC79A7; font-weight: bold;`, // promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 3
+          `color: #757575; font-weight: normal;`, // from
+          `color: default; font-weight: normal;`, // 1
+          { oldValue: 1 },
+        ],
+        [
+          `%cpending promise %cof %catom%c${abortedPromiseNumber} %cfrom %c1`,
+          `color: #CC79A7; font-weight: bold;`, // pending promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 3
+          `color: #757575; font-weight: normal;`, // from
+          `color: default; font-weight: normal;`, // 1
+          { oldValue: 1 },
+        ],
+
+        // rejected promise 3
+        [
+          `%ctransaction %c9 %c: %crejected %cpromise %cof %catom%c${abortedPromiseNumber}`,
+          `color: #757575; font-weight: normal;`, // transaction
+          `color: default; font-weight: normal;`, // 9
+          `color: #757575; font-weight: normal;`, // :
+          `color: #D55E00; font-weight: bold;`, // rejected
+          `color: #CC79A7; font-weight: bold;`, // promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 3
+        ],
+        [
+          `%crejected %cpromise %cof %catom%c${abortedPromiseNumber} %cfrom %c1 %cto %cError: Rejected because of dependency higher than …`,
+          `color: #D55E00; font-weight: bold;`, // rejected
+          `color: #CC79A7; font-weight: bold;`, // promise
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 3
+          `color: #757575; font-weight: normal;`, // from
+          `color: default; font-weight: normal;`, // 1
+          `color: #757575; font-weight: normal;`, // to
+          `color: default; font-weight: normal;`, // Error: Rejected because of dependency higher than 1
+          { error: new Error(`Rejected because of dependency higher than 1`), oldValue: 1 },
+        ],
+      ]);
+    });
   });
 
   describe('errors', () => {
@@ -2161,6 +2506,77 @@ describe('bindAtomsLoggerToStore', () => {
 
         [`transaction 2 : unsubscribed from ${testAtom}`],
         [`unmounted ${testAtom}`],
+      ]);
+    });
+
+    it('should log mounted and unmounted atoms in colors', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        formattedOutput: true,
+      });
+
+      const testAtom = atom(42);
+
+      const unmount = store.sub(testAtom, vi.fn());
+
+      const atomNumber = /atom(\d+)(.*)/.exec(testAtom.toString())?.[1];
+      expect(Number.isInteger(parseInt(atomNumber!))).toBeTruthy();
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [
+          `%ctransaction %c1 %c: %csubscribed %cto %catom%c${atomNumber}`,
+          'color: #757575; font-weight: normal;', // transaction
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // :
+          'color: #009E73; font-weight: bold;', // subscribed
+          'color: #757575; font-weight: normal;', // to
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
+        ],
+        [
+          `%cinitialized value %cof %catom%c${atomNumber} %cto %c42`,
+          'color: #0072B2; font-weight: bold;', // initialized value
+          'color: #757575; font-weight: normal;', // of
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
+          'color: #757575; font-weight: normal;', // to
+          'color: default; font-weight: normal;', // 42
+          { value: 42 },
+        ],
+        [
+          `%cmounted %catom%c${atomNumber}`,
+          'color: #009E73; font-weight: bold;', // mounted
+          'color: #757575; font-weight: normal;', // atom
+          'color: default; font-weight: normal;', // 1
+          { value: 42 },
+        ],
+      ]);
+
+      vi.clearAllMocks();
+
+      unmount();
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [
+          `%ctransaction %c2 %c: %cunsubscribed %cfrom %catom%c${atomNumber}`,
+          `color: #757575; font-weight: normal;`, // transaction
+          `color: default; font-weight: normal;`, // 2
+          `color: #757575; font-weight: normal;`, // :
+          `color: #D55E00; font-weight: bold;`, // unsubscribed
+          `color: #757575; font-weight: normal;`, // from
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 1
+        ],
+        [
+          `%cunmounted %catom%c${atomNumber}`,
+          `color: #D55E00; font-weight: bold;`, // unmounted
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 1
+        ],
       ]);
     });
 
@@ -3021,42 +3437,41 @@ describe('bindAtomsLoggerToStore', () => {
   });
 
   describe('destroyed atoms', () => {
-    it('should register atoms with FinalizationRegistry for garbage collection tracking', () => {
-      const mockRegister = vi.fn();
+    let finalizationRegistryRegisterMock: Mock;
+    let finalizationRegistryUnregisterMock: Mock;
+    let registeredCallback: ((heldValue: string) => void) | null;
+
+    beforeEach(() => {
+      finalizationRegistryRegisterMock = vi.fn();
+      finalizationRegistryUnregisterMock = vi.fn();
+      registeredCallback = null;
       vi.spyOn(global, 'FinalizationRegistry').mockImplementation(
-        (): FinalizationRegistry<string> => {
+        (callback): FinalizationRegistry<string> => {
+          registeredCallback = callback;
           return {
-            register: mockRegister,
-            unregister: vi.fn(),
+            register: finalizationRegistryRegisterMock,
+            unregister: finalizationRegistryUnregisterMock,
             [Symbol.toStringTag]: 'FinalizationRegistry',
           };
         },
       );
+    });
 
+    it('should register atoms with FinalizationRegistry for garbage collection tracking', () => {
       bindAtomsLoggerToStore(store, defaultOptions);
 
-      expect(mockRegister).not.toHaveBeenCalled();
+      expect(finalizationRegistryRegisterMock).not.toHaveBeenCalled();
 
       const testAtom = atom(42);
       store.get(testAtom);
 
-      expect(mockRegister).toHaveBeenCalled();
-      expect(mockRegister.mock.calls).toEqual([[testAtom, testAtom.toString()]]);
+      expect(finalizationRegistryRegisterMock).toHaveBeenCalled();
+      expect(finalizationRegistryRegisterMock.mock.calls).toEqual([
+        [testAtom, testAtom.toString()],
+      ]);
     });
 
     it('should log when an atom is garbage collected', () => {
-      let registeredCallback: ((heldValue: string) => void) | null = null;
-      vi.spyOn(global, 'FinalizationRegistry').mockImplementation(
-        (callback): FinalizationRegistry<string> => {
-          registeredCallback = callback as (heldValue: string) => void;
-          return {
-            register: vi.fn(),
-            unregister: vi.fn(),
-            [Symbol.toStringTag]: 'FinalizationRegistry',
-          };
-        },
-      );
-
       bindAtomsLoggerToStore(store, defaultOptions);
 
       expect(registeredCallback).not.toBeNull();
@@ -3076,6 +3491,37 @@ describe('bindAtomsLoggerToStore', () => {
 
         [`transaction 2`],
         [`destroyed ${testAtom}`],
+      ]);
+    });
+
+    it('should log when an atom is garbage collected with colors', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        formattedOutput: true,
+      });
+
+      expect(registeredCallback).not.toBeNull();
+
+      const testAtom = atom(42);
+      const atomNumber = /atom(\d+)(.*)/.exec(testAtom.toString())?.[1];
+      expect(Number.isInteger(parseInt(atomNumber!))).toBeTruthy();
+
+      registeredCallback!(testAtom.toString());
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [
+          `%ctransaction %c1`,
+          `color: #757575; font-weight: normal;`, // transaction
+          `color: default; font-weight: normal;`, // 1
+        ],
+        [
+          `%cdestroyed %catom%c${atomNumber}`,
+          `color: #D55E00; font-weight: bold;`, // destroyed
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 1
+        ],
       ]);
     });
   });
