@@ -1815,6 +1815,119 @@ describe('bindAtomsLoggerToStore', () => {
         ],
       ]);
     });
+
+    it('should log aborted promise due to changing dependencies', async () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const abortedFn = vi.fn();
+
+      const dependencyAtom = atom(0);
+
+      const promiseAtom = atom(async (get, { signal }) => {
+        get(dependencyAtom);
+        return new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            if (!signal.aborted) resolve(42);
+          }, 1000);
+          signal.addEventListener('abort', () => {
+            abortedFn();
+            clearTimeout(timeoutId);
+            reject(new Error('Promise aborted'));
+          });
+        });
+      });
+
+      store.sub(promiseAtom, vi.fn());
+      await vi.advanceTimersByTimeAsync(250);
+
+      expect(abortedFn).not.toHaveBeenCalled();
+      store.set(dependencyAtom, store.get(dependencyAtom) + 1);
+      expect(abortedFn).toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(2000);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : subscribed to ${promiseAtom}`],
+        [`initialized value of ${dependencyAtom} to 0`, { value: 0 }],
+        [`pending initial promise of ${promiseAtom}`, { dependencies: [`${dependencyAtom}`] }],
+        [`mounted ${dependencyAtom}`, { pendingPromises: [`${promiseAtom}`], value: 0 }],
+        [
+          `mounted ${promiseAtom}`,
+          { dependencies: [`${dependencyAtom}`], mountedDependencies: [`${dependencyAtom}`] },
+        ],
+
+        [`transaction 2 : set value of ${dependencyAtom} to 1`, { value: 1 }],
+        [
+          `changed value of ${dependencyAtom} from 0 to 1`,
+          {
+            mountedDependents: [`${promiseAtom}`],
+            newValue: 1,
+            oldValue: 0,
+            pendingPromises: [`${promiseAtom}`],
+          },
+        ],
+        [
+          `aborted initial promise of ${promiseAtom}`,
+          { dependencies: [`${dependencyAtom}`], mountedDependencies: [`${dependencyAtom}`] },
+        ],
+        [
+          `pending initial promise of ${promiseAtom}`,
+          { dependencies: [`${dependencyAtom}`], mountedDependencies: [`${dependencyAtom}`] },
+        ],
+
+        [`transaction 3 : resolved promise of ${promiseAtom}`],
+        [
+          `resolved initial promise of ${promiseAtom} to 42`,
+          {
+            dependencies: [`${dependencyAtom}`],
+            mountedDependencies: [`${dependencyAtom}`],
+            value: 42,
+          },
+        ],
+      ]);
+    });
+
+    it('should not log aborted promise due to unmount', async () => {
+      // **not** aborted is expected due to https://github.com/pmndrs/jotai/issues/2625
+
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const abortedFn = vi.fn();
+
+      const promiseAtom = atom(async (get, { signal }) => {
+        return new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            if (!signal.aborted) resolve(42);
+          }, 1000);
+          signal.addEventListener('abort', () => {
+            abortedFn();
+            clearTimeout(timeoutId);
+            reject(new Error('Promise aborted'));
+          });
+        });
+      });
+
+      const unsubscribe = store.sub(promiseAtom, vi.fn());
+      await vi.advanceTimersByTimeAsync(250);
+
+      expect(abortedFn).not.toHaveBeenCalled();
+      unsubscribe();
+      expect(abortedFn).not.toHaveBeenCalled(); // not aborted is expected
+
+      await vi.advanceTimersByTimeAsync(2000);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : subscribed to ${promiseAtom}`],
+        [`pending initial promise of ${promiseAtom}`],
+        [`mounted ${promiseAtom}`],
+
+        [`transaction 2 : unsubscribed from ${promiseAtom}`],
+        [`unmounted ${promiseAtom}`],
+
+        [`transaction 3 : resolved promise of ${promiseAtom}`],
+        [`resolved initial promise of ${promiseAtom} to 42`, { value: 42 }],
+      ]);
+    });
   });
 
   describe('errors', () => {
