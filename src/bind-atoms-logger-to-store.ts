@@ -22,6 +22,11 @@ export function bindAtomsLoggerToStore(
 ): store is StoreWithAtomsLogger {
   const newStateOptions = atomsLoggerOptionsToState(options);
 
+  if (isAtomsLoggerBoundToStore(store)) {
+    Object.assign(store[ATOMS_LOGGER_SYMBOL], newStateOptions);
+    return true;
+  }
+
   let buildingBlocks: ReturnType<typeof getInternalBuildingBlocks>;
   try {
     buildingBlocks = getInternalBuildingBlocks(store);

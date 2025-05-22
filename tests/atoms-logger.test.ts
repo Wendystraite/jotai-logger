@@ -17,7 +17,7 @@ import {
 import { isAtomsLoggerBoundToStore } from '../src/bind-atoms-logger-to-store.js';
 import { ATOMS_LOGGER_SYMBOL } from '../src/consts/atom-logger-symbol.js';
 import { type AtomsLoggerOptions, bindAtomsLoggerToStore } from '../src/index.js';
-import type { Store } from '../src/types/atoms-logger.js';
+import type { Store, StoreWithAtomsLogger } from '../src/types/atoms-logger.js';
 import { isDevtoolsStore } from '../src/utils/get-internal-building-blocks.js';
 
 let mockDate: MockInstance;
@@ -190,6 +190,36 @@ describe('bindAtomsLoggerToStore', () => {
       store.sub(testAtom, listener);
       expect(originalSub).toHaveBeenCalledWith(testAtom, listener);
     });
+
+    it('should not bind the logger to the store if it is already bound', () => {
+      expect(isAtomsLoggerBoundToStore(store)).toBeFalsy();
+      expect(bindAtomsLoggerToStore(store, defaultOptions)).toBe(true);
+      expect(isAtomsLoggerBoundToStore(store)).toBeTruthy();
+      expect(bindAtomsLoggerToStore(store, defaultOptions)).toBe(true);
+      expect(isAtomsLoggerBoundToStore(store)).toBeTruthy();
+      expect(consoleMock.log.mock.calls).toEqual([]);
+    });
+
+    it('should change store options when binding multiple times', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        enabled: true,
+        domain: 'hello',
+      });
+
+      expect((store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL]).toEqual(
+        expect.objectContaining({ ...defaultOptions, enabled: true, domain: 'hello' }),
+      );
+
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        enabled: false,
+      });
+
+      expect((store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL]).toEqual(
+        expect.objectContaining({ ...defaultOptions, enabled: false, domain: undefined }),
+      );
+    });
   });
 
   describe('debugLabel', () => {
@@ -331,6 +361,30 @@ describe('bindAtomsLoggerToStore', () => {
         vi.runAllTimers();
 
         expect(consoleMock.log).not.toHaveBeenCalled();
+      });
+
+      it('should not log atom interactions anymore after disabling', () => {
+        bindAtomsLoggerToStore(store, { ...defaultOptions, enabled: true });
+
+        const testAtom = atom(42);
+
+        store.get(testAtom);
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 : retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to 42`, { value: 42 }],
+        ]);
+
+        vi.clearAllMocks();
+
+        bindAtomsLoggerToStore(store, { ...defaultOptions, enabled: false });
+
+        store.get(testAtom);
+        store.set(testAtom, 43);
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([]);
       });
     });
 
@@ -3635,6 +3689,45 @@ describe('bindAtomsLoggerToStore', () => {
           `color: #757575; font-weight: normal;`, // atom
           `color: default; font-weight: normal;`, // 1
         ],
+      ]);
+    });
+
+    it('should not log when an atom is garbage collected if the store is disabled', () => {
+      bindAtomsLoggerToStore(store, { ...defaultOptions, enabled: false });
+
+      expect(registeredCallback).not.toBeNull();
+
+      const testAtom = atom(42);
+      store.get(testAtom);
+
+      vi.runAllTimers();
+
+      registeredCallback!(testAtom.toString());
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([]);
+    });
+
+    it('should not log when an atom is garbage collected if the store just got disabled', () => {
+      bindAtomsLoggerToStore(store, { ...defaultOptions, enabled: true });
+
+      expect(registeredCallback).not.toBeNull();
+
+      const testAtom = atom(42);
+      store.get(testAtom);
+
+      vi.runAllTimers();
+
+      bindAtomsLoggerToStore(store, { ...defaultOptions, enabled: false });
+
+      registeredCallback!(testAtom.toString());
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of ${testAtom}`],
+        [`initialized value of ${testAtom} to 42`, { value: 42 }],
       ]);
     });
   });
