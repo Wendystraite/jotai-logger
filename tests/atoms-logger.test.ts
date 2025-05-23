@@ -2325,6 +2325,374 @@ describe('bindAtomsLoggerToStore', () => {
         [`initialized value of ${publicAtom} to 1`, { value: 1 }],
       ]);
     });
+
+    it('should log when an atom dependencies have changed', () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const aAtom = atom(1);
+      const bAtom = atom(2);
+      const toggleAtom = atom(false);
+      const testAtom = atom((get) => {
+        if (!get(toggleAtom)) {
+          return get(aAtom);
+        } else {
+          return get(bAtom);
+        }
+      });
+
+      store.sub(testAtom, vi.fn());
+      store.set(toggleAtom, (prev) => !prev);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : subscribed to ${testAtom}`],
+        [`initialized value of ${toggleAtom} to false`, { value: false }],
+        [`initialized value of ${aAtom} to 1`, { value: 1 }],
+        [
+          `initialized value of ${testAtom} to 1`,
+          { dependencies: [`${toggleAtom}`, `${aAtom}`], value: 1 },
+        ],
+        [`mounted ${toggleAtom}`, { value: false }],
+        [`mounted ${aAtom}`, { value: 1 }],
+        [
+          `mounted ${testAtom}`,
+          {
+            dependencies: [`${toggleAtom}`, `${aAtom}`],
+            value: 1,
+          },
+        ],
+
+        [`transaction 2 : set value of ${toggleAtom}`],
+        [
+          `changed value of ${toggleAtom} from false to true`,
+          { dependents: [`${testAtom}`], newValue: true, oldValue: false },
+        ],
+        [`initialized value of ${bAtom} to 2`, { value: 2 }],
+        [
+          `changed dependencies of ${testAtom}`,
+          {
+            oldDependencies: [`${toggleAtom}`, `${aAtom}`],
+            newDependencies: [`${toggleAtom}`, `${bAtom}`],
+          },
+        ],
+        [
+          `changed value of ${testAtom} from 1 to 2`,
+          {
+            dependencies: [`${toggleAtom}`, `${bAtom}`],
+            newValue: 2,
+            oldValue: 1,
+          },
+        ],
+        [`mounted ${bAtom}`, { value: 2 }],
+        [`unmounted ${aAtom}`],
+      ]);
+    });
+
+    it('should not track atom dependencies of private atoms', () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const aAtom = atom(1);
+      const bAtom = atom(2);
+      bAtom.debugPrivate = true;
+      const cAtom = atom((get) => {
+        get(aAtom);
+        get(bAtom);
+      });
+      cAtom.debugPrivate = true;
+
+      store.sub(cAtom, vi.fn());
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1`],
+        [`initialized value of ${aAtom} to 1`, { value: 1 }],
+        [`mounted ${aAtom}`, { value: 1 }],
+      ]);
+
+      const storeData = (store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL];
+      expect(storeData.dependenciesMap.has(aAtom)).toBeTruthy();
+      expect(storeData.dependenciesMap.has(bAtom)).toBeFalsy();
+      expect(storeData.dependenciesMap.has(cAtom)).toBeFalsy();
+      expect(storeData.prevTransactionDependenciesMap.has(aAtom)).toBeTruthy();
+      expect(storeData.prevTransactionDependenciesMap.has(bAtom)).toBeFalsy();
+      expect(storeData.prevTransactionDependenciesMap.has(cAtom)).toBeFalsy();
+    });
+
+    it('should log when an atom dependencies are removed', () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const aAtom = atom(1);
+      const bAtom = atom(2);
+      const toggleAtom = atom(false);
+      toggleAtom.debugPrivate = true;
+      const testAtom = atom((get) => {
+        if (!get(toggleAtom)) {
+          get(aAtom);
+          get(bAtom);
+          return;
+        }
+      });
+
+      store.sub(testAtom, vi.fn());
+      store.set(toggleAtom, (prev) => !prev);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : subscribed to ${testAtom}`],
+        [`initialized value of ${aAtom} to 1`, { value: 1 }],
+        [`initialized value of ${bAtom} to 2`, { value: 2 }],
+        [
+          `initialized value of ${testAtom} to undefined`,
+          { dependencies: [`${aAtom}`, `${bAtom}`], value: undefined },
+        ],
+        [`mounted ${aAtom}`, { value: 1 }],
+        [`mounted ${bAtom}`, { value: 2 }],
+        [`mounted ${testAtom}`, { dependencies: [`${aAtom}`, `${bAtom}`], value: undefined }],
+
+        [`transaction 2`],
+        [
+          `changed dependencies of ${testAtom}`,
+          { oldDependencies: [`${aAtom}`, `${bAtom}`], newDependencies: [] },
+        ],
+        [`unmounted ${aAtom}`],
+        [`unmounted ${bAtom}`],
+      ]);
+    });
+
+    it('should log when an atom dependencies are added', () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const aAtom = atom(1);
+      const bAtom = atom(2);
+      const toggleAtom = atom(false);
+      toggleAtom.debugPrivate = true;
+      const testAtom = atom((get) => {
+        if (!get(toggleAtom)) {
+          return;
+        } else {
+          get(aAtom);
+          get(bAtom);
+        }
+      });
+
+      store.sub(testAtom, vi.fn());
+      store.set(toggleAtom, (prev) => !prev);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : subscribed to ${testAtom}`],
+        [`initialized value of ${testAtom} to undefined`, { value: undefined }],
+        [`mounted ${testAtom}`, { value: undefined }],
+
+        [`transaction 2`],
+        [`initialized value of ${aAtom} to 1`, { value: 1 }],
+        [`initialized value of ${bAtom} to 2`, { value: 2 }],
+        [
+          `changed dependencies of ${testAtom}`,
+          { oldDependencies: [], newDependencies: [`${aAtom}`, `${bAtom}`] },
+        ],
+        [`mounted ${aAtom}`, { value: 1 }],
+        [`mounted ${bAtom}`, { value: 2 }],
+      ]);
+    });
+
+    it('should not log atom dependencies changes if the new dependencies are private', () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const aAtom = atom(1);
+      const bAtom = atom(2);
+      bAtom.debugPrivate = true;
+      const toggleAtom = atom(false);
+      toggleAtom.debugPrivate = true;
+      const testAtom = atom((get) => {
+        if (!get(toggleAtom)) {
+          get(aAtom);
+        } else {
+          get(aAtom);
+          get(bAtom); // bAtom is added but is private
+        }
+      });
+
+      store.sub(testAtom, vi.fn());
+      store.set(toggleAtom, (prev) => !prev);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : subscribed to ${testAtom}`],
+        [`initialized value of ${aAtom} to 1`, { value: 1 }],
+        [
+          `initialized value of ${testAtom} to undefined`,
+          { dependencies: [`${aAtom}`], value: undefined },
+        ],
+        [`mounted ${aAtom}`, { value: 1 }],
+        [`mounted ${testAtom}`, { dependencies: [`${aAtom}`], value: undefined }],
+      ]);
+    });
+
+    it('should log atom dependencies without duplicated atoms', () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const aAtom = atom(1);
+      const bAtom = atom(2);
+      const toggleAtom = atom(false);
+      toggleAtom.debugPrivate = true;
+      const testAtom = atom((get) => {
+        if (!get(toggleAtom)) {
+          get(aAtom);
+          get(aAtom);
+        } else {
+          get(aAtom);
+          get(aAtom);
+          get(bAtom);
+          get(bAtom);
+          get(bAtom);
+        }
+      });
+
+      store.sub(testAtom, vi.fn());
+      store.set(toggleAtom, (prev) => !prev);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : subscribed to ${testAtom}`],
+        [`initialized value of ${aAtom} to 1`, { value: 1 }],
+        [
+          `initialized value of ${testAtom} to undefined`,
+          { dependencies: [`${aAtom}`], value: undefined },
+        ],
+        [`mounted ${aAtom}`, { value: 1 }],
+        [`mounted ${testAtom}`, { dependencies: [`${aAtom}`], value: undefined }],
+
+        [`transaction 2`],
+        [`initialized value of ${bAtom} to 2`, { value: 2 }],
+        [
+          `changed dependencies of ${testAtom}`,
+          { oldDependencies: [`${aAtom}`], newDependencies: [`${aAtom}`, `${bAtom}`] },
+        ],
+        [`mounted ${bAtom}`, { value: 2 }],
+      ]);
+    });
+
+    it('should log atom dependencies changed in colors', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        formattedOutput: true,
+      });
+
+      const aAtom = atom(1);
+      const bAtom = atom(2);
+      const toggleAtom = atom(false);
+      toggleAtom.debugPrivate = true;
+      const testAtom = atom((get) => {
+        if (!get(toggleAtom)) {
+          get(aAtom);
+        } else {
+          get(bAtom);
+        }
+      });
+
+      const testAtomNumber = /atom(\d+)(.*)/.exec(testAtom.toString())?.[1];
+      const aAtomNumber = /atom(\d+)(.*)/.exec(aAtom.toString())?.[1];
+      const bAtomNumber = /atom(\d+)(.*)/.exec(bAtom.toString())?.[1];
+
+      expect(Number.isInteger(parseInt(testAtomNumber!))).toBeTruthy();
+      expect(Number.isInteger(parseInt(aAtomNumber!))).toBeTruthy();
+      expect(Number.isInteger(parseInt(bAtomNumber!))).toBeTruthy();
+
+      store.sub(testAtom, vi.fn());
+      store.set(toggleAtom, (prev) => !prev);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [
+          `%ctransaction %c1 %c: %csubscribed %cto %catom%c${testAtomNumber}`,
+          `color: #757575; font-weight: normal;`, // transaction
+          `color: default; font-weight: normal;`, // 1
+          `color: #757575; font-weight: normal;`, // :
+          `color: #009E73; font-weight: bold;`, // subscribed
+          `color: #757575; font-weight: normal;`, // to
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 4
+        ],
+        [
+          `%cinitialized value %cof %catom%c${aAtomNumber} %cto %c1`,
+          `color: #0072B2; font-weight: bold;`, // initialized value
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 1
+          `color: #757575; font-weight: normal;`, // to
+          `color: default; font-weight: normal;`, // 1
+          { value: 1 },
+        ],
+        [
+          `%cinitialized value %cof %catom%c${testAtomNumber} %cto %cundefined`,
+          `color: #0072B2; font-weight: bold;`, // initialized value
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 4
+          `color: #757575; font-weight: normal;`, // to
+          `color: default; font-weight: normal;`, // undefined
+          { dependencies: [`atom${aAtomNumber}`], value: undefined },
+        ],
+        [
+          `%cmounted %catom%c${aAtomNumber}`,
+          `color: #009E73; font-weight: bold;`, // mounted
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 1
+          { value: 1 },
+        ],
+        [
+          `%cmounted %catom%c${testAtomNumber}`,
+          `color: #009E73; font-weight: bold;`, // mounted
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 4
+          { dependencies: [`atom${aAtomNumber}`], value: undefined },
+        ],
+        [
+          `%ctransaction %c2`,
+          `color: #757575; font-weight: normal;`, // transaction
+          `color: default; font-weight: normal;`, // 2
+        ],
+        [
+          `%cinitialized value %cof %catom%c${bAtomNumber} %cto %c2`,
+          `color: #0072B2; font-weight: bold;`, // initialized value
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 2
+          `color: #757575; font-weight: normal;`, // to
+          `color: default; font-weight: normal;`, // 2
+          { value: 2 },
+        ],
+        [
+          `%cchanged dependencies %cof %catom%c${testAtomNumber}`,
+          `color: #E69F00; font-weight: bold;`, // changed dependencies
+          `color: #757575; font-weight: normal;`, // of
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 4
+          { newDependencies: [`atom${bAtomNumber}`], oldDependencies: [`atom${aAtomNumber}`] },
+        ],
+        [
+          `%cmounted %catom%c${bAtomNumber}`,
+          `color: #009E73; font-weight: bold;`, // mounted
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 2
+          { value: 2 },
+        ],
+        [
+          `%cunmounted %catom%c${aAtomNumber}`,
+          `color: #D55E00; font-weight: bold;`, // unmounted
+          `color: #757575; font-weight: normal;`, // atom
+          `color: default; font-weight: normal;`, // 1
+        ],
+      ]);
+    });
   });
 
   describe('dependents', () => {

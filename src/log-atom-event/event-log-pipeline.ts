@@ -141,6 +141,11 @@ export const EventLogPipeline = new LogPipeline()
         plainText: () => 'destroyed',
         formatted: () => ['%cdestroyed', ['red', 'bold']],
       });
+    } else if (eventMap.dependenciesChanged) {
+      addToLogs(logs, options, {
+        plainText: () => 'changed dependencies of',
+        formatted: () => ['%cchanged dependencies %cof', ['yellow', 'bold'], 'grey'],
+      });
     } else if (eventMap.mounted) {
       addToLogs(logs, options, {
         plainText: () => 'mounted',
@@ -285,15 +290,38 @@ export const EventLogPipeline = new LogPipeline()
 
     const { pendingPromises, dependencies, dependents } = event;
 
-    if (pendingPromises && pendingPromises.length > 0) {
+    const showPendingPromises = pendingPromises && pendingPromises.length > 0;
+    const showDependents = dependents && dependents.length > 0;
+
+    let oldDependencies = eventMap.dependenciesChanged?.oldDependencies;
+    let newDependencies = dependencies;
+    const showOldDependencies = eventMap.dependenciesChanged;
+    const showNewDependencies = showOldDependencies;
+
+    const showDependencies = !showNewDependencies && dependencies && dependencies.size > 0;
+
+    if (showPendingPromises) {
       subLogsArray.push(['pending promises', pendingPromises]);
       subLogsObject.pendingPromises = pendingPromises;
     }
-    if (dependencies && dependencies.length > 0) {
-      subLogsArray.push(['dependencies', dependencies]);
-      subLogsObject.dependencies = dependencies;
+    if (showOldDependencies) {
+      oldDependencies ??= new Set();
+      const oldDependenciesArray = Array.from(oldDependencies);
+      subLogsArray.push(['old dependencies', oldDependenciesArray]);
+      subLogsObject.oldDependencies = oldDependenciesArray;
     }
-    if (dependents && dependents.length > 0) {
+    if (showNewDependencies) {
+      newDependencies ??= new Set();
+      const newDependenciesArray = Array.from(newDependencies);
+      subLogsArray.push(['new dependencies', newDependenciesArray]);
+      subLogsObject.newDependencies = newDependenciesArray;
+    }
+    if (showDependencies) {
+      const dependenciesArray = Array.from(dependencies);
+      subLogsArray.push(['dependencies', dependenciesArray]);
+      subLogsObject.dependencies = dependenciesArray;
+    }
+    if (showDependents) {
       subLogsArray.push(['dependents', dependents]);
       subLogsObject.dependents = dependents;
     }

@@ -43,6 +43,10 @@ export type AtomsLoggerState = AtomsLoggerOptionsInState & {
   atomsFinalizationRegistry: FinalizationRegistry<AtomId>;
   /** Map to track the values of promises */
   promisesResultsMap: WeakMap<PromiseLike<unknown>, unknown>;
+  /** Map to track the previous dependencies of atoms since last transaction */
+  prevTransactionDependenciesMap: WeakMap<AnyAtom, Set<AtomId>>;
+  /** Map to track the dependencies of atoms */
+  dependenciesMap: WeakMap<AnyAtom, Set<AtomId>>;
   /** Timeout id of the current transaction if started independently (not triggered by a store update) */
   transactionsDebounceTimeoutId: ReturnType<typeof setTimeout> | undefined;
   /** Scheduler for logging queued transactions */
@@ -423,7 +427,7 @@ export interface AtomsLoggerEventBase {
   /** @see {@link INTERNAL_AtomState.p} */
   pendingPromises?: AtomId[];
   /** @see {@link INTERNAL_AtomState.d} @see {@link INTERNAL_Mounted.d} */
-  dependencies?: AtomId[];
+  dependencies?: Set<AtomId>;
   /** @see {@link INTERNAL_Mounted.t} */
   dependents?: AtomId[];
 }
@@ -439,6 +443,12 @@ export type AtomsLoggerEventMap = Partial<{
   changedPromiseResolved: AtomsLoggerEventBase & { oldValue: unknown; newValue: unknown };
   changedPromiseRejected: AtomsLoggerEventBase & { oldValue: unknown; error: unknown };
   changedPromiseAborted: AtomsLoggerEventBase & { oldValue: unknown };
+  dependenciesChanged: AtomsLoggerEventBase & {
+    oldDependencies?: Set<AtomId>;
+  } & (
+      | { addedDependency: AnyAtom; clearedDependencies?: undefined }
+      | { addedDependency?: undefined; clearedDependencies: true }
+    );
   mounted: AtomsLoggerEventBase & { value?: unknown };
   unmounted: AtomsLoggerEventBase;
   destroyed: AtomsLoggerEventBase;

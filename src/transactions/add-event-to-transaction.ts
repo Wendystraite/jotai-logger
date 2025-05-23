@@ -1,6 +1,8 @@
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import { shouldSetStateInEvent } from '../log-atom-event/event-log-pipeline.js';
 import type {
+  AnyAtom,
+  AtomId,
   AtomsLoggerEventBase,
   AtomsLoggerEventMap,
   AtomsLoggerTransaction,
@@ -20,6 +22,10 @@ export function addEventToTransaction(
   const event = getEventMapEvent(eventMap);
 
   if (!shouldShowAtom(store, event.atom)) {
+    return;
+  }
+
+  if (updateDependencies(store, eventMap).shouldNotAddEvent) {
     return;
   }
 
@@ -51,6 +57,35 @@ export function addEventToTransaction(
 }
 
 /**
+ * Update the dependencies map if the event is a dependency change.
+ */
+function updateDependencies(
+  store: StoreWithAtomsLogger,
+  eventMap: AtomsLoggerEventMap,
+): { shouldNotAddEvent: boolean } {
+  if (eventMap.dependenciesChanged) {
+    const event = eventMap.dependenciesChanged;
+    const atom = event.atom as AnyAtom;
+
+    // Don't update dependencies if the added dependency is ignored
+    if (event.addedDependency && !shouldShowAtom(store, event.addedDependency)) {
+      return { shouldNotAddEvent: true };
+    }
+
+    let newDependencies: Set<AtomId>;
+    if (event.clearedDependencies) {
+      newDependencies = new Set();
+    } else {
+      const currentDependencies = store[ATOMS_LOGGER_SYMBOL].dependenciesMap.get(atom);
+      newDependencies = new Set(currentDependencies).add(event.addedDependency.toString());
+    }
+
+    store[ATOMS_LOGGER_SYMBOL].dependenciesMap.set(atom, newDependencies);
+  }
+  return { shouldNotAddEvent: false };
+}
+
+/**
  * Set the state of the atom in the event.
  */
 function setStateInEvent(
@@ -60,17 +95,15 @@ function setStateInEvent(
 ): void {
   if (typeof event.atom === 'string' || !shouldSetStateInEvent(eventMap)) return;
 
+  event.dependencies = store[ATOMS_LOGGER_SYMBOL].dependenciesMap.get(event.atom);
+
   const options = store[ATOMS_LOGGER_SYMBOL];
 
   const mountedState = store[ATOMS_LOGGER_SYMBOL].getMounted(event.atom);
-  event.dependencies = convertAtomsToStrings(mountedState?.d.values(), options);
   event.dependents = convertAtomsToStrings(mountedState?.t.values(), options);
 
   const atomState = store[ATOMS_LOGGER_SYMBOL].getState(event.atom);
   event.pendingPromises = convertAtomsToStrings(atomState?.p.values(), options);
-  if (!mountedState) {
-    event.dependencies = convertAtomsToStrings(atomState?.d.keys(), options);
-  }
 }
 
 /**

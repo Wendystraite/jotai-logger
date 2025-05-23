@@ -10,12 +10,16 @@ Logging utility for [Jotai](https://github.com/pmndrs/jotai) that helps you debu
 ## Features
 
 - 📊 Track atom state changes with detailed transaction logs
+- 🔄 Monitor atom dependencies and their changes
+- 📜 Show full atom lifecycle (init → mount → change → unmount → destroy)
 - ⏱️ Performance monitoring with timing information
-- 🧩 Configurable log levels and filtering options
-- 🔍 Stack trace support for debugging
 - 🛠️ Customizable with various configuration options
+- 🔍 React component source tracking via stack traces (experimental)
+- ⚡ Asynchronous logging that doesn't impact performance
+- 🌈 Color-coded output with accessibility-friendly schemes
 - 🐞 Compatible with [jotai-devtools](https://github.com/jotaijs/jotai-devtools)
 - 📦 No dependencies, lightweight and tree-shakable
+- 🎯 Support for both React hooks and vanilla store API
 
 ## Installation
 
@@ -371,6 +375,43 @@ function MyCounter() {
   ▶ unmounted atom4
 ```
 
+### Dependency Tracking
+
+When an atom is used in a derived atom, the logger will show their dependencies and dependents:
+
+```ts
+const derivedAtom = atom((get) => `${get(counterAtom)} is the count`);
+derivedAtom.debugLabel = 'derived';
+```
+
+```
+▶ transaction 9 : subscribed to atom5:derived
+  ▼ initialized value of atom5:derived to "42 is the count"
+    value: "42 is the count"
+    dependencies: ["atom1:counter"]
+  ▶ mounted atom5:derived
+```
+
+If the derived atom has its dependencies changed, the logger will notify you:
+
+```ts
+const atomWithVariableDeps = atom((get) = {
+  if (get(isEnabledAtom)) {
+    const aValue = get(anAtom);
+  } else {
+    const anotherValue = get(anotherAtom);
+  }
+});
+```
+
+```
+▶ transaction 10 :
+  ▶ changed value of atom6:isEnabledAtom from true to false
+  ▼ changed dependencies of atom7:atomWithVariableDeps
+    old dependencies: ["atom6:isEnabledAtom", "atom8:anAtom"]
+    new dependencies: ["atom6:isEnabledAtom", "atom9:anotherAtom"]
+```
+
 ### React components
 
 If the `getStackTrace` option is used, the logger will try to find the React component that triggered the transaction.
@@ -378,8 +419,8 @@ If the `getStackTrace` option is used, the logger will try to find the React com
 This can fail in some cases like calling from an `useEffect` but, if found, the log look like this :
 
 ```
-▶ transaction 9 : [my-component-file-name] MyComponent.useMyAtomValue retrieved value of atom5
-  ▶ initialized value of atom5 to false
+▶ transaction 11 : [my-component-file-name] MyComponent.useMyAtomValue retrieved value of atom10
+  ▶ initialized value of atom10 to false
 ```
 
 ## Logging performances

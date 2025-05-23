@@ -89,6 +89,8 @@ export function bindAtomsLoggerToStore(
     currentTransaction: undefined,
     atomsFinalizationRegistry,
     promisesResultsMap: new WeakMap(),
+    dependenciesMap: new WeakMap(),
+    prevTransactionDependenciesMap: new WeakMap(),
     transactionsDebounceTimeoutId: undefined,
   };
 
