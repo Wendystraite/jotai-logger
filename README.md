@@ -395,7 +395,7 @@ derivedAtom.debugLabel = 'derived';
 If the derived atom has its dependencies changed, the logger will notify you:
 
 ```ts
-const atomWithVariableDeps = atom((get) = {
+const atomWithVariableDeps = atom((get) => {
   if (get(isEnabledAtom)) {
     const aValue = get(anAtom);
   } else {
