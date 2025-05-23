@@ -1,5 +1,36 @@
 # jotai-logger
 
+## 2.4.0
+
+### Minor Changes
+
+- e4a48f8: feat: atom dependencies tracking
+
+  - Add a new event shown when dependencies of an atom have changed.
+    This event is not shown for initial dependencies to prevent spam.
+  - Add tests for that to maintain a full coverage.
+  - Document it in the README.
+
+### Patch Changes
+
+- 1936212: fix: don't bind the store if already bound
+
+  - Support calling multiple times `bindAtomsLoggerToStore` to a store.
+    Instead of binding the store multiple times, just bind it once and
+    changes the store options for each new call.
+  - Add some tests to check that the store does not log anything if bound
+    and disabled.
+
+- 035bd58: fix: do not log mounted dependencies
+
+  Instead of logging "dependencies", "mounted dependencies" and "mounted
+  dependents", only log "dependencies" and "dependents". We already know
+  that an atom is mounted with the corresponding event and Jotai internals
+  guarantee that a mounted atom has all its dependencies mounted so
+  showing both dependencies and mounted dependencies is pointless.
+  This also has the benefits of better performances since we don't need to
+  convert both lists to strings.
+
 ## 2.3.2
 
 ### Patch Changes
