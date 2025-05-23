@@ -298,14 +298,7 @@ describe('useAtomsLogger', () => {
 
       [`transaction 3 : subscribed to ${countWithEffect}`],
       [`mounted ${countAtom}`, { value: 0 }],
-      [
-        `mounted ${countWithEffect}`,
-        {
-          dependencies: [`${countAtom}`],
-          mountedDependencies: [`${countAtom}`],
-          value: 0,
-        },
-      ],
+      [`mounted ${countWithEffect}`, { dependencies: [`${countAtom}`], value: 0 }],
     ]);
   });
 });

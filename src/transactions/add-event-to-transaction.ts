@@ -62,13 +62,15 @@ function setStateInEvent(
 
   const options = store[ATOMS_LOGGER_SYMBOL];
 
-  const atomState = store[ATOMS_LOGGER_SYMBOL].getState(event.atom);
-  event.dependencies = convertAtomsToStrings(atomState?.d.keys(), options);
-  event.pendingPromises = convertAtomsToStrings(atomState?.p.values(), options);
-
   const mountedState = store[ATOMS_LOGGER_SYMBOL].getMounted(event.atom);
-  event.mountedDependencies = convertAtomsToStrings(mountedState?.d.values(), options);
-  event.mountedDependents = convertAtomsToStrings(mountedState?.t.values(), options);
+  event.dependencies = convertAtomsToStrings(mountedState?.d.values(), options);
+  event.dependents = convertAtomsToStrings(mountedState?.t.values(), options);
+
+  const atomState = store[ATOMS_LOGGER_SYMBOL].getState(event.atom);
+  event.pendingPromises = convertAtomsToStrings(atomState?.p.values(), options);
+  if (!mountedState) {
+    event.dependencies = convertAtomsToStrings(atomState?.d.keys(), options);
+  }
 }
 
 /**

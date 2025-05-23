@@ -1905,38 +1905,25 @@ describe('bindAtomsLoggerToStore', () => {
         [`initialized value of ${dependencyAtom} to 0`, { value: 0 }],
         [`pending initial promise of ${promiseAtom}`, { dependencies: [`${dependencyAtom}`] }],
         [`mounted ${dependencyAtom}`, { pendingPromises: [`${promiseAtom}`], value: 0 }],
-        [
-          `mounted ${promiseAtom}`,
-          { dependencies: [`${dependencyAtom}`], mountedDependencies: [`${dependencyAtom}`] },
-        ],
+        [`mounted ${promiseAtom}`, { dependencies: [`${dependencyAtom}`] }],
 
         [`transaction 2 : set value of ${dependencyAtom} to 1`, { value: 1 }],
         [
           `changed value of ${dependencyAtom} from 0 to 1`,
           {
-            mountedDependents: [`${promiseAtom}`],
+            dependents: [`${promiseAtom}`],
             newValue: 1,
             oldValue: 0,
             pendingPromises: [`${promiseAtom}`],
           },
         ],
-        [
-          `aborted initial promise of ${promiseAtom}`,
-          { dependencies: [`${dependencyAtom}`], mountedDependencies: [`${dependencyAtom}`] },
-        ],
-        [
-          `pending initial promise of ${promiseAtom}`,
-          { dependencies: [`${dependencyAtom}`], mountedDependencies: [`${dependencyAtom}`] },
-        ],
+        [`aborted initial promise of ${promiseAtom}`, { dependencies: [`${dependencyAtom}`] }],
+        [`pending initial promise of ${promiseAtom}`, { dependencies: [`${dependencyAtom}`] }],
 
         [`transaction 3 : resolved promise of ${promiseAtom}`],
         [
           `resolved initial promise of ${promiseAtom} to 42`,
-          {
-            dependencies: [`${dependencyAtom}`],
-            mountedDependencies: [`${dependencyAtom}`],
-            value: 42,
-          },
+          { dependencies: [`${dependencyAtom}`], value: 42 },
         ],
       ]);
     });
@@ -2313,27 +2300,15 @@ describe('bindAtomsLoggerToStore', () => {
         ],
         [`mounted ${valueAtom}`, { value: 1 }],
         [`mounted ${multiplyAtom}`, { value: 2 }],
-        [
-          `mounted ${resultAtom}`,
-          {
-            dependencies: [`${valueAtom}`, `${multiplyAtom}`],
-            mountedDependencies: [`${valueAtom}`, `${multiplyAtom}`],
-            value: 2,
-          },
-        ],
+        [`mounted ${resultAtom}`, { dependencies: [`${valueAtom}`, `${multiplyAtom}`], value: 2 }],
         [`transaction 2 : set value of ${valueAtom} to 2`, { value: 2 }],
         [
           `changed value of ${valueAtom} from 1 to 2`,
-          { mountedDependents: [`${resultAtom}`], newValue: 2, oldValue: 1 },
+          { dependents: [`${resultAtom}`], newValue: 2, oldValue: 1 },
         ],
         [
           `changed value of ${resultAtom} from 2 to 4`,
-          {
-            dependencies: [`${valueAtom}`, `${multiplyAtom}`],
-            mountedDependencies: [`${valueAtom}`, `${multiplyAtom}`],
-            newValue: 4,
-            oldValue: 2,
-          },
+          { dependencies: [`${valueAtom}`, `${multiplyAtom}`], newValue: 4, oldValue: 2 },
         ],
       ]);
     });
@@ -2385,14 +2360,7 @@ describe('bindAtomsLoggerToStore', () => {
         [`initialized value of ${aAtom} to 1`, { value: 1 }],
         [`initialized value of ${bAtom} to 2`, { value: 2, dependencies: [`${aAtom}`] }],
         [`mounted ${aAtom}`, { value: 1 }],
-        [
-          `mounted ${bAtom}`,
-          {
-            value: 2,
-            dependencies: [`${aAtom}`],
-            mountedDependencies: [`${aAtom}`],
-          },
-        ],
+        [`mounted ${bAtom}`, { value: 2, dependencies: [`${aAtom}`] }],
       ]);
     });
 
@@ -2431,18 +2399,14 @@ describe('bindAtomsLoggerToStore', () => {
         [`mounted ${secondAtom}`, { value: 'second' }],
         [
           `mounted ${resultAtom}`,
-          {
-            dependencies: [`${firstAtom}`, `${secondAtom}`],
-            mountedDependencies: [`${firstAtom}`, `${secondAtom}`],
-            value: 'first second',
-          },
+          { dependencies: [`${firstAtom}`, `${secondAtom}`], value: 'first second' },
         ],
 
         [`transaction 3 : set value of ${secondAtom} to "2nd"`, { value: '2nd' }],
         [
           `changed value of ${secondAtom} from "second" to "2nd"`,
           {
-            mountedDependents: [`${resultAtom}`], // here he is
+            dependents: [`${resultAtom}`], // here he is
             newValue: '2nd',
             oldValue: 'second',
           },
@@ -2451,7 +2415,6 @@ describe('bindAtomsLoggerToStore', () => {
           `changed value of ${resultAtom} from "first second" to "first 2nd"`,
           {
             dependencies: [`${firstAtom}`, `${secondAtom}`],
-            mountedDependencies: [`${firstAtom}`, `${secondAtom}`],
             newValue: 'first 2nd',
             oldValue: 'first second',
           },
@@ -2980,16 +2943,12 @@ describe('bindAtomsLoggerToStore', () => {
         ],
         [`mounted ${secondAtom}`, { value: 'second' }],
         [`mounted ${firstAtom}`, { pendingPromises: [`${thirdAsyncAtom}`], value: 'first' }],
-        [
-          `mounted ${thirdAsyncAtom}`,
-          { dependencies: [`${firstAtom}`], mountedDependencies: [`${firstAtom}`] },
-        ],
+        [`mounted ${thirdAsyncAtom}`, { dependencies: [`${firstAtom}`] }],
         [`mounted ${loadable(thirdAsyncAtom)}`, { value: { state: 'loading' } }],
         [
           `mounted ${resultAtom}`,
           {
             dependencies: [`${secondAtom}`, `${loadable(thirdAsyncAtom)}`],
-            mountedDependencies: [`${secondAtom}`, `${loadable(thirdAsyncAtom)}`],
             value: 'second loading',
           },
         ],
@@ -2998,17 +2957,13 @@ describe('bindAtomsLoggerToStore', () => {
         // result <-- loadable(thirdAsync) <-- thirdAsync <-- promise resolved
         [
           `resolved initial promise of ${thirdAsyncAtom} to "first third"`,
-          {
-            dependencies: [`${firstAtom}`],
-            mountedDependencies: [`${firstAtom}`],
-            value: 'first third',
-          },
+          { dependencies: [`${firstAtom}`], value: 'first third' },
         ],
         // result <-- loadable(thirdAsync)
         [
           `changed value of ${loadable(thirdAsyncAtom)} from {"state":"loading"} to {"state":"hasData","data":"first third"}`,
           {
-            mountedDependents: [`${resultAtom}`],
+            dependents: [`${resultAtom}`],
             newValue: { data: 'first third', state: 'hasData' },
             oldValue: { state: 'loading' },
           },
@@ -3018,7 +2973,6 @@ describe('bindAtomsLoggerToStore', () => {
           `changed value of ${resultAtom} from "second loading" to "second first third"`,
           {
             dependencies: [`${secondAtom}`, `${loadable(thirdAsyncAtom)}`],
-            mountedDependencies: [`${secondAtom}`, `${loadable(thirdAsyncAtom)}`],
             newValue: 'second first third',
             oldValue: 'second loading',
           },

@@ -410,14 +410,12 @@ export type AtomsLoggerTransaction = NonNullable<
 
 export interface AtomsLoggerEventBase {
   atom: Atom<unknown> | ReturnType<Atom<unknown>['toString']>;
-  /** @see {@link INTERNAL_AtomState.d} */
-  dependencies?: ReturnType<Atom<unknown>['toString']>[];
   /** @see {@link INTERNAL_AtomState.p} */
   pendingPromises?: ReturnType<Atom<unknown>['toString']>[];
-  /** @see {@link INTERNAL_Mounted.d} */
-  mountedDependencies?: ReturnType<Atom<unknown>['toString']>[];
+  /** @see {@link INTERNAL_AtomState.d} @see {@link INTERNAL_Mounted.d} */
+  dependencies?: ReturnType<Atom<unknown>['toString']>[];
   /** @see {@link INTERNAL_Mounted.t} */
-  mountedDependents?: ReturnType<Atom<unknown>['toString']>[];
+  dependents?: ReturnType<Atom<unknown>['toString']>[];
 }
 
 export type AtomsLoggerEventMap = Partial<{

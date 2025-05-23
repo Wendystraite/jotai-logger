@@ -283,7 +283,7 @@ export const EventLogPipeline = new LogPipeline()
   .withLog(({ subLogsArray, subLogsObject, eventMap, event }) => {
     if (!shouldSetStateInEvent(eventMap)) return;
 
-    const { pendingPromises, dependencies, mountedDependencies, mountedDependents } = event;
+    const { pendingPromises, dependencies, dependents } = event;
 
     if (pendingPromises && pendingPromises.length > 0) {
       subLogsArray.push(['pending promises', pendingPromises]);
@@ -293,13 +293,9 @@ export const EventLogPipeline = new LogPipeline()
       subLogsArray.push(['dependencies', dependencies]);
       subLogsObject.dependencies = dependencies;
     }
-    if (mountedDependencies && mountedDependencies.length > 0) {
-      subLogsArray.push(['mounted dependencies', mountedDependencies]);
-      subLogsObject.mountedDependencies = mountedDependencies;
-    }
-    if (mountedDependents && mountedDependents.length > 0) {
-      subLogsArray.push(['mounted dependents', mountedDependents]);
-      subLogsObject.mountedDependents = mountedDependents;
+    if (dependents && dependents.length > 0) {
+      subLogsArray.push(['dependents', dependents]);
+      subLogsObject.dependents = dependents;
     }
   })
 

@@ -169,7 +169,7 @@ describe('bindAtomsLoggerToStore', () => {
       [
         `changed value of ${aAtom} from 1 to 2`,
         {
-          mountedDependents: [`${bAtom}`], // OK
+          dependents: [`${bAtom}`], // OK
           newValue: 2,
           oldValue: 1,
         },
@@ -178,7 +178,6 @@ describe('bindAtomsLoggerToStore', () => {
         `changed value of ${bAtom} from 2 to 4`,
         {
           dependencies: [`${aAtom}`], // OK
-          mountedDependencies: [`${aAtom}`], // OK
           newValue: 4,
           oldValue: 2,
         },
