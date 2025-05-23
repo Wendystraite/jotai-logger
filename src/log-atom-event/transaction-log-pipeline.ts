@@ -1,7 +1,8 @@
-import type { Atom } from 'jotai';
 import { INTERNAL_isActuallyWritableAtom } from 'jotai/vanilla/internals';
 
 import type {
+  AnyAtom,
+  AtomId,
   AtomsLoggerStackTrace,
   AtomsLoggerState,
   AtomsLoggerTransactionBase,
@@ -131,9 +132,7 @@ export const TransactionLogPipeline = new LogPipeline()
 
   .withMeta(({ transactionMap, transaction: { atom } }) => {
     const showAtom = !transactionMap.unknown && atom !== undefined;
-    return { showAtom, atom } as
-      | { showAtom: false }
-      | { showAtom: true; atom: Atom<unknown> | ReturnType<Atom<unknown>['toString']> };
+    return { showAtom, atom } as { showAtom: false } | { showAtom: true; atom: AnyAtom | AtomId };
   })
 
   .withMeta(({ transaction: { atom } }) => {

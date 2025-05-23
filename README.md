@@ -94,7 +94,7 @@ type AtomsLoggerOptions = {
   /** Whether to show private atoms used internally by Jotai (default: false) */
   shouldShowPrivateAtoms?: boolean;
   /** Custom function to determine which atoms to show */
-  shouldShowAtom?: (atom: Atom<unknown>) => boolean;
+  shouldShowAtom?: (atom: Atom) => boolean;
   /** Custom logger to use instead of console */
   logger?: Logger;
   /** Whether to group logs with logger.group (default: true) */

@@ -20,6 +20,16 @@ export type StoreWithAtomsLogger = Store & {
 };
 
 /**
+ * String representation of an atom.
+ */
+export type AtomId = ReturnType<AnyAtom['toString']>;
+
+/**
+ * Generic atom type.
+ */
+export type AnyAtom = Atom<unknown>;
+
+/**
  * Internal state of the logger.
  *
  * Contains configuration options, transaction tracking, and references to original store methods.
@@ -30,7 +40,7 @@ export type AtomsLoggerState = AtomsLoggerOptionsInState & {
   /** The currently active transaction being tracked, if any */
   currentTransaction: AtomsLoggerTransactionMap | undefined;
   /** FinalizationRegistry that register atoms garbage collection */
-  atomsFinalizationRegistry: FinalizationRegistry<string>;
+  atomsFinalizationRegistry: FinalizationRegistry<AtomId>;
   /** Map to track the values of promises */
   promisesResultsMap: WeakMap<PromiseLike<unknown>, unknown>;
   /** Timeout id of the current transaction if started independently (not triggered by a store update) */
@@ -55,13 +65,13 @@ export type AtomsLoggerState = AtomsLoggerOptionsInState & {
   /** Previous overridden atom state map setter method */
   prevAtomStateMapSet: INTERNAL_AtomStateMap['set'];
   /** Previous overridden jotai dev store mounted atoms add method */
-  prevDevtoolsMountedAtomsAdd: Set<Atom<unknown>>['add'] | undefined;
+  prevDevtoolsMountedAtomsAdd: Set<AnyAtom>['add'] | undefined;
   /** Previous overridden jotai dev store mounted atoms delete method */
-  prevDevtoolsMountedAtomsDelete: Set<Atom<unknown>>['delete'] | undefined;
+  prevDevtoolsMountedAtomsDelete: Set<AnyAtom>['delete'] | undefined;
   /** Return the state of an atom */
-  getState(this: void, atom: Atom<unknown>): INTERNAL_AtomState | undefined;
+  getState(this: void, atom: AnyAtom): INTERNAL_AtomState | undefined;
   /** Return the mounted state of an atom */
-  getMounted(this: void, atom: Atom<unknown>): INTERNAL_Mounted | undefined;
+  getMounted(this: void, atom: AnyAtom): INTERNAL_Mounted | undefined;
 };
 
 /**
@@ -386,7 +396,7 @@ export interface AtomsLoggerOptions {
 }
 
 export interface AtomsLoggerTransactionBase {
-  atom: Atom<unknown> | ReturnType<Atom<unknown>['toString']> | undefined;
+  atom: AnyAtom | AtomId | undefined;
   transactionNumber?: number;
   stackTrace?: AtomsLoggerStackTrace | Promise<AtomsLoggerStackTrace | undefined> | undefined;
   events?: AtomsLoggerEventMap[];
@@ -409,13 +419,13 @@ export type AtomsLoggerTransaction = NonNullable<
 >;
 
 export interface AtomsLoggerEventBase {
-  atom: Atom<unknown> | ReturnType<Atom<unknown>['toString']>;
+  atom: AnyAtom | AtomId;
   /** @see {@link INTERNAL_AtomState.p} */
-  pendingPromises?: ReturnType<Atom<unknown>['toString']>[];
+  pendingPromises?: AtomId[];
   /** @see {@link INTERNAL_AtomState.d} @see {@link INTERNAL_Mounted.d} */
-  dependencies?: ReturnType<Atom<unknown>['toString']>[];
+  dependencies?: AtomId[];
   /** @see {@link INTERNAL_Mounted.t} */
-  dependents?: ReturnType<Atom<unknown>['toString']>[];
+  dependents?: AtomId[];
 }
 
 export type AtomsLoggerEventMap = Partial<{

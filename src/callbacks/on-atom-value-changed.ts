@@ -1,15 +1,14 @@
-import type { Atom } from 'jotai';
 import { INTERNAL_isPromiseLike, INTERNAL_registerAbortHandler } from 'jotai/vanilla/internals';
 
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import { addEventToTransaction } from '../transactions/add-event-to-transaction.js';
 import { endTransaction } from '../transactions/end-transaction.js';
 import { startTransaction } from '../transactions/start-transaction.js';
-import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import type { AnyAtom, StoreWithAtomsLogger } from '../types/atoms-logger.js';
 
 export function onAtomValueChanged(
   store: StoreWithAtomsLogger,
-  atom: Atom<unknown>,
+  atom: AnyAtom,
   args: { isInitialValue?: boolean; oldValue?: unknown; newValue: unknown },
 ) {
   const { newValue: newValueOrPromise } = args;

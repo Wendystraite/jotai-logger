@@ -1,13 +1,12 @@
-import type { Atom } from 'jotai';
 import { type INTERNAL_AtomState } from 'jotai/vanilla/internals';
 
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import type { AnyAtom, StoreWithAtomsLogger } from '../types/atoms-logger.js';
 import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { onAtomValueChanged } from './on-atom-value-changed.js';
 
 export function getOnAtomStateMapSet(store: StoreWithAtomsLogger) {
-  return function onAtomStateMapSet(atom: Atom<unknown>, atomState: INTERNAL_AtomState): void {
+  return function onAtomStateMapSet(atom: AnyAtom, atomState: INTERNAL_AtomState): void {
     let isInitialValue = true;
 
     if (shouldShowAtom(store, atom)) {

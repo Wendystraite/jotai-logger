@@ -1,4 +1,3 @@
-import type { Atom } from 'jotai';
 import {
   type INTERNAL_AtomState,
   type INTERNAL_AtomStateMap,
@@ -6,14 +5,14 @@ import {
   INTERNAL_getBuildingBlocksRev1,
 } from 'jotai/vanilla/internals';
 
-import type { Store } from '../types/atoms-logger.js';
+import type { AnyAtom, Store } from '../types/atoms-logger.js';
 
 /**
  * Store used by jotai-devtools.
  */
 interface DevStore {
   get_internal_weak_map: () => INTERNAL_AtomStateMap;
-  get_mounted_atoms: () => Set<Atom<unknown>>;
+  get_mounted_atoms: () => Set<AnyAtom>;
 }
 
 /**
@@ -24,16 +23,16 @@ interface DevStore {
  */
 export function getInternalBuildingBlocks(store: Store): {
   atomStateMap: INTERNAL_AtomStateMap;
-  getState(this: void, atom: Atom<unknown>): INTERNAL_AtomState | undefined;
-  getMounted(this: void, atom: Atom<unknown>): INTERNAL_Mounted | undefined;
+  getState(this: void, atom: AnyAtom): INTERNAL_AtomState | undefined;
+  getMounted(this: void, atom: AnyAtom): INTERNAL_Mounted | undefined;
   storeHooks: ReturnType<typeof INTERNAL_getBuildingBlocksRev1>[6] | undefined;
-  devtoolsMountedAtoms: Set<Atom<unknown>> | undefined;
+  devtoolsMountedAtoms: Set<AnyAtom> | undefined;
 } {
   let atomStateMap: INTERNAL_AtomStateMap | undefined;
-  let getState: ((atom: Atom<unknown>) => INTERNAL_AtomState | undefined) | undefined;
-  let getMounted: ((atom: Atom<unknown>) => INTERNAL_Mounted | undefined) | undefined;
+  let getState: ((atom: AnyAtom) => INTERNAL_AtomState | undefined) | undefined;
+  let getMounted: ((atom: AnyAtom) => INTERNAL_Mounted | undefined) | undefined;
   let storeHooks: ReturnType<typeof INTERNAL_getBuildingBlocksRev1>[6] | undefined;
-  let devtoolsMountedAtoms: Set<Atom<unknown>> | undefined;
+  let devtoolsMountedAtoms: Set<AnyAtom> | undefined;
 
   // Try to get the building blocks from the store.
   let buildingBlocks = INTERNAL_getBuildingBlocksRev1(store) as

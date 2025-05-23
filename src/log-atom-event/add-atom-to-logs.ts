@@ -1,11 +1,10 @@
-import type { Atom } from 'jotai';
-
 import type { DEFAULT_ATOMS_LOGGER_COLORS } from '../consts/colors.js';
+import type { AnyAtom, AtomId } from '../types/atoms-logger.js';
 import { addToLogs } from './add-to-logs.js';
 
 export function addAtomToLogs(
   logs: unknown[],
-  atom: Atom<unknown> | ReturnType<Atom<unknown>['toString']>,
+  atom: AnyAtom | AtomId,
   options: {
     formattedOutput: boolean;
     colorScheme: 'default' | 'light' | 'dark';

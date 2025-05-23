@@ -1,15 +1,15 @@
-import type { Atom } from 'jotai';
+import type { AnyAtom, AtomId } from '../types/atoms-logger.js';
 
 export function convertAtomsToStrings(
-  atoms: IteratorObject<Atom<unknown>> | undefined,
+  atoms: IteratorObject<AnyAtom> | undefined,
   options: {
     shouldShowPrivateAtoms: boolean;
   },
-): string[] | undefined {
+): AtomId[] | undefined {
   if (!atoms) {
     return undefined;
   }
-  const strings: string[] = [];
+  const strings: AtomId[] = [];
   for (const atom of atoms) {
     if (!options.shouldShowPrivateAtoms && atom.debugPrivate === true) {
       continue;

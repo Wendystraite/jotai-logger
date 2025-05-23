@@ -1,6 +1,6 @@
 import { atom } from 'jotai';
 import { atomFamily } from 'jotai/utils';
-import { type Atom, createStore } from 'jotai/vanilla';
+import { createStore } from 'jotai/vanilla';
 import { INTERNAL_buildStoreRev1, INTERNAL_getBuildingBlocksRev1 } from 'jotai/vanilla/internals';
 import { loadable } from 'jotai/vanilla/utils';
 import {
@@ -17,7 +17,7 @@ import {
 import { isAtomsLoggerBoundToStore } from '../src/bind-atoms-logger-to-store.js';
 import { ATOMS_LOGGER_SYMBOL } from '../src/consts/atom-logger-symbol.js';
 import { type AtomsLoggerOptions, bindAtomsLoggerToStore } from '../src/index.js';
-import type { Store, StoreWithAtomsLogger } from '../src/types/atoms-logger.js';
+import type { AnyAtom, AtomId, Store, StoreWithAtomsLogger } from '../src/types/atoms-logger.js';
 import { isDevtoolsStore } from '../src/utils/get-internal-building-blocks.js';
 
 let mockDate: MockInstance;
@@ -390,7 +390,7 @@ describe('bindAtomsLoggerToStore', () => {
 
     describe('shouldShowAtom', () => {
       it('should respect shouldShowAtom option', () => {
-        const shouldShowAtom = (a: Atom<unknown>) => a === testAtom1;
+        const shouldShowAtom = (a: AnyAtom) => a === testAtom1;
         bindAtomsLoggerToStore(store, { ...defaultOptions, shouldShowAtom });
 
         const testAtom1 = atom(1);
@@ -3560,14 +3560,14 @@ describe('bindAtomsLoggerToStore', () => {
   describe('destroyed atoms', () => {
     let finalizationRegistryRegisterMock: Mock;
     let finalizationRegistryUnregisterMock: Mock;
-    let registeredCallback: ((heldValue: string) => void) | null;
+    let registeredCallback: ((heldValue: AtomId) => void) | null;
 
     beforeEach(() => {
       finalizationRegistryRegisterMock = vi.fn();
       finalizationRegistryUnregisterMock = vi.fn();
       registeredCallback = null;
       vi.spyOn(global, 'FinalizationRegistry').mockImplementation(
-        (callback): FinalizationRegistry<string> => {
+        (callback): FinalizationRegistry<AtomId> => {
           registeredCallback = callback;
           return {
             register: finalizationRegistryRegisterMock,

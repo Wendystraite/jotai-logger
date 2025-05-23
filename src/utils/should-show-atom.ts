@@ -1,12 +1,7 @@
-import type { Atom } from 'jotai';
-
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import type { AnyAtom, AtomId, StoreWithAtomsLogger } from '../types/atoms-logger.js';
 
-export function shouldShowAtom(
-  store: StoreWithAtomsLogger,
-  atom: Atom<unknown> | ReturnType<Atom<unknown>['toString']>,
-): boolean {
+export function shouldShowAtom(store: StoreWithAtomsLogger, atom: AnyAtom | AtomId): boolean {
   if (!store[ATOMS_LOGGER_SYMBOL].enabled) {
     return false;
   }

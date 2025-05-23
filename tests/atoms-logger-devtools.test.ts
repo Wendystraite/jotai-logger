@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { renderHook } from '@testing-library/react';
 import { atom, createStore } from 'jotai';
-import type { Atom } from 'jotai';
 import { useAtomsDevtools } from 'jotai-devtools';
 import {
   type Mock,
@@ -17,7 +16,11 @@ import {
 import { isAtomsLoggerBoundToStore } from '../src/bind-atoms-logger-to-store.js';
 import { ATOMS_LOGGER_SYMBOL } from '../src/consts/atom-logger-symbol.js';
 import { bindAtomsLoggerToStore, useAtomsLogger } from '../src/index.js';
-import type { AtomsLoggerOptions, StoreWithAtomsLogger } from '../src/types/atoms-logger.js';
+import type {
+  AnyAtom,
+  AtomsLoggerOptions,
+  StoreWithAtomsLogger,
+} from '../src/types/atoms-logger.js';
 import { isDevtoolsStore } from '../src/utils/get-internal-building-blocks.js';
 
 let mockDate: MockInstance;
@@ -65,8 +68,8 @@ describe('useAtomsLogger', () => {
     expect(isDevtoolsStore(store)).toBeTruthy();
     expect((store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL]).toEqual(
       expect.objectContaining({
-        prevDevtoolsMountedAtomsAdd: expect.any(Function) as Set<Atom<unknown>>['add'],
-        prevDevtoolsMountedAtomsDelete: expect.any(Function) as Set<Atom<unknown>>['delete'],
+        prevDevtoolsMountedAtomsAdd: expect.any(Function) as Set<AnyAtom>['add'],
+        prevDevtoolsMountedAtomsDelete: expect.any(Function) as Set<AnyAtom>['delete'],
       }),
     );
   });
@@ -110,8 +113,8 @@ describe('bindAtomsLoggerToStore', () => {
     expect(isDevtoolsStore(store)).toBeTruthy();
     expect((store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL]).toEqual(
       expect.objectContaining({
-        prevDevtoolsMountedAtomsAdd: expect.any(Function) as Set<Atom<unknown>>['add'],
-        prevDevtoolsMountedAtomsDelete: expect.any(Function) as Set<Atom<unknown>>['delete'],
+        prevDevtoolsMountedAtomsAdd: expect.any(Function) as Set<AnyAtom>['add'],
+        prevDevtoolsMountedAtomsDelete: expect.any(Function) as Set<AnyAtom>['delete'],
       }),
     );
   });
