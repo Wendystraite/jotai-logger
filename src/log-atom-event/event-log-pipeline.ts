@@ -281,24 +281,25 @@ export const EventLogPipeline = new LogPipeline()
 
   // Extra data logger
   .withLog(({ subLogsArray, subLogsObject, eventMap, event }) => {
-    // If the atom is unmounted or destroyed, we don't need to log anything else.
-    if (!eventMap.unmounted && !eventMap.destroyed) {
-      if (event.pendingPromises) {
-        subLogsArray.push(['pending promises', event.pendingPromises]);
-        subLogsObject.pendingPromises = event.pendingPromises;
-      }
-      if (event.dependencies) {
-        subLogsArray.push(['dependencies', event.dependencies]);
-        subLogsObject.dependencies = event.dependencies;
-      }
-      if (event.mountedDependencies) {
-        subLogsArray.push(['mounted dependencies', event.mountedDependencies]);
-        subLogsObject.mountedDependencies = event.mountedDependencies;
-      }
-      if (event.mountedDependents) {
-        subLogsArray.push(['mounted dependents', event.mountedDependents]);
-        subLogsObject.mountedDependents = event.mountedDependents;
-      }
+    if (!shouldSetStateInEvent(eventMap)) return;
+
+    const { pendingPromises, dependencies, mountedDependencies, mountedDependents } = event;
+
+    if (pendingPromises && pendingPromises.length > 0) {
+      subLogsArray.push(['pending promises', pendingPromises]);
+      subLogsObject.pendingPromises = pendingPromises;
+    }
+    if (dependencies && dependencies.length > 0) {
+      subLogsArray.push(['dependencies', dependencies]);
+      subLogsObject.dependencies = dependencies;
+    }
+    if (mountedDependencies && mountedDependencies.length > 0) {
+      subLogsArray.push(['mounted dependencies', mountedDependencies]);
+      subLogsObject.mountedDependencies = mountedDependencies;
+    }
+    if (mountedDependents && mountedDependents.length > 0) {
+      subLogsArray.push(['mounted dependents', mountedDependents]);
+      subLogsObject.mountedDependents = mountedDependents;
     }
   })
 
@@ -316,3 +317,11 @@ export const EventLogPipeline = new LogPipeline()
       }
     }
   });
+
+/**
+ * Check if the event states should be added to the event.
+ */
+export function shouldSetStateInEvent(eventMap: AtomsLoggerEventMap): boolean {
+  // If the atom is unmounted or destroyed, we don't need to log anything else.
+  return !eventMap.unmounted && !eventMap.destroyed;
+}

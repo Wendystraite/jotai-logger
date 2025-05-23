@@ -1,4 +1,5 @@
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
+import { shouldSetStateInEvent } from '../log-atom-event/event-log-pipeline.js';
 import type {
   AtomsLoggerEventBase,
   AtomsLoggerEventMap,
@@ -22,7 +23,7 @@ export function addEventToTransaction(
     return;
   }
 
-  setStateInEvent(store, event);
+  setStateInEvent(store, eventMap, event);
 
   const currentTransactionMap = store[ATOMS_LOGGER_SYMBOL].currentTransaction;
 
@@ -52,32 +53,22 @@ export function addEventToTransaction(
 /**
  * Set the state of the atom in the event.
  */
-function setStateInEvent(store: StoreWithAtomsLogger, event: AtomsLoggerEventBase): void {
-  if (typeof event.atom === 'string') {
-    return;
-  }
+function setStateInEvent(
+  store: StoreWithAtomsLogger,
+  eventMap: AtomsLoggerEventMap,
+  event: AtomsLoggerEventBase,
+): void {
+  if (typeof event.atom === 'string' || !shouldSetStateInEvent(eventMap)) return;
 
   const options = store[ATOMS_LOGGER_SYMBOL];
 
   const atomState = store[ATOMS_LOGGER_SYMBOL].getState(event.atom);
-  if (atomState) {
-    if (atomState.d.size > 0) {
-      event.dependencies = convertAtomsToStrings(atomState.d.keys(), options);
-    }
-    if (atomState.p.size > 0) {
-      event.pendingPromises = convertAtomsToStrings(atomState.p.keys(), options);
-    }
-  }
+  event.dependencies = convertAtomsToStrings(atomState?.d.keys(), options);
+  event.pendingPromises = convertAtomsToStrings(atomState?.p.values(), options);
 
   const mountedState = store[ATOMS_LOGGER_SYMBOL].getMounted(event.atom);
-  if (mountedState) {
-    if (mountedState.d.size > 0) {
-      event.mountedDependencies = convertAtomsToStrings(mountedState.d.values(), options);
-    }
-    if (mountedState.t.size > 0) {
-      event.mountedDependents = convertAtomsToStrings(mountedState.t.values(), options);
-    }
-  }
+  event.mountedDependencies = convertAtomsToStrings(mountedState?.d.values(), options);
+  event.mountedDependents = convertAtomsToStrings(mountedState?.t.values(), options);
 }
 
 /**
