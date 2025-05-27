@@ -28,9 +28,11 @@
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.3.0",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "@types/node": "^22.15.21",
     "@types/react": "^19.1.3",
     "@types/react-dom": "^19.1.3",
     "@vitest/coverage-v8": "3.1.3",
+    "benny": "^3.7.1",
     "eslint": "^9.26.0",
     "jiti": "^2.4.2",
     "jotai": "^2.12.4",
@@ -42,6 +44,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "stacktrace-js": "^2.0.2",
+    "tsx": "^4.19.4",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.32.0",
     "vitest": "^3.1.3"
@@ -59,7 +62,11 @@
     "coverage": "vitest run --coverage --coverage.include=src",
     "dev": "vitest",
     "local-release": "changeset version && changeset publish",
-    "prepublishOnly": "npm run ci"
+    "prepublishOnly": "npm run ci",
+    "benchmark": "pnpm run benchmark:simple-read && pnpm run benchmark:simple-write && pnpm run benchmark:subscribe-write",
+    "benchmark:simple-read": "tsx benchmarks/simple-read.ts",
+    "benchmark:simple-write": "tsx benchmarks/simple-write.ts",
+    "benchmark:subscribe-write": "tsx benchmarks/subscribe-write.ts"
   },
   "main": "dist/index.js",
   "exports": {
@@ -89,5 +96,8 @@
     "onlyBuiltDependencies": [
       "esbuild"
     ]
+  },
+  "devEngines": {
+    "node": ">=20.11.0"
   }
 }

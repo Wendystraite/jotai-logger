@@ -1,0 +1,63 @@
+{
+  "name": "subscribe-write",
+  "date": "2025-05-27T16:59:17.796Z",
+  "version": null,
+  "results": [
+    {
+      "name": "atoms=100",
+      "ops": 691737,
+      "margin": 7.57,
+      "percentSlower": 0
+    },
+    {
+      "name": "atoms=100 [with logger]",
+      "ops": 42488,
+      "margin": 4.5,
+      "percentSlower": 93.86
+    },
+    {
+      "name": "atoms=1000",
+      "ops": 623849,
+      "margin": 8.15,
+      "percentSlower": 9.81
+    },
+    {
+      "name": "atoms=1000 [with logger]",
+      "ops": 44912,
+      "margin": 4.1,
+      "percentSlower": 93.51
+    },
+    {
+      "name": "atoms=10000",
+      "ops": 688915,
+      "margin": 7.55,
+      "percentSlower": 0.41
+    },
+    {
+      "name": "atoms=10000 [with logger]",
+      "ops": 40416,
+      "margin": 4.49,
+      "percentSlower": 94.16
+    },
+    {
+      "name": "atoms=100000",
+      "ops": 642481,
+      "margin": 6.07,
+      "percentSlower": 7.12
+    },
+    {
+      "name": "atoms=100000 [with logger]",
+      "ops": 38578,
+      "margin": 3.48,
+      "percentSlower": 94.42
+    }
+  ],
+  "fastest": {
+    "name": "atoms=100",
+    "index": 0
+  },
+  "slowest": {
+    "name": "atoms=100000 [with logger]",
+    "index": 7
+  }
+}

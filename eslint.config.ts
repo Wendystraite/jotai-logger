@@ -16,8 +16,6 @@ export default tseslint.config(
           allowDefaultProject: ['eslint.config.ts'],
           defaultProject: 'tsconfig.base.json',
         },
-        // @ts-expect-error -- vite typing
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -29,10 +27,19 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.test.{ts,tsx}'],
+    files: ['tests/**/*.test.{ts,tsx}'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/restrict-template-expressions': 'off',
+      '@typescript-eslint/no-empty-function': 'off',
+    },
+  },
+  {
+    files: ['benchmarks/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/restrict-template-expressions': 'off',
+      '@typescript-eslint/no-empty-function': 'off',
     },
   },
 );
