@@ -1,4 +1,5 @@
 import { atom } from 'jotai';
+import type { PrimitiveAtom } from 'jotai';
 import { atomFamily } from 'jotai/utils';
 import { createStore } from 'jotai/vanilla';
 import { INTERNAL_buildStoreRev1, INTERNAL_getBuildingBlocksRev1 } from 'jotai/vanilla/internals';
@@ -2974,6 +2975,62 @@ describe('bindAtomsLoggerToStore', () => {
           [`changed value of ${testAtom} from 1 to 2`, { newValue: 2, oldValue: 1 }],
         ]);
       });
+    });
+
+    it('should merge nested direct store calls', () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const otherAtom1 = atom(0);
+      const otherAtom2 = atom(0);
+      const otherAtom3 = atom(0);
+
+      const testAtomCallback = (otherAtom: PrimitiveAtom<number>) => () => {
+        store.get(otherAtom); // Nested store.get call
+        store.set(otherAtom, 2); // Nested store.set call
+        store.sub(otherAtom, vi.fn()); // Nested store.sub call
+      };
+
+      const testAtom1 = atom(testAtomCallback(otherAtom1), testAtomCallback(otherAtom1));
+      const testAtom2 = atom(testAtomCallback(otherAtom2), testAtomCallback(otherAtom2));
+      const testAtom3 = atom(testAtomCallback(otherAtom3), testAtomCallback(otherAtom3));
+
+      store.get(testAtom1);
+      store.set(testAtom2);
+      store.sub(testAtom3, vi.fn());
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        // Nested inside store.get
+        [`transaction 1 : retrieved value of ${testAtom1}`],
+        // `- Nested store.get transaction
+        [`initialized value of ${otherAtom1} to 0`, { value: 0 }],
+        // `- Nested store.set transaction
+        [`changed value of ${otherAtom1} from 0 to 2`, { newValue: 2, oldValue: 0 }],
+        // `- Nested store.sub transaction
+        [`mounted ${otherAtom1}`, { value: 2 }],
+        [`initialized value of ${testAtom1} to undefined`, { value: undefined }],
+
+        // Nested inside store.set
+        [`transaction 2 : called set of ${testAtom2}`],
+        // `- Nested store.get transaction
+        [`initialized value of ${otherAtom2} to 0`, { value: 0 }],
+        // `- Nested store.set transaction
+        [`changed value of ${otherAtom2} from 0 to 2`, { newValue: 2, oldValue: 0 }],
+        // `- Nested store.sub transaction
+        [`mounted ${otherAtom2}`, { value: 2 }],
+
+        // Nested inside store.sub
+        [`transaction 3 : subscribed to ${testAtom3}`],
+        // `- Nested store.get transaction
+        [`initialized value of ${otherAtom3} to 0`, { value: 0 }],
+        // `- Nested store.set transaction
+        [`changed value of ${otherAtom3} from 0 to 2`, { newValue: 2, oldValue: 0 }],
+        // `- Nested store.sub transaction
+        [`mounted ${otherAtom3}`, { value: 2 }],
+        [`initialized value of ${testAtom3} to undefined`, { value: undefined }],
+        [`mounted ${testAtom3}`, { value: undefined }],
+      ]);
     });
   });
 

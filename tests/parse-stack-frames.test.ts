@@ -303,4 +303,34 @@ describe('parseStackFrames', () => {
       stackFrames,
     });
   });
+
+  it('should ignore hooks called from node_modules', () => {
+    const stackFrames: StackFrame[] = [
+      { functionName: 'useAtomValue', fileName: '/node_modules/some-lib/atoms.ts' },
+      { functionName: 'useCustomHook', fileName: '/node_modules/some-lib/hooks/custom.ts' },
+      { functionName: 'Component', fileName: '/src/components/TestComponent.tsx' },
+    ];
+    const result = parseStackFrames(stackFrames);
+    expect(result).toEqual({
+      file: { name: 'TestComponent', path: '/src/components/TestComponent.tsx' },
+      react: { component: 'Component', hooks: undefined },
+      stackFrames,
+    });
+  });
+
+  it('should ignore components called from node_modules', () => {
+    const stackFrames: StackFrame[] = [
+      { functionName: 'useAtomValue', fileName: '/node_modules/some-lib/atoms.ts' },
+      { functionName: 'useCustomHook', fileName: '/node_modules/some-lib/hooks/custom.ts' },
+      { functionName: 'LibComponent', fileName: '/node_modules/LibComponent.tsx' },
+      { functionName: 'OtherLibComponent', fileName: '/node_modules/OtherLibComponent.tsx' },
+      { functionName: 'Component', fileName: '/src/components/TestComponent.tsx' },
+    ];
+    const result = parseStackFrames(stackFrames);
+    expect(result).toEqual({
+      file: { name: 'TestComponent', path: '/src/components/TestComponent.tsx' },
+      react: { component: 'Component', hooks: undefined },
+      stackFrames,
+    });
+  });
 });

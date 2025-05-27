@@ -7,11 +7,12 @@ import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
 
 export function getOnStoreGet(store: StoreWithAtomsLogger): StoreWithAtomsLogger['get'] {
   return function onStoreGet<TValue>(atom: Atom<TValue>): TValue {
+    const doStartTransaction = !store[ATOMS_LOGGER_SYMBOL].isInsideTransaction;
     try {
-      startTransaction(store, { storeGet: { atom } });
+      if (doStartTransaction) startTransaction(store, { storeGet: { atom } });
       return store[ATOMS_LOGGER_SYMBOL].prevStoreGet(atom);
     } finally {
-      endTransaction(store);
+      if (doStartTransaction) endTransaction(store);
     }
   };
 }

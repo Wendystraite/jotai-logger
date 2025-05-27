@@ -87,6 +87,7 @@ export function bindAtomsLoggerToStore(
     logTransactionsScheduler,
     transactionNumber: 0,
     currentTransaction: undefined,
+    isInsideTransaction: false,
     atomsFinalizationRegistry,
     promisesResultsMap: new WeakMap(),
     dependenciesMap: new WeakMap(),

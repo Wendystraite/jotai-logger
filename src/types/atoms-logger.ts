@@ -39,6 +39,8 @@ export type AtomsLoggerState = AtomsLoggerOptionsInState & {
   transactionNumber: number;
   /** The currently active transaction being tracked, if any */
   currentTransaction: AtomsLoggerTransactionMap | undefined;
+  /** Flag to indicate if the logger is currently processing a transaction (not debouncing) */
+  isInsideTransaction: boolean;
   /** FinalizationRegistry that register atoms garbage collection */
   atomsFinalizationRegistry: FinalizationRegistry<AtomId>;
   /** Map to track the values of promises */

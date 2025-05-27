@@ -12,6 +12,7 @@ import { convertAtomsToStrings } from '../utils/convert-atoms-to-strings.js';
 import { getEventMapEvent } from '../utils/get-event-map-event.js';
 import { getTransactionMapTransaction } from '../utils/get-transaction-map-transaction.js';
 import { shouldShowAtom } from '../utils/should-show-atom.js';
+import { debounceEndTransaction } from './debounce-end-transaction.js';
 import { endTransaction } from './end-transaction.js';
 import { startTransaction } from './start-transaction.js';
 
@@ -45,7 +46,7 @@ export function addEventToTransaction(
 
   // Debounce the transaction since a new event is added to it.
   if (store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId !== undefined) {
-    endTransaction(store);
+    debounceEndTransaction(store);
   }
 
   // Add the event to the current transaction.

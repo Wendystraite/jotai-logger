@@ -10,14 +10,15 @@ export function getOnStoreSet(store: StoreWithAtomsLogger): StoreWithAtomsLogger
     atom: WritableAtom<TValue, TArgs, TResult>,
     ...args: TArgs
   ) {
+    const doStartTransaction = !store[ATOMS_LOGGER_SYMBOL].isInsideTransaction;
     try {
       const transaction = { atom, args, result: undefined as unknown };
-      startTransaction(store, { storeSet: transaction });
+      if (doStartTransaction) startTransaction(store, { storeSet: transaction });
       const result = store[ATOMS_LOGGER_SYMBOL].prevStoreSet(atom, ...args);
       transaction.result = result;
       return result;
     } finally {
-      endTransaction(store);
+      if (doStartTransaction) endTransaction(store);
     }
   };
 }

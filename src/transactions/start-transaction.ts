@@ -22,6 +22,8 @@ export function startTransaction(
     endTransaction(store, { immediate: true });
   }
 
+  store[ATOMS_LOGGER_SYMBOL].isInsideTransaction = true;
+
   const transaction = getTransactionMapTransaction(transactionMap);
 
   transaction.startTimestamp ??= performance.now();

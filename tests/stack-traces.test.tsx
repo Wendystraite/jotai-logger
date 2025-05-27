@@ -289,14 +289,12 @@ describe('useAtomsLogger', () => {
     expect(consoleMock.log.mock.calls).toEqual([
       [`transaction 1 : [stack-traces] MyCounter retrieved value of ${countWithEffect}`],
       [`initialized value of ${countAtom} to 0`, { value: 0 }],
-
-      [`transaction 2`], // Does not show [atomEffect] Object.effectAtom.unstable_onInit
       [
         `initialized value of ${countWithEffect} to 0`,
         { value: 0, dependencies: [`${countAtom}`] },
       ],
 
-      [`transaction 3 : subscribed to ${countWithEffect}`],
+      [`transaction 2 : subscribed to ${countWithEffect}`],
       [`mounted ${countAtom}`, { value: 0 }],
       [`mounted ${countWithEffect}`, { dependencies: [`${countAtom}`], value: 0 }],
     ]);
