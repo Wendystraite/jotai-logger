@@ -56,7 +56,7 @@
     "check-format": "prettier --check .",
     "check-exports": "attw --pack . --ignore-rules=cjs-resolves-to-esm",
     "check-types": "tsc --build tsconfig.tests.json --noEmit",
-    "lint": "eslint",
+    "lint": "eslint --max-warnings=0",
     "lint:package": "publint",
     "test": "vitest run",
     "coverage": "vitest run --coverage --coverage.include=src",

@@ -73,7 +73,6 @@ describe('stringifyValue', () => {
   });
 
   it('should handle non-serializable values', () => {
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
     const fn = () => {};
     expect(stringifyValue(fn, defaultOptions)).toBe('() => {\n    }');
   });
