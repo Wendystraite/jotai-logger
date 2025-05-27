@@ -1,5 +1,31 @@
 # jotai-logger
 
+## 2.5.0
+
+### Minor Changes
+
+- 300c383: feat: synchronous logging
+
+  Add three new options: `synchronous`, `transactionDebounceMs` and
+  `requestIdleCallbackTimeoutMs`. These options can further customize the
+  logger behavior either by logging everything immediately or waiting
+  longer for the browser to be idle before logging. Each use case is
+  explained in the README. Add tests for each option.
+
+### Patch Changes
+
+- 34a0327: fix: handle direct store calls inside transactions
+
+  - Handle the rare case where store methods are called inside
+    transactions (e.g. store.get called inside a store.sub). This can
+    happen in some advanced use cases in some Jotai libraries.
+  - Instead of showing a new transaction, merge the nested transaction
+    into the existing one.
+  - Update tests for this use case.
+  - Also update the existing jotai-effect test that was exactly doing
+    that. Add a test for the stack-traces parsing since jotai-effect does
+    not cover this case anymore.
+
 ## 2.4.0
 
 ### Minor Changes
