@@ -144,6 +144,12 @@ export interface AtomsLoggerOptionsInState {
 
   /** @see AtomsLoggerOptions.getStackTrace */
   getStackTrace?(): StackFrame[] | undefined | Promise<StackFrame[] | undefined>;
+
+  /** @see AtomsLoggerOptions.transactionDebounceMs */
+  transactionDebounceMs: number;
+
+  /** @see AtomsLoggerOptions.requestIdleCallbackTimeoutMs */
+  requestIdleCallbackTimeoutMs: number;
 }
 
 /**
@@ -399,6 +405,75 @@ export interface AtomsLoggerOptions {
    * ```
    */
   getStackTrace?(this: void): StackFrame[] | undefined | Promise<StackFrame[] | undefined>;
+
+  /**
+   * Whether to log transactions synchronously or asynchronously.
+   *
+   * - If set to `true`, the logger will log transactions synchronously
+   *   - This makes `transactionDebounceMs` and `requestIdleCallbackTimeoutMs`
+   *     options irrelevant.
+   *   - This is useful for debugging purposes or if you want to see the logs
+   *     immediately.
+   *   - Note : if `getStackTrace` is provided and returns a promise, the
+   *     transaction will be logged only after the promise is resolved.
+   * - If set to `false`, the logger will log transactions asynchronously
+   *   - First, transaction events are debounced using `transactionDebounceMs`
+   *     option.
+   *   - Then, the transactions are scheduled to be logged using
+   *     `requestIdleCallback` with a maximum timeout defined by
+   *     `requestIdleCallbackTimeoutMs` option.
+   *   - This is useful for reducing the impact of the logger on the application
+   *     performance.
+   *
+   * @default false
+   */
+  synchronous?: boolean;
+
+  /**
+   * Debounce time for transaction flushing in milliseconds.
+   *
+   * Only used if `synchronous` is set to `false`.
+   *
+   * - This ensures that multiple independent events are logged together in a
+   *   single transaction instead of multiple transactions.
+   *
+   * - Use `0` for no debounce, which means that every transaction will be
+   *   scheduled to be logged immediately. This is the same as setting
+   *   `synchronous` to `true`.
+   *
+   * @default 250
+   */
+  transactionDebounceMs?: number;
+
+  /**
+   * Timeout in milliseconds for the
+   * {@link https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback#timeout | `requestIdleCallback`}
+   * used to flush transactions.
+   *
+   * Only used if `synchronous` is set to `false`.
+   *
+   * - `requestIdleCallback` queues transactions to be logged during a browser's
+   *   idle periods with this maximum timeout per transaction. This ensure that
+   *   the logger does not impact too much the application performances.
+   *
+   * - Use a positive value to set a maximum timeout for the
+   *   `requestIdleCallback`.
+   *   - This means that the logger will wait for the browser to be idle for at
+   *     least this amount of time before logging the transaction.
+   *   - It will fallback to `setTimeout` with a timeout of `0` if the browser
+   *     does not support `requestIdleCallback`.
+   *
+   * - Use `0` to wait indefinitely for the browser to be idle before logging
+   *   the transaction.
+   *   - It will fallback to `setTimeout` with a timeout of `0` if the browser
+   *     does not support `requestIdleCallback`.
+   *
+   * - Use `-1` or lower to log scheduled transactions immediately. This is the
+   *   same as setting `synchronous` to `true`.
+   *
+   * @default 250
+   */
+  requestIdleCallbackTimeoutMs?: number;
 }
 
 export interface AtomsLoggerTransactionBase {

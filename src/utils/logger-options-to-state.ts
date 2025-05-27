@@ -1,5 +1,6 @@
 import type { AtomsLoggerOptions, AtomsLoggerOptionsInState } from '../types/atoms-logger.js';
 
+// eslint-disable-next-line complexity -- it's a simple conversion function
 export function atomsLoggerOptionsToState(
   options: AtomsLoggerOptions = {},
 ): AtomsLoggerOptionsInState {
@@ -22,8 +23,10 @@ export function atomsLoggerOptionsToState(
     collapseTransactions = false,
     collapseEvents = true,
     getStackTrace,
+    synchronous = false,
+    transactionDebounceMs = 250,
+    requestIdleCallbackTimeoutMs = 250,
   } = options;
-
   return {
     enabled,
     domain,
@@ -47,5 +50,7 @@ export function atomsLoggerOptionsToState(
     collapseTransactions,
     collapseEvents,
     getStackTrace,
+    transactionDebounceMs: synchronous ? -1 : transactionDebounceMs,
+    requestIdleCallbackTimeoutMs: synchronous ? -1 : requestIdleCallbackTimeoutMs,
   };
 }

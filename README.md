@@ -127,6 +127,12 @@ type AtomsLoggerOptions = {
   collapseEvents?: boolean;
   /** Custom function to retrieve calling React components' names from stack traces */
   getStackTrace?: () => { functionName?: string; fileName?: string }[] | undefined;
+  /** Whether to log synchronously or asynchronously (default: false) */
+  synchronous?: boolean;
+  /** Debounce time in milliseconds for grouping transactions (default: 250ms) */
+  transactionDebounceMs?: number;
+  /** Timeout in milliseconds for requestIdleCallback (default: 250ms) */
+  requestIdleCallbackTimeoutMs?: number;
 };
 
 const options: AtomsLoggerOptions = {
@@ -213,6 +219,63 @@ useAtomsLogger({
       return StackTrace.fromError(error as Error, { offline: true });
     }
   },
+});
+```
+
+### Synchronous vs. Asynchronous Logging
+
+By default, the logger uses an asynchronous approach to log transactions, ensuring minimal impact on your application's performance.
+
+#### Synchronous Logging
+
+You can switch to synchronous logging by setting the `synchronous` option to `true`.
+
+This option can be useful for debugging, testing, when you need deterministic log ordering or when you use your own logger that already logs asynchronously.
+However, it can significantly impact performance, especially in applications with frequent atom changes.
+
+```tsx
+import { useAtomsLogger } from 'jotai-logger';
+
+// Log transactions synchronously
+useAtomsLogger({
+  synchronous: true,
+});
+```
+
+#### Asynchronous Logging Configuration
+
+For asynchronous logging, you can fine-tune two key parameters:
+
+1. `transactionDebounceMs` (default: `250ms`) - Controls how transactions are grouped:
+
+   - Higher values (e.g., `500ms`) - Group more unknown events into fewer transactions, reducing console noise
+   - Lower values (e.g., `50ms`) - See transactions more quickly, with less grouping
+   - Setting to `0` - Schedule each transaction to be logged immediately without debouncing incoming events. This is the same as `synchronous: true`.
+
+2. `requestIdleCallbackTimeoutMs` (default: `250ms`) - Controls when scheduled transaction are written:
+   - Higher values - Allow more time for the browser to process logs during idle periods
+   - Setting to `0` - Only log when the browser is completely idle (may delay logs indefinitely)
+   - Setting to `-1` - Disable `requestIdleCallback` completely, logging scheduled transactions immediately. This is the same as `synchronous: true`.
+
+Here are some examples of how to configure these options based on your needs:
+
+```tsx
+// Quick feedback: minimal debounce, guaranteed logging within 100 to 150ms
+useAtomsLogger({
+  transactionDebounceMs: 50,
+  requestIdleCallbackTimeoutMs: 100,
+});
+
+// Performance priority: group events aggressively, only log during idle time
+useAtomsLogger({
+  transactionDebounceMs: 500,
+  requestIdleCallbackTimeoutMs: 0, // No maximum timeout, only log when truly idle
+});
+
+// Balanced approach (default behavior)
+useAtomsLogger({
+  transactionDebounceMs: 250,
+  requestIdleCallbackTimeoutMs: 250,
 });
 ```
 

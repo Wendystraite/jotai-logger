@@ -133,6 +133,8 @@ describe('useAtomsLogger', () => {
       showTransactionElapsedTime: true,
       collapseTransactions: false,
       collapseEvents: true,
+      transactionDebounceMs: 250,
+      requestIdleCallbackTimeoutMs: 250,
     };
     expect(isAtomsLoggerBoundToStore(store)).toBeTruthy();
     expect((store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL]).toEqual(

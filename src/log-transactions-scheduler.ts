@@ -9,11 +9,6 @@ import type {
 } from './types/atoms-logger.js';
 import { getTransactionMapTransaction } from './utils/get-transaction-map-transaction.js';
 
-/**
- * Timeout for requestIdleCallback in ms.
- */
-const REQUEST_IDLE_CALLBACK_TIMEOUT_MS = 250;
-
 export function createLogTransactionsScheduler(
   store: StoreWithAtomsLogger,
 ): AtomsLoggerState['logTransactionsScheduler'] {
@@ -39,7 +34,7 @@ export function createLogTransactionsScheduler(
             this.process();
           }
         });
-      });
+      }, store[ATOMS_LOGGER_SYMBOL]);
     },
     add(transactionMap) {
       this.queue.push(transactionMap);
@@ -49,9 +44,14 @@ export function createLogTransactionsScheduler(
   return logTransactionsScheduler;
 }
 
-function schedule(cb: () => void) {
-  if (typeof globalThis.requestIdleCallback === 'function') {
-    globalThis.requestIdleCallback(cb, { timeout: REQUEST_IDLE_CALLBACK_TIMEOUT_MS });
+function schedule(
+  cb: () => void,
+  { requestIdleCallbackTimeoutMs }: { requestIdleCallbackTimeoutMs: number },
+): void {
+  if (requestIdleCallbackTimeoutMs <= -1) {
+    cb();
+  } else if (typeof globalThis.requestIdleCallback === 'function') {
+    globalThis.requestIdleCallback(cb, { timeout: requestIdleCallbackTimeoutMs });
   } else {
     setTimeout(cb, 0);
   }

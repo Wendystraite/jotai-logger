@@ -12,7 +12,7 @@ export function endTransaction(
   store[ATOMS_LOGGER_SYMBOL].isInsideTransaction = false;
 
   // Flush the transaction events immediately (useful when starting a new transaction).
-  if (immediate) {
+  if (immediate || store[ATOMS_LOGGER_SYMBOL].transactionDebounceMs <= 0) {
     stopEndTransactionDebounce(store);
     updateTransactionEndTimestamp(store);
     flushTransactionEvents(store);
