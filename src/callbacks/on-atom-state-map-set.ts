@@ -2,7 +2,11 @@ import { type INTERNAL_AtomState } from 'jotai/vanilla/internals';
 
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import { addEventToTransaction } from '../transactions/add-event-to-transaction.js';
-import type { AnyAtom, StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import {
+  AtomsLoggerEventTypes,
+  type AnyAtom,
+  type StoreWithAtomsLogger,
+} from '../types/atoms-logger.js';
 import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { onAtomValueChanged } from './on-atom-value-changed.js';
 
@@ -18,13 +22,21 @@ export function getOnAtomStateMapSet(store: StoreWithAtomsLogger) {
     const originalMapSet = atomState.d.set.bind(atomState.d);
     atomState.d.set = function mapSetProxy(addedDependency: AnyAtom, epochNumber: number) {
       const result = originalMapSet(addedDependency, epochNumber);
-      addEventToTransaction(store, { dependenciesChanged: { atom, addedDependency } });
+      addEventToTransaction(store, {
+        type: AtomsLoggerEventTypes.dependenciesChanged,
+        atom,
+        addedDependency,
+      });
       return result;
     };
     const originalMapClear = atomState.d.clear.bind(atomState.d);
     atomState.d.clear = function mapClearProxy() {
       originalMapClear();
-      addEventToTransaction(store, { dependenciesChanged: { atom, clearedDependencies: true } });
+      addEventToTransaction(store, {
+        type: AtomsLoggerEventTypes.dependenciesChanged,
+        atom,
+        clearedDependencies: true,
+      });
     };
 
     // Track the values changes in the atom state.

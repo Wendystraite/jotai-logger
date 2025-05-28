@@ -1,9 +1,9 @@
-import type { AtomsLoggerState, AtomsLoggerTransactionMap } from '../types/atoms-logger.js';
+import type { AtomsLoggerState, AtomsLoggerTransaction } from '../types/atoms-logger.js';
 import { logEvent } from './log-event.js';
 import { TransactionLogPipeline } from './transaction-log-pipeline.js';
 
 export function logTransaction(
-  transactionMap: AtomsLoggerTransactionMap,
+  transaction: AtomsLoggerTransaction,
   options: AtomsLoggerState,
 ): void {
   const { logger, collapseTransactions } = options;
@@ -14,7 +14,7 @@ export function logTransaction(
     logs,
     additionalDataToLog,
     transaction: { events = [] },
-  } = TransactionLogPipeline.execute({ transactionMap, options });
+  } = TransactionLogPipeline.execute({ transaction, options });
 
   if (Object.keys(additionalDataToLog).length > 0) {
     logs.push(additionalDataToLog);

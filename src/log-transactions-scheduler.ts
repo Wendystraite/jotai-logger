@@ -7,7 +7,6 @@ import type {
   AtomsLoggerState,
   StoreWithAtomsLogger,
 } from './types/atoms-logger.js';
-import { getTransactionMapTransaction } from './utils/get-transaction-map-transaction.js';
 
 export function createLogTransactionsScheduler(
   store: StoreWithAtomsLogger,
@@ -21,14 +20,13 @@ export function createLogTransactionsScheduler(
       this.isProcessing = true;
 
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- should exist
-      const nextTransactionMap = this.queue.shift()!;
-      const nextTransaction = getTransactionMapTransaction(nextTransactionMap);
+      const nextTransaction = this.queue.shift()!;
 
       schedule(() => {
         waitForStackTrace(nextTransaction.stackTrace, (stackTrace) => {
           nextTransaction.stackTrace = stackTrace;
           try {
-            logTransaction(nextTransactionMap, store[ATOMS_LOGGER_SYMBOL]);
+            logTransaction(nextTransaction, store[ATOMS_LOGGER_SYMBOL]);
           } finally {
             this.isProcessing = false;
             this.process();
@@ -36,8 +34,8 @@ export function createLogTransactionsScheduler(
         });
       }, store[ATOMS_LOGGER_SYMBOL]);
     },
-    add(transactionMap) {
-      this.queue.push(transactionMap);
+    add(transaction) {
+      this.queue.push(transaction);
       this.process();
     },
   };

@@ -1,63 +1,63 @@
 {
   "name": "subscribe-write",
-  "date": "2025-05-28T18:33:18.024Z",
+  "date": "2025-05-28T21:16:54.975Z",
   "version": null,
   "results": [
     {
       "name": "atoms=100",
-      "ops": 845564,
-      "margin": 8.53,
-      "percentSlower": 3.08
-    },
-    {
-      "name": "atoms=100 [with logger]",
-      "ops": 63974,
-      "margin": 2.91,
-      "percentSlower": 92.67
-    },
-    {
-      "name": "atoms=1000",
-      "ops": 839244,
-      "margin": 5.82,
-      "percentSlower": 3.81
-    },
-    {
-      "name": "atoms=1000 [with logger]",
-      "ops": 59593,
-      "margin": 3.08,
-      "percentSlower": 93.17
-    },
-    {
-      "name": "atoms=10000",
-      "ops": 763065,
-      "margin": 7.5,
-      "percentSlower": 12.54
-    },
-    {
-      "name": "atoms=10000 [with logger]",
-      "ops": 64568,
-      "margin": 3.22,
-      "percentSlower": 92.6
-    },
-    {
-      "name": "atoms=100000",
-      "ops": 872443,
-      "margin": 6.56,
+      "ops": 903576,
+      "margin": 4.47,
       "percentSlower": 0
     },
     {
+      "name": "atoms=100 [with logger]",
+      "ops": 66985,
+      "margin": 2.44,
+      "percentSlower": 92.59
+    },
+    {
+      "name": "atoms=1000",
+      "ops": 781114,
+      "margin": 7.1,
+      "percentSlower": 13.55
+    },
+    {
+      "name": "atoms=1000 [with logger]",
+      "ops": 74798,
+      "margin": 1.89,
+      "percentSlower": 91.72
+    },
+    {
+      "name": "atoms=10000",
+      "ops": 818144,
+      "margin": 4.89,
+      "percentSlower": 9.45
+    },
+    {
+      "name": "atoms=10000 [with logger]",
+      "ops": 72411,
+      "margin": 2.58,
+      "percentSlower": 91.99
+    },
+    {
+      "name": "atoms=100000",
+      "ops": 832016,
+      "margin": 6.07,
+      "percentSlower": 7.92
+    },
+    {
       "name": "atoms=100000 [with logger]",
-      "ops": 58138,
-      "margin": 3.46,
-      "percentSlower": 93.34
+      "ops": 68930,
+      "margin": 2.01,
+      "percentSlower": 92.37
     }
   ],
   "fastest": {
-    "name": "atoms=100000",
-    "index": 6
+    "name": "atoms=100",
+    "index": 0
   },
   "slowest": {
-    "name": "atoms=100000 [with logger]",
-    "index": 7
+    "name": "atoms=100 [with logger]",
+    "index": 1
   }
 }

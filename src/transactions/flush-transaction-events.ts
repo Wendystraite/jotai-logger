@@ -1,16 +1,15 @@
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import type {
-  AnyAtom,
-  AtomId,
-  AtomsLoggerTransaction,
-  StoreWithAtomsLogger,
+import {
+  AtomsLoggerEventTypes,
+  type AnyAtom,
+  type AtomId,
+  type AtomsLoggerTransaction,
+  type StoreWithAtomsLogger,
 } from '../types/atoms-logger.js';
-import { getTransactionMapTransaction } from '../utils/get-transaction-map-transaction.js';
 
 export function flushTransactionEvents(store: StoreWithAtomsLogger): void {
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- should never happen since it is called in endTransaction
-  const transactionMap = store[ATOMS_LOGGER_SYMBOL].currentTransaction!;
-  const transaction = getTransactionMapTransaction(transactionMap);
+  const transaction = store[ATOMS_LOGGER_SYMBOL].currentTransaction!;
 
   store[ATOMS_LOGGER_SYMBOL].currentTransaction = undefined;
 
@@ -26,7 +25,7 @@ export function flushTransactionEvents(store: StoreWithAtomsLogger): void {
   store[ATOMS_LOGGER_SYMBOL].transactionNumber += 1;
 
   // Add current transaction to scheduler instead of executing immediately
-  store[ATOMS_LOGGER_SYMBOL].logTransactionsScheduler.add(transactionMap);
+  store[ATOMS_LOGGER_SYMBOL].logTransactionsScheduler.add(transaction);
 }
 
 /**
@@ -40,13 +39,12 @@ function cleanupDependencyChangedEvents(
   const existingDependencyChangedEventsMap = new WeakMap<AnyAtom, boolean>();
 
   for (let i = transaction.events.length - 1; i >= 0; i -= 1) {
-    const eventMap = transaction.events[i];
-    if (!eventMap?.dependenciesChanged) {
+    const event = transaction.events[i];
+    if (!event || event.type !== AtomsLoggerEventTypes.dependenciesChanged) {
       continue;
     }
 
-    const event = eventMap.dependenciesChanged;
-    const atom = event.atom as AnyAtom;
+    const atom = event.atom;
 
     // Remove the event if it is a duplicate
     if (existingDependencyChangedEventsMap.has(atom)) {

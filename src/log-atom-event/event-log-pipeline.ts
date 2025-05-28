@@ -1,17 +1,91 @@
-import type {
-  AtomsLoggerEvent,
-  AtomsLoggerEventMap,
-  AtomsLoggerState,
+import {
+  AtomsLoggerEventTypes,
+  type AtomsLoggerEvent,
+  type AtomsLoggerEventType,
+  type AtomsLoggerState,
 } from '../types/atoms-logger.js';
-import { getEventMapEvent } from '../utils/get-event-map-event.js';
 import { stringifyValue } from '../utils/stringify-value.js';
 import { addAtomToLogs } from './add-atom-to-logs.js';
 import { addToLogs } from './add-to-logs.js';
 import { LogPipeline } from './log-pipeline.js';
 
+const addEventTypeToLogsMapping: Record<AtomsLoggerEventType, Parameters<typeof addToLogs>[2]> = {
+  [AtomsLoggerEventTypes.initialized]: {
+    plainText: () => 'initialized value of',
+    formatted: () => ['%cinitialized value %cof', ['blue', 'bold'], 'grey'],
+  },
+  [AtomsLoggerEventTypes.changed]: {
+    plainText: () => 'changed value of',
+    formatted: () => ['%cchanged value %cof', ['lightBlue', 'bold'], 'grey'],
+  },
+  [AtomsLoggerEventTypes.initialPromisePending]: {
+    plainText: () => 'pending initial promise of',
+    formatted: () => ['%cpending initial promise %cof', ['pink', 'bold'], 'grey'],
+  },
+  [AtomsLoggerEventTypes.changedPromisePending]: {
+    plainText: () => 'pending promise of',
+    formatted: () => ['%cpending promise %cof', ['pink', 'bold'], 'grey'],
+  },
+  [AtomsLoggerEventTypes.initialPromiseResolved]: {
+    plainText: () => 'resolved initial promise of',
+    formatted: () => [
+      '%cresolved %cinitial promise %cof',
+      ['green', 'bold'],
+      ['pink', 'bold'],
+      'grey',
+    ],
+  },
+  [AtomsLoggerEventTypes.changedPromiseResolved]: {
+    plainText: () => 'resolved promise of',
+    formatted: () => ['%cresolved %cpromise %cof', ['green', 'bold'], ['pink', 'bold'], 'grey'],
+  },
+  [AtomsLoggerEventTypes.initialPromiseRejected]: {
+    plainText: () => 'rejected initial promise of',
+    formatted: () => [
+      '%crejected %cinitial promise %cof',
+      ['red', 'bold'],
+      ['pink', 'bold'],
+      'grey',
+    ],
+  },
+  [AtomsLoggerEventTypes.changedPromiseRejected]: {
+    plainText: () => 'rejected promise of',
+    formatted: () => ['%crejected %cpromise %cof', ['red', 'bold'], ['pink', 'bold'], 'grey'],
+  },
+  [AtomsLoggerEventTypes.initialPromiseAborted]: {
+    plainText: () => 'aborted initial promise of',
+    formatted: () => [
+      '%caborted %cinitial promise %cof',
+      ['red', 'bold'],
+      ['pink', 'bold'],
+      'grey',
+    ],
+  },
+  [AtomsLoggerEventTypes.changedPromiseAborted]: {
+    plainText: () => 'aborted promise of',
+    formatted: () => ['%caborted %cpromise %cof', ['red', 'bold'], ['pink', 'bold'], 'grey'],
+  },
+  [AtomsLoggerEventTypes.destroyed]: {
+    plainText: () => 'destroyed',
+    formatted: () => ['%cdestroyed', ['red', 'bold']],
+  },
+  [AtomsLoggerEventTypes.dependenciesChanged]: {
+    plainText: () => 'changed dependencies of',
+    formatted: () => ['%cchanged dependencies %cof', ['yellow', 'bold'], 'grey'],
+  },
+  [AtomsLoggerEventTypes.mounted]: {
+    plainText: () => 'mounted',
+    formatted: () => ['%cmounted', ['green', 'bold']],
+  },
+  [AtomsLoggerEventTypes.unmounted]: {
+    plainText: () => 'unmounted',
+    formatted: () => ['%cunmounted', ['red', 'bold']],
+  },
+};
+
 export const EventLogPipeline = new LogPipeline()
   .withArgs<{
-    eventMap: AtomsLoggerEventMap;
+    event: AtomsLoggerEvent;
     options: AtomsLoggerState;
   }>()
 
@@ -20,12 +94,10 @@ export const EventLogPipeline = new LogPipeline()
     logs: [string, ...unknown[]];
     subLogsArray: [string, ...unknown[]][];
     subLogsObject: Record<string, unknown>;
-    event: AtomsLoggerEvent;
   }>(function addLogsToEventMeta(context) {
     context.logs = [] as unknown[] as [string, ...unknown[]];
     context.subLogsArray = [];
     context.subLogsObject = {};
-    context.event = getEventMapEvent(context.eventMap);
   })
 
   // Process old values
@@ -60,7 +132,7 @@ export const EventLogPipeline = new LogPipeline()
       | { hasNewValue?: undefined; newValue?: undefined; isNewValueError?: undefined }
     ) & { showNewValueInLog: boolean }
   >(function addNewValuesToEventMeta(context) {
-    const { event, eventMap } = context;
+    const { event } = context;
     if ('newValue' in event) {
       context.hasNewValue = true;
       context.newValue = event.newValue;
@@ -74,98 +146,13 @@ export const EventLogPipeline = new LogPipeline()
       context.newValue = event.error;
       context.isNewValueError = true;
     }
-    context.showNewValueInLog = !eventMap.mounted;
+    context.showNewValueInLog = event.type !== AtomsLoggerEventTypes.mounted;
   })
 
   // {event}
   .withLog(function addEventToEventLogs(context) {
-    const { logs, eventMap, options } = context;
-    if (eventMap.initialized) {
-      addToLogs(logs, options, {
-        plainText: () => 'initialized value of',
-        formatted: () => ['%cinitialized value %cof', ['blue', 'bold'], 'grey'],
-      });
-    } else if (eventMap.changed) {
-      addToLogs(logs, options, {
-        plainText: () => 'changed value of',
-        formatted: () => ['%cchanged value %cof', ['lightBlue', 'bold'], 'grey'],
-      });
-    } else if (eventMap.initialPromisePending) {
-      addToLogs(logs, options, {
-        plainText: () => 'pending initial promise of',
-        formatted: () => ['%cpending initial promise %cof', ['pink', 'bold'], 'grey'],
-      });
-    } else if (eventMap.changedPromisePending) {
-      addToLogs(logs, options, {
-        plainText: () => 'pending promise of',
-        formatted: () => ['%cpending promise %cof', ['pink', 'bold'], 'grey'],
-      });
-    } else if (eventMap.initialPromiseResolved) {
-      addToLogs(logs, options, {
-        plainText: () => 'resolved initial promise of',
-        formatted: () => [
-          '%cresolved %cinitial promise %cof',
-          ['green', 'bold'],
-          ['pink', 'bold'],
-          'grey',
-        ],
-      });
-    } else if (eventMap.changedPromiseResolved) {
-      addToLogs(logs, options, {
-        plainText: () => 'resolved promise of',
-        formatted: () => ['%cresolved %cpromise %cof', ['green', 'bold'], ['pink', 'bold'], 'grey'],
-      });
-    } else if (eventMap.initialPromiseRejected) {
-      addToLogs(logs, options, {
-        plainText: () => 'rejected initial promise of',
-        formatted: () => [
-          '%crejected %cinitial promise %cof',
-          ['red', 'bold'],
-          ['pink', 'bold'],
-          'grey',
-        ],
-      });
-    } else if (eventMap.changedPromiseRejected) {
-      addToLogs(logs, options, {
-        plainText: () => 'rejected promise of',
-        formatted: () => ['%crejected %cpromise %cof', ['red', 'bold'], ['pink', 'bold'], 'grey'],
-      });
-    } else if (eventMap.initialPromiseAborted) {
-      addToLogs(logs, options, {
-        plainText: () => 'aborted initial promise of',
-        formatted: () => [
-          '%caborted %cinitial promise %cof',
-          ['red', 'bold'],
-          ['pink', 'bold'],
-          'grey',
-        ],
-      });
-    } else if (eventMap.changedPromiseAborted) {
-      addToLogs(logs, options, {
-        plainText: () => 'aborted promise of',
-        formatted: () => ['%caborted %cpromise %cof', ['red', 'bold'], ['pink', 'bold'], 'grey'],
-      });
-    } else if (eventMap.destroyed) {
-      addToLogs(logs, options, {
-        plainText: () => 'destroyed',
-        formatted: () => ['%cdestroyed', ['red', 'bold']],
-      });
-    } else if (eventMap.dependenciesChanged) {
-      addToLogs(logs, options, {
-        plainText: () => 'changed dependencies of',
-        formatted: () => ['%cchanged dependencies %cof', ['yellow', 'bold'], 'grey'],
-      });
-    } else if (eventMap.mounted) {
-      addToLogs(logs, options, {
-        plainText: () => 'mounted',
-        formatted: () => ['%cmounted', ['green', 'bold']],
-      });
-    } else if (eventMap.unmounted) {
-      addToLogs(logs, options, {
-        plainText: () => 'unmounted',
-        formatted: () => ['%cunmounted', ['red', 'bold']],
-      });
-    }
+    const { logs, event, options } = context;
+    addToLogs(logs, options, addEventTypeToLogsMapping[event.type]);
   })
 
   // {atom}
@@ -290,18 +277,19 @@ export const EventLogPipeline = new LogPipeline()
   })
 
   // Extra data logger
-  .withLog(function addExtraDataToEventLogs({ subLogsArray, subLogsObject, eventMap, event }) {
-    if (!shouldSetStateInEvent(eventMap)) return;
+  .withLog(function addExtraDataToEventLogs({ subLogsArray, subLogsObject, event }) {
+    if (!shouldSetStateInEvent(event)) return;
 
     const { pendingPromises, dependencies, dependents } = event;
 
     const showPendingPromises = pendingPromises && pendingPromises.length > 0;
     const showDependents = dependents && dependents.length > 0;
 
-    let oldDependencies = eventMap.dependenciesChanged?.oldDependencies;
-    let newDependencies = dependencies;
-    const showOldDependencies = eventMap.dependenciesChanged;
+    const showOldDependencies = event.type === AtomsLoggerEventTypes.dependenciesChanged;
     const showNewDependencies = showOldDependencies;
+
+    let oldDependencies = showOldDependencies ? event.oldDependencies : undefined;
+    let newDependencies = dependencies;
 
     const showDependencies = !showNewDependencies && dependencies && dependencies.size > 0;
 
@@ -350,7 +338,9 @@ export const EventLogPipeline = new LogPipeline()
 /**
  * Check if the event states should be added to the event.
  */
-export function shouldSetStateInEvent(eventMap: AtomsLoggerEventMap): boolean {
+export function shouldSetStateInEvent(event: AtomsLoggerEvent): boolean {
   // If the atom is unmounted or destroyed, we don't need to log anything else.
-  return !eventMap.unmounted && !eventMap.destroyed;
+  return (
+    event.type !== AtomsLoggerEventTypes.unmounted && event.type !== AtomsLoggerEventTypes.destroyed
+  );
 }

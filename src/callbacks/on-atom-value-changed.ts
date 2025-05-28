@@ -4,7 +4,12 @@ import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import { addEventToTransaction } from '../transactions/add-event-to-transaction.js';
 import { endTransaction } from '../transactions/end-transaction.js';
 import { startTransaction } from '../transactions/start-transaction.js';
-import type { AnyAtom, StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import {
+  AtomsLoggerEventTypes,
+  AtomsLoggerTransactionTypes,
+  type AnyAtom,
+  type StoreWithAtomsLogger,
+} from '../types/atoms-logger.js';
 
 export function onAtomValueChanged(
   store: StoreWithAtomsLogger,
@@ -18,9 +23,18 @@ export function onAtomValueChanged(
   if (!INTERNAL_isPromiseLike(newValueOrPromise)) {
     const newValue = newValueOrPromise;
     if (isInitialValue) {
-      addEventToTransaction(store, { initialized: { atom, value: newValue } });
+      addEventToTransaction(store, {
+        type: AtomsLoggerEventTypes.initialized,
+        atom,
+        value: newValue,
+      });
     } else if (oldValue !== newValueOrPromise) {
-      addEventToTransaction(store, { changed: { atom, oldValue, newValue } });
+      addEventToTransaction(store, {
+        type: AtomsLoggerEventTypes.changed,
+        atom,
+        oldValue,
+        newValue,
+      });
     }
     return;
   }
@@ -53,17 +67,31 @@ export function onAtomValueChanged(
   let isAborted = false;
 
   if (isInitialValue) {
-    addEventToTransaction(store, { initialPromisePending: { atom } });
+    addEventToTransaction(store, {
+      type: AtomsLoggerEventTypes.initialPromisePending,
+      atom,
+    });
   } else {
-    addEventToTransaction(store, { changedPromisePending: { atom, oldValue } });
+    addEventToTransaction(store, {
+      type: AtomsLoggerEventTypes.changedPromisePending,
+      atom,
+      oldValue,
+    });
   }
 
   INTERNAL_registerAbortHandler(newPromise, () => {
     isAborted = true;
     if (isInitialValue) {
-      addEventToTransaction(store, { initialPromiseAborted: { atom } });
+      addEventToTransaction(store, {
+        type: AtomsLoggerEventTypes.initialPromiseAborted,
+        atom,
+      });
     } else {
-      addEventToTransaction(store, { changedPromiseAborted: { atom, oldValue } });
+      addEventToTransaction(store, {
+        type: AtomsLoggerEventTypes.changedPromiseAborted,
+        atom,
+        oldValue,
+      });
     }
   });
 
@@ -86,7 +114,10 @@ export function onAtomValueChanged(
     // Current transaction is a promise resolved or rejected : This can means
     // that these promises were waiting for the previous pending transaction to
     // be settled so merge them into the current transaction.
-    if (currentTransaction.promiseResolved || currentTransaction.promiseRejected) {
+    if (
+      currentTransaction.type === AtomsLoggerTransactionTypes.promiseResolved ||
+      currentTransaction.type === AtomsLoggerTransactionTypes.promiseRejected
+    ) {
       return false;
     }
 
@@ -101,32 +132,64 @@ export function onAtomValueChanged(
 
         const doStartTransaction = canStartNewTransaction();
 
-        if (doStartTransaction) startTransaction(store, { promiseResolved: { atom } });
-
-        if (isInitialValue) {
-          addEventToTransaction(store, { initialPromiseResolved: { atom, value: newValue } });
-        } else {
-          addEventToTransaction(store, { changedPromiseResolved: { atom, oldValue, newValue } });
+        if (doStartTransaction) {
+          startTransaction(store, {
+            type: AtomsLoggerTransactionTypes.promiseResolved,
+            atom,
+          });
         }
 
-        if (doStartTransaction) endTransaction(store);
+        if (isInitialValue) {
+          addEventToTransaction(store, {
+            type: AtomsLoggerEventTypes.initialPromiseResolved,
+            atom,
+            value: newValue,
+          });
+        } else {
+          addEventToTransaction(store, {
+            type: AtomsLoggerEventTypes.changedPromiseResolved,
+            atom,
+            oldValue,
+            newValue,
+          });
+        }
+
+        if (doStartTransaction) {
+          endTransaction(store);
+        }
       }
     },
     (error: unknown) => {
       if (!isAborted) {
         const doStartTransaction = canStartNewTransaction();
 
-        if (doStartTransaction) startTransaction(store, { promiseRejected: { atom } });
+        if (doStartTransaction) {
+          startTransaction(store, {
+            type: AtomsLoggerTransactionTypes.promiseRejected,
+            atom,
+          });
+        }
 
         store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.set(newPromise, error);
 
         if (isInitialValue) {
-          addEventToTransaction(store, { initialPromiseRejected: { atom, error } });
+          addEventToTransaction(store, {
+            type: AtomsLoggerEventTypes.initialPromiseRejected,
+            atom,
+            error,
+          });
         } else {
-          addEventToTransaction(store, { changedPromiseRejected: { atom, oldValue, error } });
+          addEventToTransaction(store, {
+            type: AtomsLoggerEventTypes.changedPromiseRejected,
+            atom,
+            oldValue,
+            error,
+          });
         }
 
-        if (doStartTransaction) endTransaction(store);
+        if (doStartTransaction) {
+          endTransaction(store);
+        }
       }
     },
   );

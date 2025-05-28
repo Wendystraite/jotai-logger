@@ -1,15 +1,14 @@
 import { INTERNAL_isActuallyWritableAtom } from 'jotai/vanilla/internals';
 
-import type {
-  AnyAtom,
-  AtomId,
-  AtomsLoggerStackTrace,
-  AtomsLoggerState,
-  AtomsLoggerTransaction,
-  AtomsLoggerTransactionBase,
-  AtomsLoggerTransactionMap,
+import {
+  AtomsLoggerTransactionTypes,
+  type AnyAtom,
+  type AtomId,
+  type AtomsLoggerStackTrace,
+  type AtomsLoggerState,
+  type AtomsLoggerTransaction,
+  type AtomsLoggerTransactionType,
 } from '../types/atoms-logger.js';
-import { getTransactionMapTransaction } from '../utils/get-transaction-map-transaction.js';
 import { hasAtomCustomWriteMethod } from '../utils/has-atom-custom-write-method.js';
 import { stringifyValue } from '../utils/stringify-value.js';
 import { addAtomToLogs } from './add-atom-to-logs.js';
@@ -19,20 +18,61 @@ import { addLocaleTimeToLogs } from './add-locale-time-to-logs.js';
 import { addToLogs } from './add-to-logs.js';
 import { LogPipeline } from './log-pipeline.js';
 
+const addTransactionTypeToLogsMapping: Record<
+  Exclude<AtomsLoggerTransactionType, AtomsLoggerTransactionTypes['unknown']>,
+  ({
+    hasCustomWriteMethod,
+  }: {
+    hasCustomWriteMethod: boolean | undefined;
+  }) => Parameters<typeof addToLogs>[2]
+> = {
+  [AtomsLoggerTransactionTypes.storeSet]: ({ hasCustomWriteMethod }) => {
+    if (hasCustomWriteMethod) {
+      return {
+        plainText: () => 'called set of',
+        formatted: () => [`%ccalled set %cof`, ['yellow', 'bold'], 'grey'],
+      };
+    } else {
+      return {
+        plainText: () => 'set value of',
+        formatted: () => [`%cset value %cof`, ['yellow', 'bold'], 'grey'],
+      };
+    }
+  },
+  [AtomsLoggerTransactionTypes.storeSubscribe]: () => ({
+    plainText: () => 'subscribed to',
+    formatted: () => ['%csubscribed %cto', ['green', 'bold'], 'grey'],
+  }),
+  [AtomsLoggerTransactionTypes.storeUnsubscribe]: () => ({
+    plainText: () => 'unsubscribed from',
+    formatted: () => ['%cunsubscribed %cfrom', ['red', 'bold'], 'grey'],
+  }),
+  [AtomsLoggerTransactionTypes.storeGet]: () => ({
+    plainText: () => 'retrieved value of',
+    formatted: () => ['%cretrieved value %cof', ['blue', 'bold'], 'grey'],
+  }),
+  [AtomsLoggerTransactionTypes.promiseResolved]: () => ({
+    plainText: () => 'resolved promise of',
+    formatted: () => ['%cresolved %cpromise %cof', ['green', 'bold'], ['pink', 'bold'], 'grey'],
+  }),
+  [AtomsLoggerTransactionTypes.promiseRejected]: () => ({
+    plainText: () => 'rejected promise of',
+    formatted: () => ['%crejected %cpromise %cof', ['red', 'bold'], ['pink', 'bold'], 'grey'],
+  }),
+};
+
 export const TransactionLogPipeline = new LogPipeline()
   .withArgs<{
-    transactionMap: AtomsLoggerTransactionMap;
+    transaction: AtomsLoggerTransaction;
     options: AtomsLoggerState;
   }>()
 
   .withMeta<{
     logs: unknown[];
     additionalDataToLog: Record<string, unknown>;
-    transaction: AtomsLoggerTransaction;
   }>(function addLogsToTransactionMeta(context) {
     context.logs = [];
     context.additionalDataToLog = {};
-    context.transaction = getTransactionMapTransaction(context.transactionMap);
   })
 
   .withMeta<{ showDomain: true; domain: string } | { showDomain?: undefined; domain?: undefined }>(
@@ -143,7 +183,7 @@ export const TransactionLogPipeline = new LogPipeline()
     | { showStackTrace?: undefined; stackTrace?: undefined }
   >(function addStackTraceToTransactionMeta(context) {
     const stackTrace = context.transaction.stackTrace as Exclude<
-      AtomsLoggerTransactionBase['stackTrace'],
+      AtomsLoggerTransaction['stackTrace'],
       Promise<AtomsLoggerStackTrace | undefined> // Promise was resolved in log scheduler
     >;
     if (
@@ -169,8 +209,11 @@ export const TransactionLogPipeline = new LogPipeline()
         hasDefaultWriteMethod?: undefined;
       }
   >(function addAtomToTransactionMeta(context) {
-    const { transactionMap, transaction } = context;
-    if (!transactionMap.unknown && transaction.atom !== undefined) {
+    const { transaction } = context;
+    if (
+      transaction.type !== AtomsLoggerTransactionTypes.unknown &&
+      transaction.atom !== undefined
+    ) {
       const atom = transaction.atom;
       context.showAtom = true;
       context.atom = atom;
@@ -182,8 +225,8 @@ export const TransactionLogPipeline = new LogPipeline()
   })
 
   .withMeta<{ showTransactionName?: true }>(function addTransactionNameToTransactionMeta(context) {
-    const { showAtom, transactionMap } = context;
-    if (showAtom === true && !transactionMap.unknown) {
+    const { showAtom, transaction } = context;
+    if (showAtom === true && transaction.type !== AtomsLoggerTransactionTypes.unknown) {
       context.showTransactionName = true;
     }
   })
@@ -273,45 +316,17 @@ export const TransactionLogPipeline = new LogPipeline()
   // {event}
   .withLog(function addEventToTransactionLogs(context) {
     if (!context.showTransactionName) return;
-    const { logs, options, transactionMap, hasCustomWriteMethod } = context;
-    if (transactionMap.storeSet) {
-      if (hasCustomWriteMethod) {
-        addToLogs(logs, options, {
-          plainText: () => 'called set of',
-          formatted: () => [`%ccalled set %cof`, ['yellow', 'bold'], 'grey'],
-        });
-      } else {
-        addToLogs(logs, options, {
-          plainText: () => 'set value of',
-          formatted: () => [`%cset value %cof`, ['yellow', 'bold'], 'grey'],
-        });
-      }
-    } else if (transactionMap.storeSubscribe) {
-      addToLogs(logs, options, {
-        plainText: () => 'subscribed to',
-        formatted: () => ['%csubscribed %cto', ['green', 'bold'], 'grey'],
-      });
-    } else if (transactionMap.storeUnsubscribe) {
-      addToLogs(logs, options, {
-        plainText: () => 'unsubscribed from',
-        formatted: () => ['%cunsubscribed %cfrom', ['red', 'bold'], 'grey'],
-      });
-    } else if (transactionMap.storeGet) {
-      addToLogs(logs, options, {
-        plainText: () => 'retrieved value of',
-        formatted: () => ['%cretrieved value %cof', ['blue', 'bold'], 'grey'],
-      });
-    } else if (transactionMap.promiseResolved) {
-      addToLogs(logs, options, {
-        plainText: () => 'resolved promise of',
-        formatted: () => ['%cresolved %cpromise %cof', ['green', 'bold'], ['pink', 'bold'], 'grey'],
-      });
-    } else if (transactionMap.promiseRejected) {
-      addToLogs(logs, options, {
-        plainText: () => 'rejected promise of',
-        formatted: () => ['%crejected %cpromise %cof', ['red', 'bold'], ['pink', 'bold'], 'grey'],
-      });
-    }
+    const { logs, options, transaction, hasCustomWriteMethod } = context;
+    addToLogs(
+      logs,
+      options,
+      addTransactionTypeToLogsMapping[
+        transaction.type as Exclude<
+          AtomsLoggerTransactionType,
+          AtomsLoggerTransactionTypes['unknown']
+        >
+      ]({ hasCustomWriteMethod }),
+    );
   })
 
   // {atom}

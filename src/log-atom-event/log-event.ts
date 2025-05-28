@@ -1,12 +1,12 @@
-import { type AtomsLoggerEventMap, type AtomsLoggerState } from '../types/atoms-logger.js';
+import { type AtomsLoggerEvent, type AtomsLoggerState } from '../types/atoms-logger.js';
 import { EventLogPipeline } from './event-log-pipeline.js';
 
-export function logEvent(eventMap: AtomsLoggerEventMap, options: AtomsLoggerState): void {
+export function logEvent(event: AtomsLoggerEvent, options: AtomsLoggerState): void {
   const { collapseEvents, logger } = options;
 
   let { groupLogs } = options;
 
-  const { logs, subLogsArray, subLogsObject } = EventLogPipeline.execute({ eventMap, options });
+  const { logs, subLogsArray, subLogsObject } = EventLogPipeline.execute({ event, options });
 
   if (collapseEvents ? !logger.groupCollapsed : !logger.group) {
     groupLogs = false;

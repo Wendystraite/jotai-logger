@@ -38,7 +38,7 @@ export type AtomsLoggerState = AtomsLoggerOptionsInState & {
   /** Incremental counter for transactions */
   transactionNumber: number;
   /** The currently active transaction being tracked, if any */
-  currentTransaction: AtomsLoggerTransactionMap | undefined;
+  currentTransaction: AtomsLoggerTransaction | undefined;
   /** Flag to indicate if the logger is currently processing a transaction (not debouncing) */
   isInsideTransaction: boolean;
   /** FinalizationRegistry that register atoms garbage collection */
@@ -54,13 +54,13 @@ export type AtomsLoggerState = AtomsLoggerOptionsInState & {
   /** Scheduler for logging queued transactions */
   logTransactionsScheduler: {
     /** Queue of transactions to be logged */
-    queue: AtomsLoggerTransactionMap[];
+    queue: AtomsLoggerTransaction[];
     /** Flag to indicate if the scheduler is currently processing */
     isProcessing: boolean;
     /** Process the next transaction in the queue */
     process: () => void;
     /** Add a transaction to the queue and process it */
-    add: (transactionMap: AtomsLoggerTransactionMap) => void;
+    add: (transaction: AtomsLoggerTransaction) => void;
   };
   /** Previous overridden store.get method */
   prevStoreGet: StoreWithAtomsLogger['get'];
@@ -476,62 +476,177 @@ export interface AtomsLoggerOptions {
   requestIdleCallbackTimeoutMs?: number;
 }
 
-export interface AtomsLoggerTransactionBase {
+export const AtomsLoggerTransactionTypes = {
+  unknown: 1,
+  storeGet: 2,
+  storeSet: 3,
+  storeSubscribe: 4,
+  storeUnsubscribe: 5,
+  promiseResolved: 6,
+  promiseRejected: 7,
+} as const;
+
+export type AtomsLoggerTransactionTypes = typeof AtomsLoggerTransactionTypes;
+
+export type AtomsLoggerTransactionType =
+  AtomsLoggerTransactionTypes[keyof AtomsLoggerTransactionTypes];
+
+export type AtomsLoggerTransactionBase<
+  TData extends {
+    type: AtomsLoggerTransactionType;
+  },
+> = TData & {
   atom: AnyAtom | AtomId | undefined;
   transactionNumber: number;
   stackTrace: AtomsLoggerStackTrace | Promise<AtomsLoggerStackTrace | undefined> | undefined;
-  events: AtomsLoggerEventMap[];
+  events: AtomsLoggerEvent[];
   startTimestamp: ReturnType<typeof performance.now>;
   endTimestamp: ReturnType<typeof performance.now>;
+};
+
+export interface AtomsLoggerTransactionMap {
+  [AtomsLoggerTransactionTypes.unknown]: AtomsLoggerTransactionBase<{
+    type: AtomsLoggerTransactionTypes['unknown'];
+  }>;
+  [AtomsLoggerTransactionTypes.storeGet]: AtomsLoggerTransactionBase<{
+    type: AtomsLoggerTransactionTypes['storeGet'];
+  }>;
+  [AtomsLoggerTransactionTypes.storeSet]: AtomsLoggerTransactionBase<{
+    type: AtomsLoggerTransactionTypes['storeSet'];
+    args: unknown[];
+    result: unknown;
+  }>;
+  [AtomsLoggerTransactionTypes.storeSubscribe]: AtomsLoggerTransactionBase<{
+    type: AtomsLoggerTransactionTypes['storeSubscribe'];
+    listener: () => void;
+  }>;
+  [AtomsLoggerTransactionTypes.storeUnsubscribe]: AtomsLoggerTransactionBase<{
+    type: AtomsLoggerTransactionTypes['storeUnsubscribe'];
+    listener: () => void;
+  }>;
+  [AtomsLoggerTransactionTypes.promiseResolved]: AtomsLoggerTransactionBase<{
+    type: AtomsLoggerTransactionTypes['promiseResolved'];
+  }>;
+  [AtomsLoggerTransactionTypes.promiseRejected]: AtomsLoggerTransactionBase<{
+    type: AtomsLoggerTransactionTypes['promiseRejected'];
+  }>;
 }
 
-export type AtomsLoggerTransactionMap = Partial<{
-  unknown: AtomsLoggerTransactionBase;
-  storeGet: AtomsLoggerTransactionBase;
-  storeSet: AtomsLoggerTransactionBase & { args: unknown[]; result: unknown };
-  storeSubscribe: AtomsLoggerTransactionBase & { listener: () => void };
-  storeUnsubscribe: AtomsLoggerTransactionBase & { listener: () => void };
-  promiseResolved: AtomsLoggerTransactionBase;
-  promiseRejected: AtomsLoggerTransactionBase;
-}>;
+export type AtomsLoggerTransaction = AtomsLoggerTransactionMap[keyof AtomsLoggerTransactionMap];
 
-export type AtomsLoggerTransaction = NonNullable<
-  AtomsLoggerTransactionMap[keyof AtomsLoggerTransactionMap]
->;
+export const AtomsLoggerEventTypes = {
+  initialized: 1,
+  initialPromisePending: 2,
+  initialPromiseResolved: 3,
+  initialPromiseRejected: 4,
+  initialPromiseAborted: 5,
+  changed: 6,
+  changedPromisePending: 7,
+  changedPromiseResolved: 8,
+  changedPromiseRejected: 9,
+  changedPromiseAborted: 10,
+  dependenciesChanged: 11,
+  mounted: 12,
+  unmounted: 13,
+  destroyed: 14,
+} as const;
 
-export interface AtomsLoggerEventBase {
-  atom: AnyAtom | AtomId;
+export type AtomsLoggerEventTypes = typeof AtomsLoggerEventTypes;
+export type AtomsLoggerEventType = AtomsLoggerEventTypes[keyof AtomsLoggerEventTypes];
+
+export type AtomsLoggerEventBase<
+  TData extends { type: AtomsLoggerEventType; atom: AnyAtom | AtomId } = {
+    type: AtomsLoggerEventType;
+    atom: AnyAtom | AtomId;
+  },
+> = TData & {
   /** @see {@link INTERNAL_AtomState.p} */
   pendingPromises?: AtomId[];
   /** @see {@link INTERNAL_AtomState.d} @see {@link INTERNAL_Mounted.d} */
   dependencies?: Set<AtomId>;
   /** @see {@link INTERNAL_Mounted.t} */
   dependents?: AtomId[];
-}
+};
 
-export type AtomsLoggerEventMap = Partial<{
-  initialized: AtomsLoggerEventBase & { value: unknown };
-  initialPromisePending: AtomsLoggerEventBase;
-  initialPromiseResolved: AtomsLoggerEventBase & { value: unknown };
-  initialPromiseRejected: AtomsLoggerEventBase & { error: unknown };
-  initialPromiseAborted: AtomsLoggerEventBase;
-  changed: AtomsLoggerEventBase & { oldValue?: unknown; oldValues?: unknown[]; newValue: unknown };
-  changedPromisePending: AtomsLoggerEventBase & { oldValue: unknown };
-  changedPromiseResolved: AtomsLoggerEventBase & { oldValue: unknown; newValue: unknown };
-  changedPromiseRejected: AtomsLoggerEventBase & { oldValue: unknown; error: unknown };
-  changedPromiseAborted: AtomsLoggerEventBase & { oldValue: unknown };
-  dependenciesChanged: AtomsLoggerEventBase & {
-    oldDependencies?: Set<AtomId>;
-  } & (
+export interface AtomsLoggerEventMap {
+  [AtomsLoggerEventTypes.initialized]: AtomsLoggerEventBase<{
+    type: AtomsLoggerEventTypes['initialized'];
+    atom: AnyAtom;
+    value: unknown;
+  }>;
+  [AtomsLoggerEventTypes.initialPromisePending]: AtomsLoggerEventBase<{
+    type: AtomsLoggerEventTypes['initialPromisePending'];
+    atom: AnyAtom;
+  }>;
+  [AtomsLoggerEventTypes.initialPromiseResolved]: AtomsLoggerEventBase<{
+    type: AtomsLoggerEventTypes['initialPromiseResolved'];
+    atom: AnyAtom;
+    value: unknown;
+  }>;
+  [AtomsLoggerEventTypes.initialPromiseRejected]: AtomsLoggerEventBase<{
+    type: AtomsLoggerEventTypes['initialPromiseRejected'];
+    atom: AnyAtom;
+    error: unknown;
+  }>;
+  [AtomsLoggerEventTypes.initialPromiseAborted]: AtomsLoggerEventBase<{
+    type: AtomsLoggerEventTypes['initialPromiseAborted'];
+    atom: AnyAtom;
+  }>;
+  [AtomsLoggerEventTypes.changed]: AtomsLoggerEventBase<{
+    type: AtomsLoggerEventTypes['changed'];
+    atom: AnyAtom;
+    oldValue?: unknown;
+    oldValues?: unknown[];
+    newValue: unknown;
+  }>;
+  [AtomsLoggerEventTypes.changedPromisePending]: AtomsLoggerEventBase<{
+    type: AtomsLoggerEventTypes['changedPromisePending'];
+    atom: AnyAtom;
+    oldValue: unknown;
+  }>;
+  [AtomsLoggerEventTypes.changedPromiseResolved]: AtomsLoggerEventBase<{
+    type: AtomsLoggerEventTypes['changedPromiseResolved'];
+    atom: AnyAtom;
+    oldValue: unknown;
+    newValue: unknown;
+  }>;
+  [AtomsLoggerEventTypes.changedPromiseRejected]: AtomsLoggerEventBase<{
+    type: AtomsLoggerEventTypes['changedPromiseRejected'];
+    atom: AnyAtom;
+    oldValue: unknown;
+    error: unknown;
+  }>;
+  [AtomsLoggerEventTypes.changedPromiseAborted]: AtomsLoggerEventBase<{
+    type: AtomsLoggerEventTypes['changedPromiseAborted'];
+    atom: AnyAtom;
+    oldValue: unknown;
+  }>;
+  [AtomsLoggerEventTypes.dependenciesChanged]: AtomsLoggerEventBase<
+    {
+      type: AtomsLoggerEventTypes['dependenciesChanged'];
+      atom: AnyAtom;
+      oldDependencies?: Set<AtomId>;
+    } & (
       | { addedDependency: AnyAtom; clearedDependencies?: undefined }
       | { addedDependency?: undefined; clearedDependencies: true }
-    );
-  mounted: AtomsLoggerEventBase & { value?: unknown };
-  unmounted: AtomsLoggerEventBase;
-  destroyed: AtomsLoggerEventBase;
-}>;
+    )
+  >;
+  [AtomsLoggerEventTypes.mounted]: AtomsLoggerEventBase<{
+    type: AtomsLoggerEventTypes['mounted'];
+    atom: AnyAtom;
+    value?: unknown;
+  }>;
+  [AtomsLoggerEventTypes.unmounted]: AtomsLoggerEventBase<{
+    type: AtomsLoggerEventTypes['unmounted'];
+    atom: AnyAtom;
+  }>;
+  [AtomsLoggerEventTypes.destroyed]: AtomsLoggerEventBase<{
+    type: AtomsLoggerEventTypes['destroyed'];
+    atom: AtomId;
+  }>;
+}
 
-export type AtomsLoggerEvent = NonNullable<AtomsLoggerEventMap[keyof AtomsLoggerEventMap]>;
+export type AtomsLoggerEvent = AtomsLoggerEventMap[keyof AtomsLoggerEventMap];
 
 /**
  * Stack frame information for the logger to identify the component and the hooks that triggered the event.
