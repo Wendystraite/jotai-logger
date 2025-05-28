@@ -24,23 +24,25 @@ export const TransactionLogPipeline = new LogPipeline()
     options: AtomsLoggerState;
   }>()
 
-  .withMeta(() => ({
-    logs: [] as unknown[],
-    additionalDataToLog: {} as Record<string, unknown>,
-  }))
+  .withMeta(function addLogsToTransactionMeta() {
+    return {
+      logs: [] as unknown[],
+      additionalDataToLog: {} as Record<string, unknown>,
+    };
+  })
 
-  .withMeta(({ transactionMap }) => {
+  .withMeta(function addTransactionToTransactionMeta({ transactionMap }) {
     const transaction = getTransactionMapTransaction(transactionMap);
     return { transaction };
   })
 
-  .withMeta(({ options: { domain } }) => {
+  .withMeta(function addDomainToTransactionMeta({ options: { domain } }) {
     const showDomain = domain !== undefined && domain.length > 0;
     return { showDomain, domain } as { showDomain: false } | { showDomain: true; domain: string };
   })
 
   // {domain} -
-  .withLog((context) => {
+  .withLog(function addDomainToTransactionLogs(context) {
     if (!context.showDomain) return;
     const { logs, options, domain } = context;
     addToLogs(logs, options, {
@@ -50,13 +52,16 @@ export const TransactionLogPipeline = new LogPipeline()
     addDashToLogs(logs, options);
   })
 
-  .withMeta(({ transaction: { transactionNumber }, options }) => {
+  .withMeta(function addTransactionNumberToTransactionMeta({
+    transaction: { transactionNumber },
+    options,
+  }) {
     const showTransactionNumber = options.showTransactionNumber;
     return { showTransactionNumber, transactionNumber };
   })
 
   // transaction {transactionNumber}
-  .withLog((context) => {
+  .withLog(function addTransactionNumberToTransactionLogs(context) {
     if (!context.showTransactionNumber) return;
     const { logs, options, transactionNumber } = context;
     addToLogs(logs, options, {
@@ -65,50 +70,51 @@ export const TransactionLogPipeline = new LogPipeline()
     });
   })
 
-  .withMeta(({ transaction: { startTimestamp }, options: { showTransactionLocaleTime } }) => {
+  .withMeta(function addTransactionLocaleTimeToTransactionMeta({
+    transaction: { startTimestamp },
+    options: { showTransactionLocaleTime },
+  }) {
     const showLocaleTime = showTransactionLocaleTime;
     return { showLocaleTime, startTimestamp };
   })
 
-  .withMeta(
-    ({
-      transaction: { startTimestamp, endTimestamp },
-      options: { showTransactionElapsedTime },
-    }) => {
-      const showElapsedTime = showTransactionElapsedTime && startTimestamp !== endTimestamp;
-      return { showElapsedTime, startTimestamp, endTimestamp };
-    },
-  )
+  .withMeta(function addElapsedTimeToTransactionMeta({
+    transaction: { startTimestamp, endTimestamp },
+    options: { showTransactionElapsedTime },
+  }) {
+    const showElapsedTime = showTransactionElapsedTime && startTimestamp !== endTimestamp;
+    return { showElapsedTime, startTimestamp, endTimestamp };
+  })
 
   // -
-  .withLog((context) => {
+  .withLog(function addDateTimeDashToTransactionLogs(context) {
     if (!context.showLocaleTime && !context.showElapsedTime) return;
     const { logs, options } = context;
     addDashToLogs(logs, options);
   })
 
   // {localeTime}
-  .withLog((context) => {
+  .withLog(function addLocaleTimeToTransactionLogs(context) {
     if (!context.showLocaleTime) return;
     const { logs, options, startTimestamp } = context;
     addLocaleTimeToLogs(logs, startTimestamp, options);
   })
 
   // -
-  .withLog((context) => {
+  .withLog(function addLocaleTimeDashToTransactionLogs(context) {
     if (!context.showLocaleTime || !context.showElapsedTime) return;
     const { logs, options } = context;
     addDashToLogs(logs, options);
   })
 
   // {elapsedTime}
-  .withLog((context) => {
+  .withLog(function addElapsedTimeToTransactionLogs(context) {
     if (!context.showElapsedTime) return;
     const { logs, options, startTimestamp, endTimestamp } = context;
     addElapsedTimeToLogs(logs, startTimestamp, endTimestamp, options);
   })
 
-  .withMeta(({ transaction }) => {
+  .withMeta(function addStackTraceToTransactionMeta({ transaction }) {
     const stackTrace = transaction.stackTrace as Exclude<
       AtomsLoggerTransactionBase['stackTrace'],
       Promise<AtomsLoggerStackTrace | undefined> // Promise was resolved in log scheduler
@@ -120,12 +126,12 @@ export const TransactionLogPipeline = new LogPipeline()
       | { showStackTrace: true; stackTrace: AtomsLoggerStackTrace };
   })
 
-  .withMeta(({ transactionMap, transaction: { atom } }) => {
+  .withMeta(function addAtomToTransactionMeta({ transactionMap, transaction: { atom } }) {
     const showAtom = !transactionMap.unknown && atom !== undefined;
     return { showAtom, atom } as { showAtom: false } | { showAtom: true; atom: AnyAtom | AtomId };
   })
 
-  .withMeta(({ transaction: { atom } }) => {
+  .withMeta(function addAtomWriteToTransactionMeta({ transaction: { atom } }) {
     const isWriteMethod =
       atom !== undefined && typeof atom !== 'string' && INTERNAL_isActuallyWritableAtom(atom);
     return {
@@ -134,13 +140,13 @@ export const TransactionLogPipeline = new LogPipeline()
     };
   })
 
-  .withMeta(({ transactionMap, showAtom }) => {
+  .withMeta(function addTransactionNameToTransactionMeta({ transactionMap, showAtom }) {
     return {
       showTransactionName: showAtom && !transactionMap.unknown,
     };
   })
 
-  .withMeta(({ showAtom, transaction, hasDefaultWriteMethod }) => {
+  .withMeta(function addArgsToTransactionMeta({ showAtom, transaction, hasDefaultWriteMethod }) {
     let showArgs = showAtom && 'args' in transaction && transaction.args.length > 0;
     const args = 'args' in transaction ? transaction.args : [];
 
@@ -153,41 +159,39 @@ export const TransactionLogPipeline = new LogPipeline()
     return { showArgs, args } as { showArgs: false } | { showArgs: true; args: unknown[] };
   })
 
-  .withMeta(({ showAtom, transaction }) => {
+  .withMeta(function addResultToTransactionMeta({ showAtom, transaction }) {
     const showResult = showAtom && 'result' in transaction && transaction.result !== undefined;
     const result = showResult ? transaction.result : undefined;
     return { showResult, result } as { showResult: false } | { showResult: true; result: unknown };
   })
 
   // :
-  .withLog(
-    ({
-      logs,
-      options,
-      showDomain,
-      showTransactionNumber,
-      showLocaleTime,
-      showElapsedTime,
-      showStackTrace,
-      showTransactionName,
-      showAtom,
-      showArgs,
-      showResult,
-    }) => {
-      if (
-        (showDomain || showTransactionNumber || showLocaleTime || showElapsedTime) &&
-        (showStackTrace || showTransactionName || showAtom || showArgs || showResult)
-      ) {
-        addToLogs(logs, options, {
-          plainText: () => ':',
-          formatted: () => [`%c:`, 'grey'],
-        });
-      }
-    },
-  )
+  .withLog(function addColonToTransactionLogs({
+    logs,
+    options,
+    showDomain,
+    showTransactionNumber,
+    showLocaleTime,
+    showElapsedTime,
+    showStackTrace,
+    showTransactionName,
+    showAtom,
+    showArgs,
+    showResult,
+  }) {
+    if (
+      (showDomain || showTransactionNumber || showLocaleTime || showElapsedTime) &&
+      (showStackTrace || showTransactionName || showAtom || showArgs || showResult)
+    ) {
+      addToLogs(logs, options, {
+        plainText: () => ':',
+        formatted: () => [`%c:`, 'grey'],
+      });
+    }
+  })
 
   // {stackTrace}
-  .withLog((context) => {
+  .withLog(function addStackTraceToTransactionLogs(context) {
     if (!context.showStackTrace) return;
     const { logs, options, stackTrace } = context;
     const { react, file } = stackTrace;
@@ -214,7 +218,7 @@ export const TransactionLogPipeline = new LogPipeline()
   })
 
   // {event}
-  .withLog((context) => {
+  .withLog(function addEventToTransactionLogs(context) {
     if (!context.showTransactionName) return;
 
     const { logs, options, transactionMap, hasCustomWriteMethod } = context;
@@ -260,7 +264,7 @@ export const TransactionLogPipeline = new LogPipeline()
   })
 
   // {atom}
-  .withLog((context) => {
+  .withLog(function addAtomToTransactionLogs(context) {
     if (!context.showAtom) return;
 
     const { logs, options, atom } = context;
@@ -269,7 +273,7 @@ export const TransactionLogPipeline = new LogPipeline()
   })
 
   // {args}
-  .withLog((context) => {
+  .withLog(function addArgsToTransactionLogs(context) {
     if (!context.showArgs) return;
 
     const {
@@ -322,7 +326,7 @@ export const TransactionLogPipeline = new LogPipeline()
   })
 
   // {result}
-  .withLog((context) => {
+  .withLog(function addResultToTransactionLogs(context) {
     if (!context.showResult) return;
 
     const {

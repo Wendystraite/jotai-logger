@@ -12,15 +12,17 @@ export const EventLogPipeline = new LogPipeline()
   }>()
 
   // Initialize base logging context
-  .withMeta(({ eventMap }) => ({
-    logs: [] as unknown[] as [string, ...unknown[]],
-    subLogsArray: [] as [string, ...unknown[]][],
-    subLogsObject: {} as Record<string, unknown>,
-    event: getEventMapEvent(eventMap),
-  }))
+  .withMeta(function addLogsToEventMeta({ eventMap }) {
+    return {
+      logs: [] as unknown[] as [string, ...unknown[]],
+      subLogsArray: [] as [string, ...unknown[]][],
+      subLogsObject: {} as Record<string, unknown>,
+      event: getEventMapEvent(eventMap),
+    };
+  })
 
   // Process old values
-  .withMeta(({ event }) => {
+  .withMeta(function addOldValuesToEventMeta({ event }) {
     let hasOldValue = false;
     let oldValue: unknown;
     let isOldValueError = false;
@@ -45,7 +47,7 @@ export const EventLogPipeline = new LogPipeline()
   })
 
   // Process new values
-  .withMeta(({ eventMap, event }) => {
+  .withMeta(function addNewValuesToEventMeta({ eventMap, event }) {
     let hasNewValue = false;
     let newValue: unknown;
     let isNewValueError = false;
@@ -70,7 +72,7 @@ export const EventLogPipeline = new LogPipeline()
   })
 
   // {event}
-  .withLog(({ logs, eventMap, options }) => {
+  .withLog(function addEventToEventLogs({ logs, eventMap, options }) {
     if (eventMap.initialized) {
       addToLogs(logs, options, {
         plainText: () => 'initialized value of',
@@ -160,12 +162,12 @@ export const EventLogPipeline = new LogPipeline()
   })
 
   // {atom}
-  .withLog(({ logs, event, options }) => {
+  .withLog(function addAtomToEventLogs({ logs, event, options }) {
     addAtomToLogs(logs, event.atom, options);
   })
 
   // xx times
-  .withLog(({ logs, hasOldValues, oldValues, options }) => {
+  .withLog(function addCallTimesToEventLogs({ logs, hasOldValues, oldValues, options }) {
     if (hasOldValues) {
       addToLogs(logs, options, {
         plainText: () => `${oldValues.length.toString()} times`,
@@ -175,117 +177,113 @@ export const EventLogPipeline = new LogPipeline()
   })
 
   // from xx
-  .withLog(
-    ({
-      logs,
-      subLogsArray,
-      subLogsObject,
-      options,
-      options: { stringifyValues },
-      hasOldValue,
-      oldValue,
-      isOldValueError,
-      hasOldValues,
-      oldValues,
-    }) => {
-      if (hasOldValue) {
-        addToLogs(logs, options, {
-          plainText: () => {
-            if (stringifyValues) {
-              const stringifiedState = stringifyValue(oldValue, options);
-              return `from ${stringifiedState}`;
-            } else if (hasOldValues) {
-              return [`from`, oldValues];
-            } else {
-              return [`from`, oldValue];
-            }
-          },
-          formatted: () => {
-            if (stringifyValues) {
-              const stringifiedState = stringifyValue(oldValue, options);
-              return [`%cfrom %c${stringifiedState}`, 'grey', 'default'];
-            } else {
-              return [`%cfrom %c%o`, 'grey', 'default', { data: oldValue }];
-            }
-          },
-        });
-      }
+  .withLog(function addOldValuesToEventLogs({
+    logs,
+    subLogsArray,
+    subLogsObject,
+    options,
+    options: { stringifyValues },
+    hasOldValue,
+    oldValue,
+    isOldValueError,
+    hasOldValues,
+    oldValues,
+  }) {
+    if (hasOldValue) {
+      addToLogs(logs, options, {
+        plainText: () => {
+          if (stringifyValues) {
+            const stringifiedState = stringifyValue(oldValue, options);
+            return `from ${stringifiedState}`;
+          } else if (hasOldValues) {
+            return [`from`, oldValues];
+          } else {
+            return [`from`, oldValue];
+          }
+        },
+        formatted: () => {
+          if (stringifyValues) {
+            const stringifiedState = stringifyValue(oldValue, options);
+            return [`%cfrom %c${stringifiedState}`, 'grey', 'default'];
+          } else {
+            return [`%cfrom %c%o`, 'grey', 'default', { data: oldValue }];
+          }
+        },
+      });
+    }
 
-      if (hasOldValues) {
-        subLogsArray.push(['old values', oldValues]);
-        if (options.stringifyValues) subLogsObject.oldValues = oldValues;
-      } else if (hasOldValue) {
-        if (isOldValueError) {
-          subLogsArray.push(['old error', oldValue]);
-          if (options.stringifyValues) subLogsObject.oldError = oldValue;
-        } else {
-          subLogsArray.push(['old value', oldValue]);
-          if (options.stringifyValues) subLogsObject.oldValue = oldValue;
-        }
+    if (hasOldValues) {
+      subLogsArray.push(['old values', oldValues]);
+      if (options.stringifyValues) subLogsObject.oldValues = oldValues;
+    } else if (hasOldValue) {
+      if (isOldValueError) {
+        subLogsArray.push(['old error', oldValue]);
+        if (options.stringifyValues) subLogsObject.oldError = oldValue;
+      } else {
+        subLogsArray.push(['old value', oldValue]);
+        if (options.stringifyValues) subLogsObject.oldValue = oldValue;
       }
-    },
-  )
+    }
+  })
 
   // to xx
-  .withLog(
-    ({
-      logs,
-      subLogsArray,
-      subLogsObject,
-      options,
-      options: { stringifyValues },
-      hasNewValue,
-      newValue,
-      isNewValueError,
-      showNewValueInLog,
-      hasOldValue,
-      isOldValueError,
-    }) => {
-      if (showNewValueInLog && hasNewValue) {
-        addToLogs(logs, options, {
-          plainText: () => {
-            if (stringifyValues) {
-              const stringifiedState = stringifyValue(newValue, options);
-              return `to ${stringifiedState}`;
-            } else {
-              return [`to`, newValue];
-            }
-          },
-          formatted: () => {
-            if (stringifyValues) {
-              const stringifiedState = stringifyValue(newValue, options);
-              return [`%cto %c${stringifiedState}`, 'grey', 'default'];
-            } else {
-              return [`%cto %c%o`, 'grey', 'default', { data: newValue }];
-            }
-          },
-        });
-      }
+  .withLog(function addNewValuesToEventLogs({
+    logs,
+    subLogsArray,
+    subLogsObject,
+    options,
+    options: { stringifyValues },
+    hasNewValue,
+    newValue,
+    isNewValueError,
+    showNewValueInLog,
+    hasOldValue,
+    isOldValueError,
+  }) {
+    if (showNewValueInLog && hasNewValue) {
+      addToLogs(logs, options, {
+        plainText: () => {
+          if (stringifyValues) {
+            const stringifiedState = stringifyValue(newValue, options);
+            return `to ${stringifiedState}`;
+          } else {
+            return [`to`, newValue];
+          }
+        },
+        formatted: () => {
+          if (stringifyValues) {
+            const stringifiedState = stringifyValue(newValue, options);
+            return [`%cto %c${stringifiedState}`, 'grey', 'default'];
+          } else {
+            return [`%cto %c%o`, 'grey', 'default', { data: newValue }];
+          }
+        },
+      });
+    }
 
-      if (hasNewValue) {
-        if (isNewValueError) {
-          if (hasOldValue && isOldValueError) {
-            subLogsArray.push(['new error', newValue]);
-            if (options.stringifyValues) subLogsObject.newError = newValue;
-          } else {
-            subLogsArray.push(['error', newValue]);
-            if (options.stringifyValues) subLogsObject.error = newValue;
-          }
+    if (hasNewValue) {
+      if (isNewValueError) {
+        if (hasOldValue && isOldValueError) {
+          subLogsArray.push(['new error', newValue]);
+          if (options.stringifyValues) subLogsObject.newError = newValue;
         } else {
-          if (hasOldValue && !isOldValueError) {
-            subLogsArray.push(['new value', newValue]);
-            if (options.stringifyValues) subLogsObject.newValue = newValue;
-          } else {
-            subLogsArray.push(['value', newValue]);
-            if (options.stringifyValues) subLogsObject.value = newValue;
-          }
+          subLogsArray.push(['error', newValue]);
+          if (options.stringifyValues) subLogsObject.error = newValue;
+        }
+      } else {
+        if (hasOldValue && !isOldValueError) {
+          subLogsArray.push(['new value', newValue]);
+          if (options.stringifyValues) subLogsObject.newValue = newValue;
+        } else {
+          subLogsArray.push(['value', newValue]);
+          if (options.stringifyValues) subLogsObject.value = newValue;
         }
       }
-    },
-  )
+    }
+  })
 
   // Extra data logger
-  .withLog(({ subLogsArray, subLogsObject, eventMap, event }) => {
+  .withLog(function addExtraDataToEventLogs({ subLogsArray, subLogsObject, eventMap, event }) {
     if (!shouldSetStateInEvent(eventMap)) return;
 
     const { pendingPromises, dependencies, dependents } = event;
@@ -328,7 +326,7 @@ export const EventLogPipeline = new LogPipeline()
   })
 
   // Indentation
-  .withLog(({ logs, subLogsArray, options }) => {
+  .withLog(function addIndentationToEventLogs({ logs, subLogsArray, options }) {
     const { indentSpaces, indentSpacesDepth1, indentSpacesDepth2 } = options;
 
     if (indentSpaces > 0) {
