@@ -25,7 +25,7 @@
  */
 export class LogPipeline<const TArgs extends object, const TMetaData extends object> {
   /** Array of functions that generate metadata from args and existing metadata */
-  metaDataFns: ((args: TArgs & TMetaData) => Partial<TMetaData>)[] = [];
+  metaDataFns: ((args: TArgs & TMetaData) => void)[] = [];
 
   /** Array of logger functions that will receive args and metadata */
   loggerFns: ((args: TArgs & TMetaData) => void)[] = [];
@@ -37,13 +37,10 @@ export class LogPipeline<const TArgs extends object, const TMetaData extends obj
    */
   execute(args: TArgs): TArgs & TMetaData {
     // Generate the meta data for the loggers
-    const metaData = this.metaDataFns.reduce(
-      (acc, metaDataFn) => {
-        Object.assign(acc, metaDataFn(acc));
-        return acc;
-      },
-      args as TArgs & TMetaData,
-    );
+    const metaData = args as TArgs & TMetaData;
+    for (const meta of this.metaDataFns) {
+      meta(metaData);
+    }
     // Generate the logs
     for (const log of this.loggerFns) {
       log(metaData);
@@ -67,10 +64,11 @@ export class LogPipeline<const TArgs extends object, const TMetaData extends obj
    * @returns Pipeline with updated metadata type
    */
   withMeta<const TNewMetaData extends object>(
-    meta: (args: TArgs & TMetaData) => TNewMetaData,
+    meta: (args: TArgs & TMetaData & TNewMetaData) => void,
   ): LogPipeline<TArgs, TMetaData & TNewMetaData> {
-    this.metaDataFns.push(meta);
-    return this as unknown as LogPipeline<TArgs, TMetaData & TNewMetaData>;
+    const that = this as unknown as LogPipeline<TArgs, TMetaData & TNewMetaData>;
+    that.metaDataFns.push(meta);
+    return that;
   }
 
   /**

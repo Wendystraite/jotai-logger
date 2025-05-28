@@ -1,4 +1,8 @@
-import type { AtomsLoggerEventMap, AtomsLoggerState } from '../types/atoms-logger.js';
+import type {
+  AtomsLoggerEvent,
+  AtomsLoggerEventMap,
+  AtomsLoggerState,
+} from '../types/atoms-logger.js';
 import { getEventMapEvent } from '../utils/get-event-map-event.js';
 import { stringifyValue } from '../utils/stringify-value.js';
 import { addAtomToLogs } from './add-atom-to-logs.js';
@@ -12,67 +16,70 @@ export const EventLogPipeline = new LogPipeline()
   }>()
 
   // Initialize base logging context
-  .withMeta(function addLogsToEventMeta({ eventMap }) {
-    return {
-      logs: [] as unknown[] as [string, ...unknown[]],
-      subLogsArray: [] as [string, ...unknown[]][],
-      subLogsObject: {} as Record<string, unknown>,
-      event: getEventMapEvent(eventMap),
-    };
+  .withMeta<{
+    logs: [string, ...unknown[]];
+    subLogsArray: [string, ...unknown[]][];
+    subLogsObject: Record<string, unknown>;
+    event: AtomsLoggerEvent;
+  }>(function addLogsToEventMeta(context) {
+    context.logs = [] as unknown[] as [string, ...unknown[]];
+    context.subLogsArray = [];
+    context.subLogsObject = {};
+    context.event = getEventMapEvent(context.eventMap);
   })
 
   // Process old values
-  .withMeta(function addOldValuesToEventMeta({ event }) {
-    let hasOldValue = false;
-    let oldValue: unknown;
-    let isOldValueError = false;
-
-    if ('oldValue' in event) {
-      hasOldValue = true;
-      oldValue = event.oldValue;
-      isOldValueError = oldValue instanceof Error;
-    }
-
-    let hasOldValues = false;
-    let oldValues: unknown[] = [];
+  .withMeta<
+    (
+      | { hasOldValues: true; oldValues: unknown[] }
+      | { hasOldValues?: undefined; oldValues?: undefined }
+    ) &
+      (
+        | { hasOldValue: true; oldValue: unknown; isOldValueError: boolean }
+        | { hasOldValue?: undefined; oldValue?: undefined; isOldValueError?: undefined }
+      )
+  >(function addOldValuesToEventMeta(context) {
+    const { event } = context;
     if ('oldValues' in event && event.oldValues !== undefined && event.oldValues.length > 0) {
-      hasOldValues = true;
-      oldValues = event.oldValues;
-      hasOldValue = true;
-      oldValue = oldValues[0];
-      isOldValueError = oldValue instanceof Error;
+      context.hasOldValues = true;
+      context.oldValues = event.oldValues;
+      context.hasOldValue = true;
+      context.oldValue = event.oldValues[0];
+      context.isOldValueError = event.oldValues[0] instanceof Error;
+    } else if ('oldValue' in event) {
+      context.hasOldValue = true;
+      context.oldValue = event.oldValue;
+      context.isOldValueError = event.oldValue instanceof Error;
     }
-
-    return { hasOldValue, oldValue, isOldValueError, hasOldValues, oldValues };
   })
 
   // Process new values
-  .withMeta(function addNewValuesToEventMeta({ eventMap, event }) {
-    let hasNewValue = false;
-    let newValue: unknown;
-    let isNewValueError = false;
-
+  .withMeta<
+    (
+      | { hasNewValue: true; newValue: unknown; isNewValueError: boolean }
+      | { hasNewValue?: undefined; newValue?: undefined; isNewValueError?: undefined }
+    ) & { showNewValueInLog: boolean }
+  >(function addNewValuesToEventMeta(context) {
+    const { event, eventMap } = context;
     if ('newValue' in event) {
-      hasNewValue = true;
-      newValue = event.newValue;
-      isNewValueError = false;
+      context.hasNewValue = true;
+      context.newValue = event.newValue;
+      context.isNewValueError = false;
     } else if ('value' in event) {
-      hasNewValue = true;
-      newValue = event.value;
-      isNewValueError = false;
+      context.hasNewValue = true;
+      context.newValue = event.value;
+      context.isNewValueError = false;
     } else if ('error' in event) {
-      hasNewValue = true;
-      newValue = event.error;
-      isNewValueError = true;
+      context.hasNewValue = true;
+      context.newValue = event.error;
+      context.isNewValueError = true;
     }
-
-    const showNewValueInLog = !eventMap.mounted;
-
-    return { hasNewValue, newValue, isNewValueError, showNewValueInLog };
+    context.showNewValueInLog = !eventMap.mounted;
   })
 
   // {event}
-  .withLog(function addEventToEventLogs({ logs, eventMap, options }) {
+  .withLog(function addEventToEventLogs(context) {
+    const { logs, eventMap, options } = context;
     if (eventMap.initialized) {
       addToLogs(logs, options, {
         plainText: () => 'initialized value of',
