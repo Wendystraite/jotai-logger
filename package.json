@@ -66,7 +66,8 @@
     "benchmark": "pnpm run benchmark:simple-read && pnpm run benchmark:simple-write && pnpm run benchmark:subscribe-write",
     "benchmark:simple-read": "tsx benchmarks/simple-read.ts",
     "benchmark:simple-write": "tsx benchmarks/simple-write.ts",
-    "benchmark:subscribe-write": "tsx benchmarks/subscribe-write.ts"
+    "benchmark:subscribe-write": "tsx benchmarks/subscribe-write.ts",
+    "benchmark:inspect": "tsx --inspect-brk ./benchmarks/inspect-me.ts"
   },
   "main": "dist/index.js",
   "exports": {
