@@ -316,7 +316,7 @@ For Next.js applications, you can leverage environment variables or the built-in
 import dynamic from 'next/dynamic';
 
 const AtomsLogger = process.env.NODE_ENV === 'development'
-  ? dynamic(() => import('./AtomsLogger').then((mod) => ({ default: mod.DevTools })), { ssr: false })
+  ? dynamic(() => import('./AtomsLogger').then((mod) => ({ default: mod.AtomsLogger })), { ssr: false })
   : null;
 
 function App() {
