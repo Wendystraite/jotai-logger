@@ -85,7 +85,7 @@ export function bindAtomsLoggerToStore(
     getState: buildingBlocks.getState,
     getMounted: buildingBlocks.getMounted,
     logTransactionsScheduler,
-    transactionNumber: 0,
+    transactionNumber: 1,
     currentTransaction: undefined,
     isInsideTransaction: false,
     atomsFinalizationRegistry,

@@ -4,6 +4,7 @@ import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import type {
   AtomsLoggerStackTrace,
   AtomsLoggerTransaction,
+  AtomsLoggerTransactionBase,
   AtomsLoggerTransactionMap,
   StackFrame,
   StoreWithAtomsLogger,
@@ -15,7 +16,12 @@ import { endTransaction } from './end-transaction.js';
 
 export function startTransaction(
   store: StoreWithAtomsLogger,
-  transactionMap: AtomsLoggerTransactionMap,
+  partialTransactionMap: {
+    [K in keyof AtomsLoggerTransactionMap]: Omit<
+      NonNullable<AtomsLoggerTransactionMap[K]>,
+      Exclude<keyof AtomsLoggerTransactionBase, 'atom'>
+    >;
+  },
 ): void {
   if (store[ATOMS_LOGGER_SYMBOL].currentTransaction) {
     // Finish the previous transaction immediately to start a new one.
@@ -24,9 +30,13 @@ export function startTransaction(
 
   store[ATOMS_LOGGER_SYMBOL].isInsideTransaction = true;
 
+  const transactionMap = partialTransactionMap as AtomsLoggerTransactionMap;
+
   const transaction = getTransactionMapTransaction(transactionMap);
 
-  transaction.startTimestamp ??= performance.now();
+  transaction.transactionNumber = store[ATOMS_LOGGER_SYMBOL].transactionNumber;
+  transaction.events = [];
+  transaction.startTimestamp = performance.now();
 
   if (!transaction.stackTrace && store[ATOMS_LOGGER_SYMBOL].getStackTrace) {
     try {

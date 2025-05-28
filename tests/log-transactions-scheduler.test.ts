@@ -5,7 +5,7 @@ import { bindAtomsLoggerToStore } from '../src/bind-atoms-logger-to-store.js';
 import { ATOMS_LOGGER_SYMBOL } from '../src/consts/atom-logger-symbol.js';
 import * as logTransactionModule from '../src/log-atom-event/log-transaction.js';
 import { createLogTransactionsScheduler } from '../src/log-transactions-scheduler.js';
-import type { StoreWithAtomsLogger } from '../src/types/atoms-logger.js';
+import type { AtomsLoggerTransactionMap, StoreWithAtomsLogger } from '../src/types/atoms-logger.js';
 
 describe('logTransactionsScheduler', () => {
   let originalRequestIdleCallback: typeof globalThis.requestIdleCallback;
@@ -36,7 +36,16 @@ describe('logTransactionsScheduler', () => {
     expect(logTransactionSpy).not.toHaveBeenCalled();
     expect(requestIdleCallbackMockFn).not.toHaveBeenCalled();
 
-    const transactionMap = { unknown: { atom: 'test' } };
+    const transactionMap: AtomsLoggerTransactionMap = {
+      unknown: {
+        atom: 'test',
+        endTimestamp: -1,
+        events: [],
+        stackTrace: undefined,
+        startTimestamp: -1,
+        transactionNumber: -1,
+      },
+    };
     scheduler.add(transactionMap);
 
     expect(requestIdleCallbackMockFn).toHaveBeenCalledWith(expect.any(Function), { timeout: 250 });
@@ -63,7 +72,16 @@ describe('logTransactionsScheduler', () => {
     expect(logTransactionSpy).not.toHaveBeenCalled();
     expect(setTimeoutSpy).not.toHaveBeenCalled();
 
-    const transactionMap = { unknown: { atom: 'test' } };
+    const transactionMap: AtomsLoggerTransactionMap = {
+      unknown: {
+        atom: 'test',
+        endTimestamp: -1,
+        events: [],
+        stackTrace: undefined,
+        startTimestamp: -1,
+        transactionNumber: -1,
+      },
+    };
     scheduler.add(transactionMap);
 
     expect(logTransactionSpy).toHaveBeenCalledWith(transactionMap, store[ATOMS_LOGGER_SYMBOL]);

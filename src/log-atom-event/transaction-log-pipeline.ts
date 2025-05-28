@@ -51,10 +51,8 @@ export const TransactionLogPipeline = new LogPipeline()
   })
 
   .withMeta(({ transaction: { transactionNumber }, options }) => {
-    const showTransactionNumber = options.showTransactionNumber && transactionNumber !== undefined;
-    return { showTransactionNumber, transactionNumber } as
-      | { showTransactionNumber: false }
-      | { showTransactionNumber: true; transactionNumber: number };
+    const showTransactionNumber = options.showTransactionNumber;
+    return { showTransactionNumber, transactionNumber };
   })
 
   // transaction {transactionNumber}
@@ -68,10 +66,8 @@ export const TransactionLogPipeline = new LogPipeline()
   })
 
   .withMeta(({ transaction: { startTimestamp }, options: { showTransactionLocaleTime } }) => {
-    const showLocaleTime = showTransactionLocaleTime && startTimestamp !== undefined;
-    return { showLocaleTime, startTimestamp } as
-      | { showLocaleTime: false }
-      | { showLocaleTime: true; startTimestamp: number };
+    const showLocaleTime = showTransactionLocaleTime;
+    return { showLocaleTime, startTimestamp };
   })
 
   .withMeta(
@@ -79,14 +75,8 @@ export const TransactionLogPipeline = new LogPipeline()
       transaction: { startTimestamp, endTimestamp },
       options: { showTransactionElapsedTime },
     }) => {
-      const showElapsedTime =
-        showTransactionElapsedTime &&
-        startTimestamp !== undefined &&
-        endTimestamp !== undefined &&
-        startTimestamp !== endTimestamp;
-      return { showElapsedTime, startTimestamp, endTimestamp } as
-        | { showElapsedTime: false }
-        | { showElapsedTime: true; startTimestamp: number; endTimestamp: number };
+      const showElapsedTime = showTransactionElapsedTime && startTimestamp !== endTimestamp;
+      return { showElapsedTime, startTimestamp, endTimestamp };
     },
   )
 

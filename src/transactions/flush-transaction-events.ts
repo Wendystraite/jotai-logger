@@ -18,11 +18,12 @@ export function flushTransactionEvents(store: StoreWithAtomsLogger): void {
   cleanupDependencyChangedEvents(store, transaction);
 
   // If the transaction has no events, we don't need to log it.
-  if (!transaction.events?.length) {
+  if (transaction.events.length <= 0) {
     return;
   }
 
-  transaction.transactionNumber = store[ATOMS_LOGGER_SYMBOL].transactionNumber += 1;
+  // Only increment the transaction number if the current transaction is logged
+  store[ATOMS_LOGGER_SYMBOL].transactionNumber += 1;
 
   // Add current transaction to scheduler instead of executing immediately
   store[ATOMS_LOGGER_SYMBOL].logTransactionsScheduler.add(transactionMap);
@@ -36,8 +37,6 @@ function cleanupDependencyChangedEvents(
   store: StoreWithAtomsLogger,
   transaction: AtomsLoggerTransaction,
 ): void {
-  if (!transaction.events) return;
-
   const existingDependencyChangedEventsMap = new WeakMap<AnyAtom, boolean>();
 
   for (let i = transaction.events.length - 1; i >= 0; i -= 1) {

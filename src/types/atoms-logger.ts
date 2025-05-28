@@ -478,11 +478,11 @@ export interface AtomsLoggerOptions {
 
 export interface AtomsLoggerTransactionBase {
   atom: AnyAtom | AtomId | undefined;
-  transactionNumber?: number;
-  stackTrace?: AtomsLoggerStackTrace | Promise<AtomsLoggerStackTrace | undefined> | undefined;
-  events?: AtomsLoggerEventMap[];
-  startTimestamp?: ReturnType<typeof performance.now>;
-  endTimestamp?: ReturnType<typeof performance.now>;
+  transactionNumber: number;
+  stackTrace: AtomsLoggerStackTrace | Promise<AtomsLoggerStackTrace | undefined> | undefined;
+  events: AtomsLoggerEventMap[];
+  startTimestamp: ReturnType<typeof performance.now>;
+  endTimestamp: ReturnType<typeof performance.now>;
 }
 
 export type AtomsLoggerTransactionMap = Partial<{

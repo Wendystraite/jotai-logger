@@ -18,8 +18,15 @@ import { startTransaction } from './start-transaction.js';
 
 export function addEventToTransaction(
   store: StoreWithAtomsLogger,
-  eventMap: AtomsLoggerEventMap,
+  partialEventMap: {
+    [K in keyof AtomsLoggerEventMap]: Omit<
+      NonNullable<AtomsLoggerEventMap[K]>,
+      Exclude<keyof AtomsLoggerEventBase, 'atom'>
+    >;
+  },
 ): void {
+  const eventMap = partialEventMap as AtomsLoggerEventMap;
+
   const event = getEventMapEvent(eventMap);
 
   if (!shouldShowAtom(store, event.atom)) {
@@ -50,7 +57,7 @@ export function addEventToTransaction(
   }
 
   // Add the event to the current transaction.
-  (transaction.events ??= []).push(eventMap);
+  transaction.events.push(eventMap);
 
   // Compute/reorder the events in the transaction.
   mergeChangedEvents(transaction, eventMap);
@@ -120,7 +127,7 @@ function reversePromiseAbortedAndPending(
 ): void {
   if (eventMap.initialPromiseAborted || eventMap.changedPromiseAborted) {
     const events = transaction.events;
-    if (events && events.length > 1) {
+    if (events.length > 1) {
       const eventBeforeAbort = events[events.length - 2];
       if (eventBeforeAbort?.initialPromisePending || eventBeforeAbort?.changedPromisePending) {
         events[events.length - 2] = eventMap;
@@ -140,11 +147,11 @@ function mergeChangedEvents(
   if (eventMap.changed !== undefined) {
     const changedEvent = getEventMapEvent(eventMap) as NonNullable<AtomsLoggerEventMap['changed']>;
     const events = transaction.events;
-    const previousChangedEventIndex = events?.findIndex(
+    const previousChangedEventIndex = events.findIndex(
       (previousEventMap) =>
         previousEventMap !== eventMap && previousEventMap.changed?.atom === changedEvent.atom,
     );
-    if (events && previousChangedEventIndex !== undefined && previousChangedEventIndex > -1) {
+    if (previousChangedEventIndex > -1) {
       const [previousChangedEventMap] = events.splice(previousChangedEventIndex, 1);
       const previousChangedEvent = previousChangedEventMap?.changed;
       if (previousChangedEvent !== undefined) {
