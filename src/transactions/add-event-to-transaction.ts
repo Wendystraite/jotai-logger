@@ -43,6 +43,7 @@ export function addEventToTransaction(store: StoreWithAtomsLogger, event: AtomsL
 
   // Add the event to the current transaction.
   transaction.events.push(event);
+  transaction.eventsCount += 1;
 
   // Compute/reorder the events in the transaction.
   mergeChangedEvents(transaction, event);
@@ -128,26 +129,29 @@ function reversePromiseAbortedAndPending(
  */
 function mergeChangedEvents(transaction: AtomsLoggerTransaction, event: AtomsLoggerEvent): void {
   if (event.type === AtomsLoggerEventTypes.changed) {
-    const events = transaction.events;
-    const previousChangedEventIndex = events.findIndex(
-      (previousEvent) =>
+    const previousChangedEventIndex = transaction.events.findIndex((previousEvent) => {
+      return (
+        previousEvent !== undefined &&
         previousEvent !== event &&
         previousEvent.type === AtomsLoggerEventTypes.changed &&
-        previousEvent.atom === event.atom,
-    );
+        previousEvent.atom === event.atom
+      );
+    });
     if (previousChangedEventIndex > -1) {
-      const [previousChangedEvent] = events.splice(previousChangedEventIndex, 1) as [
-        AtomsLoggerEventMap[AtomsLoggerEventTypes['changed']],
-      ];
-      const oldValues: unknown[] = [];
+      const previousChangedEvent = transaction.events[
+        previousChangedEventIndex
+      ] as AtomsLoggerEventMap[AtomsLoggerEventTypes['changed']];
+      let oldValues: unknown[];
       if (previousChangedEvent.oldValues !== undefined) {
-        oldValues.push(...previousChangedEvent.oldValues);
+        oldValues = previousChangedEvent.oldValues;
+        oldValues.push(event.oldValue);
       } else {
-        oldValues.push(previousChangedEvent.oldValue);
+        oldValues = [previousChangedEvent.oldValue, event.oldValue];
       }
-      oldValues.push(event.oldValue);
       event.oldValues = oldValues;
       delete event.oldValue;
+      transaction.events[previousChangedEventIndex] = undefined;
+      transaction.eventsCount -= 1;
     }
   }
 }

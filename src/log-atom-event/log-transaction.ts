@@ -13,7 +13,7 @@ export function logTransaction(
   const {
     logs,
     additionalDataToLog,
-    transaction: { events = [] },
+    transaction: { events },
   } = TransactionLogPipeline.execute({ transaction, options });
 
   if (Object.keys(additionalDataToLog).length > 0) {
@@ -37,7 +37,9 @@ export function logTransaction(
       }
     }
     for (const event of events) {
-      logEvent(event, options);
+      if (event) {
+        logEvent(event, options);
+      }
     }
   } finally {
     if (logs.length > 0 && groupLogs) {

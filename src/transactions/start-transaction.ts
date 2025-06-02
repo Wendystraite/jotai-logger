@@ -17,7 +17,12 @@ export function startTransaction(
   partialTransaction: {
     [K in keyof AtomsLoggerTransactionMap]: Omit<
       AtomsLoggerTransactionMap[K],
-      'transactionNumber' | 'events' | 'startTimestamp' | 'endTimestamp' | 'stackTrace'
+      | 'transactionNumber'
+      | 'events'
+      | 'eventsCount'
+      | 'startTimestamp'
+      | 'endTimestamp'
+      | 'stackTrace'
     >;
   }[keyof AtomsLoggerTransactionMap],
 ): void {
@@ -32,6 +37,7 @@ export function startTransaction(
 
   transaction.transactionNumber = store[ATOMS_LOGGER_SYMBOL].transactionNumber;
   transaction.events = [];
+  transaction.eventsCount = 0;
   transaction.startTimestamp = performance.now();
 
   if (!transaction.stackTrace && store[ATOMS_LOGGER_SYMBOL].getStackTrace) {

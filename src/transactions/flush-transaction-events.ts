@@ -17,7 +17,7 @@ export function flushTransactionEvents(store: StoreWithAtomsLogger): void {
   cleanupDependencyChangedEvents(store, transaction);
 
   // If the transaction has no events, we don't need to log it.
-  if (transaction.events.length <= 0) {
+  if (transaction.eventsCount <= 0) {
     return;
   }
 
@@ -36,10 +36,10 @@ function cleanupDependencyChangedEvents(
   store: StoreWithAtomsLogger,
   transaction: AtomsLoggerTransaction,
 ): void {
-  const existingDependencyChangedEventsMap = new WeakMap<AnyAtom, boolean>();
+  const existingDependencyChangedEventsMap = new WeakSet<AnyAtom>();
 
-  for (let i = transaction.events.length - 1; i >= 0; i -= 1) {
-    const event = transaction.events[i];
+  for (let eventIndex = transaction.events.length - 1; eventIndex >= 0; eventIndex -= 1) {
+    const event = transaction.events[eventIndex];
     if (!event || event.type !== AtomsLoggerEventTypes.dependenciesChanged) {
       continue;
     }
@@ -48,10 +48,11 @@ function cleanupDependencyChangedEvents(
 
     // Remove the event if it is a duplicate
     if (existingDependencyChangedEventsMap.has(atom)) {
-      transaction.events.splice(i, 1);
+      transaction.events[eventIndex] = undefined;
+      transaction.eventsCount -= 1;
       continue;
     }
-    existingDependencyChangedEventsMap.set(atom, true);
+    existingDependencyChangedEventsMap.add(atom);
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- should always be set in this event
     const newDependencies = event.dependencies!;
@@ -65,7 +66,8 @@ function cleanupDependencyChangedEvents(
       event.oldDependencies === undefined ||
       !hasDependenciesChanged(event.oldDependencies, newDependencies)
     ) {
-      transaction.events.splice(i, 1);
+      transaction.events[eventIndex] = undefined;
+      transaction.eventsCount -= 1;
       continue;
     }
   }

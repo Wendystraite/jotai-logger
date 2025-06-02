@@ -499,7 +499,8 @@ export type AtomsLoggerTransactionBase<
   atom: AnyAtom | AtomId | undefined;
   transactionNumber: number;
   stackTrace: AtomsLoggerStackTrace | Promise<AtomsLoggerStackTrace | undefined> | undefined;
-  events: AtomsLoggerEvent[];
+  events: (AtomsLoggerEvent | undefined)[];
+  eventsCount: number;
   startTimestamp: ReturnType<typeof performance.now>;
   endTimestamp: ReturnType<typeof performance.now>;
 };
