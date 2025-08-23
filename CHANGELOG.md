@@ -1,5 +1,30 @@
 # jotai-logger
 
+## 2.5.1
+
+### Patch Changes
+
+- f021bc7: perf: don't splice merged events
+
+  Do not use `Array.splice` in transaction events when merging changed
+  events preventing unnecessary iterations. Instead, set to `undefined`
+  the event's value at its given index and decrement the array's counter.
+
+- 549f614: perf: don't use transaction and event mappings
+
+  Do not use transaction and event mappings when starting transactions and
+  events and instead send directly the corresponding transaction or event.
+  Makes the code and typing simpler and prevent the need to find which
+  transaction or event is used using `Object.values[0]` everywhere,
+  a thing that was eating performances. Use numbers as types to prevent
+  a costly strings comparison. Use mapping by type where possible.
+
+- 6700925: perf: do not copy meta in log pipelines
+
+  Instead of instantiating multiple objects containing meta data in log
+  pipelines, assign these values directly to the shared context.
+  This prevents lots of instantiations, copies and gc.
+
 ## 2.5.0
 
 ### Minor Changes
@@ -15,7 +40,6 @@
 ### Patch Changes
 
 - 34a0327: fix: handle direct store calls inside transactions
-
   - Handle the rare case where store methods are called inside
     transactions (e.g. store.get called inside a store.sub). This can
     happen in some advanced use cases in some Jotai libraries.
@@ -31,7 +55,6 @@
 ### Minor Changes
 
 - e4a48f8: feat: atom dependencies tracking
-
   - Add a new event shown when dependencies of an atom have changed.
     This event is not shown for initial dependencies to prevent spam.
   - Add tests for that to maintain a full coverage.
@@ -40,7 +63,6 @@
 ### Patch Changes
 
 - 1936212: fix: don't bind the store if already bound
-
   - Support calling multiple times `bindAtomsLoggerToStore` to a store.
     Instead of binding the store multiple times, just bind it once and
     changes the store options for each new call.
@@ -73,7 +95,6 @@
 ### Patch Changes
 
 - 77616b7: fix: invalid transactions elapsed time
-
   - Some transaction elapsed time were incorrect due to the internal
     debouncing of transaction events. Now store the end timestamp before
     debouncing.
@@ -110,7 +131,6 @@
 ### Minor Changes
 
 - 27bdda5: feat: add "getStackTrace" option
-
   - Add a "getStackTrace" option to provide your own function to retrieve
     the stack trace. If used, the logger will try to find the React
     component that triggered the transaction.
@@ -124,7 +144,6 @@
 ### Minor Changes
 
 - 07fb009: feat: better performances by scheduling logs
-
   - Debounce all received events by 250ms in transactions and schedule all
     transactions to be logged using either window.requestIdleCallback or
     setTimeout. requestIdleCallback queues transactions to be logged
@@ -139,7 +158,6 @@
 ### Minor Changes
 
 - be06395: feat: add "stringify" option
-
   - Add a "stringify" option to provide your own function to stringify
     data in the logs. Document it in the README.
   - Handle more complex objects with the built-in stringify function using
@@ -148,7 +166,6 @@
 ### Patch Changes
 
 - 46376c1: fix: don't log dependents before they are mounted
-
   - Don't log dependents atoms in a log before they are mounted.
     This also prevent the incorrect data to be logged in a "mount" event.
 
@@ -180,7 +197,6 @@
 - 1085092: feat: stringifyValues and formattedOutput options
 
   Add two new options for the logger:
-
   - stringifyValues to stringify data in the logs.
     - If enabled, it will be like before : the state of atoms, arguments,
       ect.. will be stringified in the log.
@@ -240,7 +256,6 @@
 ### Patch Changes
 
 - 6e4f056: fix: prevent crash on custom store
-
   - Prevent the logger from crashing if the provided store does not
     contain Jotai's internal symbol for building blocks.
   - The `bindAtomsLoggerToStore` now returns a boolean confirming whether
