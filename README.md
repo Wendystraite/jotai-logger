@@ -247,7 +247,6 @@ useAtomsLogger({
 For asynchronous logging, you can fine-tune two key parameters:
 
 1. `transactionDebounceMs` (default: `250ms`) - Controls how transactions are grouped:
-
    - Higher values (e.g., `500ms`) - Group more unknown events into fewer transactions, reducing console noise
    - Lower values (e.g., `50ms`) - See transactions more quickly, with less grouping
    - Setting to `0` - Schedule each transaction to be logged immediately without debouncing incoming events. This is the same as `synchronous: true`.
