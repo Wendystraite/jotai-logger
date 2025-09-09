@@ -34,6 +34,14 @@ yarn add jotai-logger
 pnpm install jotai-logger
 ```
 
+## Compatibility
+
+| jotai-logger | [jotai](https://github.com/pmndrs/jotai) | Status            |
+| ------------ | ---------------------------------------- | ----------------- |
+| <= 2.5       | < 2.12.4                                 | ❌ Not compatible |
+| <= 2.5       | >= 2.12.4 < 2.14.0                       | ✅ Compatible     |
+| <= 2.5       | >= 2.14.0                                | ❌ Not compatible |
+
 ## Usage
 
 ### Basic Setup

@@ -48,7 +48,7 @@ importers:
         specifier: ^2.5.1
         version: 2.5.1
       jotai:
-        specifier: ^2.13.1
+        specifier: 2.13.1
         version: 2.13.1(@babel/template@7.27.2)(@types/react@19.1.11)(react@19.1.1)
       jotai-devtools:
         specifier: ^0.12.0
@@ -1704,6 +1704,7 @@ packages:
     resolution: {integrity: sha512-Quz3MvAwHxVYNXsOByL7xI5EB2WYOeFswqaHIA3qOK3isRWTxiplBEocmmru6XmxDB2L7jDNYtYA4FyimoAFEw==}
     engines: {node: '>=8.17.0'}
     hasBin: true
+    bundledDependencies: []
 
   jsonfile@4.0.0:
     resolution: {integrity: sha512-m6F1R3z8jjlf2imQHS2Qez5sjKWQzbuuhuJ/FKYFRZvPE3PuHcSMVZzfsLhGVOkfd20obL5SWEBew5ShlquNxg==}
