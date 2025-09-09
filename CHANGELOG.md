@@ -1,5 +1,15 @@
 # jotai-logger
 
+## 2.5.2
+
+### Patch Changes
+
+- 67e6c6e: fix: add jotai 2.14.0 to incompatible versions
+
+  Add jotai >= 2.14.0 to incompatible versions in both the readme and
+  peerDependencies : this new version changes some jotai internals that
+  broke jotai-logger.
+
 ## 2.5.1
 
 ### Patch Changes
