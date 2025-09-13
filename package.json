@@ -99,6 +99,10 @@
     ]
   },
   "devEngines": {
-    "node": ">=20.11.0"
+    "runtime": {
+      "name": "node",
+      "version": ">=20.11.0",
+      "onFail": "warn"
+    }
   }
 }
