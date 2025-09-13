@@ -70,10 +70,6 @@ export type AtomsLoggerState = AtomsLoggerOptionsInState & {
   prevStoreSub: StoreWithAtomsLogger['sub'];
   /** Previous overridden atom state map setter method */
   prevAtomStateMapSet: INTERNAL_AtomStateMap['set'];
-  /** Previous overridden jotai dev store mounted atoms add method */
-  prevDevtoolsMountedAtomsAdd: Set<AnyAtom>['add'] | undefined;
-  /** Previous overridden jotai dev store mounted atoms delete method */
-  prevDevtoolsMountedAtomsDelete: Set<AnyAtom>['delete'] | undefined;
   /** Return the state of an atom */
   getState(this: void, atom: AnyAtom): INTERNAL_AtomState | undefined;
   /** Return the mounted state of an atom */

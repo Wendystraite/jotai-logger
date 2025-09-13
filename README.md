@@ -36,11 +36,10 @@ pnpm install jotai-logger
 
 ## Compatibility
 
-| jotai-logger | [jotai](https://github.com/pmndrs/jotai) | Status            |
-| ------------ | ---------------------------------------- | ----------------- |
-| <= 2.5       | < 2.12.4                                 | ❌ Not compatible |
-| <= 2.5       | >= 2.12.4 < 2.14.0                       | ✅ Compatible     |
-| <= 2.5       | >= 2.14.0                                | ❌ Not compatible |
+| jotai-logger | [react](https://github.com/facebook/react) | [jotai](https://github.com/pmndrs/jotai) | [jotai-devtools](https://github.com/jotaijs/jotai-devtools) |
+| ------------ | ------------------------------------------ | ---------------------------------------- | ----------------------------------------------------------- |
+| <= 2.5.2     | >=17.0.0                                   | >= 2.12.4 < 2.14.0                       | == 0.12.0                                                   |
+| >= 3.0.0     | >=17.0.0                                   | >= 2.14.0                                | >= 0.13.0                                                   |
 
 ## Usage
 
