@@ -64,7 +64,8 @@ describe('stack traces', () => {
     };
     defaultOptions = {
       logger: consoleMock,
-      groupLogs: false,
+      groupTransactions: false,
+      groupEvents: false,
       formattedOutput: false,
       showTransactionElapsedTime: false,
       shouldShowPrivateAtoms: false,

@@ -100,8 +100,11 @@ export interface AtomsLoggerOptionsInState {
   /** @see AtomsLoggerOptions.logger */
   logger: Pick<Console, 'log'> & Partial<Pick<Console, 'group' | 'groupCollapsed' | 'groupEnd'>>;
 
-  /** @see AtomsLoggerOptions.groupLogs */
-  groupLogs: boolean;
+  /** @see AtomsLoggerOptions.groupTransactions */
+  groupTransactions: boolean;
+
+  /** @see AtomsLoggerOptions.groupEvents */
+  groupEvents: boolean;
 
   /** @see AtomsLoggerOptions.indentSpaces */
   indentSpaces: number;
@@ -227,22 +230,34 @@ export interface AtomsLoggerOptions {
    *
    * By default, it uses the `console` global object.
    *
-   * If either `groupLogs` is `false` or `logger.group` and `logger.groupEnd` are not provided, logs will not be grouped.
+   * If either `groupTransactions` and `groupEvents` are `false`
+   * or `logger.group` and `logger.groupEnd` are not provided, logs will not be grouped.
    *
    * @default console
    */
   logger?: Pick<Console, 'log'> & Partial<Pick<Console, 'group' | 'groupCollapsed' | 'groupEnd'>>;
 
   /**
-   * Whether to group logs with `logger.group` and `logger.groupEnd`.
+   * Whether to group transaction logs with `logger.group` and `logger.groupEnd`.
    *
-   * - If set to `true`, logs will be grouped using `logger.group`, `logger.groupCollapsed` and `logger.groupEnd`.
+   * - If set to `true`, transaction will be grouped using `logger.group`, `logger.groupCollapsed` and `logger.groupEnd`.
    * - If set to `false`, only `logger.log` will be used.
    *   This can be useful if using a custom `logger` that doesn't support grouping or for testing purposes.
    *
    * @default true
    */
-  groupLogs?: boolean;
+  groupTransactions?: boolean;
+
+  /**
+   * Whether to group event logs with `logger.group` and `logger.groupEnd`.
+   *
+   * - If set to `true`, event logs will be grouped using `logger.group`, `logger.groupCollapsed` and `logger.groupEnd`.
+   * - If set to `false`, only `logger.log` will be used.
+   *   This can be useful if using a custom `logger` that doesn't support grouping or for testing purposes.
+   *
+   * @default false
+   */
+  groupEvents?: boolean;
 
   /**
    * Number of spaces to use for each level of indentation in the logs.
@@ -375,6 +390,8 @@ export interface AtomsLoggerOptions {
   /**
    * Whether to collapse grouped transaction logs by default using `logger.groupCollapsed` instead of `logger.group`.
    *
+   * Only applies if `groupTransactions` is `true`.
+   *
    * This is useful for reducing clutter in the console.
    *
    * @default false
@@ -384,9 +401,11 @@ export interface AtomsLoggerOptions {
   /**
    * Whether to collapse grouped events logs by default using `logger.groupCollapsed` instead of `logger.group`.
    *
+   * Only applies if `groupEvents` is `true`.
+   *
    * This is useful for reducing clutter in the console.
    *
-   * @default true
+   * @default false
    */
   collapseEvents?: boolean;
 

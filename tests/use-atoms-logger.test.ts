@@ -64,14 +64,16 @@ describe('useAtomsLogger', () => {
     const store = createStore();
     renderHook(() => {
       const [options, setOptions] = useState<AtomsLoggerOptions>({
-        groupLogs: false,
+        groupTransactions: false,
+        groupEvents: false,
         shouldShowPrivateAtoms: false,
         stringifyLimit: 50,
       });
       useAtomsLogger({ store, ...options });
       useEffect(() => {
         setOptions({
-          groupLogs: true,
+          groupTransactions: true,
+          groupEvents: true,
           shouldShowPrivateAtoms: true,
           stringifyLimit: 100,
         });
@@ -80,7 +82,8 @@ describe('useAtomsLogger', () => {
     expect(isAtomsLoggerBoundToStore(store)).toBeTruthy();
     expect((store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL]).toEqual(
       expect.objectContaining({
-        groupLogs: true,
+        groupTransactions: true,
+        groupEvents: true,
         shouldShowPrivateAtoms: true,
         stringifyLimit: 100,
       }),
@@ -119,7 +122,8 @@ describe('useAtomsLogger', () => {
       shouldShowPrivateAtoms: false,
       shouldShowAtom: undefined,
       logger: console,
-      groupLogs: true,
+      groupTransactions: true,
+      groupEvents: false,
       indentSpaces: 0,
       indentSpacesDepth1: '',
       indentSpacesDepth2: '',
@@ -132,7 +136,7 @@ describe('useAtomsLogger', () => {
       showTransactionLocaleTime: false,
       showTransactionElapsedTime: true,
       collapseTransactions: false,
-      collapseEvents: true,
+      collapseEvents: false,
       ownerStackLimit: 2,
       transactionDebounceMs: 250,
       requestIdleCallbackTimeoutMs: 250,

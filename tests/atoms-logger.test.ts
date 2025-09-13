@@ -60,7 +60,8 @@ describe('bindAtomsLoggerToStore', () => {
     };
     defaultOptions = {
       logger: consoleMock,
-      groupLogs: false,
+      groupTransactions: false,
+      groupEvents: false,
       formattedOutput: false,
       showTransactionElapsedTime: false,
     };
@@ -323,8 +324,10 @@ describe('bindAtomsLoggerToStore', () => {
         shouldShowPrivateAtoms: true,
         stringifyLimit: 100,
         logger: consoleMock,
-        groupLogs: false,
-        collapseEvents: false,
+        groupTransactions: false,
+        groupEvents: true,
+        collapseEvents: true,
+        collapseTransactions: true,
         ownerStackLimit: 5,
       };
 
@@ -336,8 +339,10 @@ describe('bindAtomsLoggerToStore', () => {
       expect(store[ATOMS_LOGGER_SYMBOL].shouldShowPrivateAtoms).toBe(true);
       expect(store[ATOMS_LOGGER_SYMBOL].stringifyLimit).toBe(100);
       expect(store[ATOMS_LOGGER_SYMBOL].logger).toBe(consoleMock);
-      expect(store[ATOMS_LOGGER_SYMBOL].groupLogs).toBe(false);
-      expect(store[ATOMS_LOGGER_SYMBOL].collapseEvents).toBe(false);
+      expect(store[ATOMS_LOGGER_SYMBOL].groupTransactions).toBe(false);
+      expect(store[ATOMS_LOGGER_SYMBOL].groupEvents).toBe(true);
+      expect(store[ATOMS_LOGGER_SYMBOL].collapseEvents).toBe(true);
+      expect(store[ATOMS_LOGGER_SYMBOL].collapseTransactions).toBe(true);
       expect(store[ATOMS_LOGGER_SYMBOL].ownerStackLimit).toBe(5);
     });
 
@@ -762,7 +767,8 @@ describe('bindAtomsLoggerToStore', () => {
         bindAtomsLoggerToStore(store, {
           ...defaultOptions,
           indentSpaces: 3,
-          groupLogs: true,
+          groupTransactions: true,
+          groupEvents: true,
         });
 
         const testAtom = atom(0);
@@ -771,12 +777,16 @@ describe('bindAtomsLoggerToStore', () => {
         vi.runAllTimers();
 
         expect(consoleMock.group.mock.calls).toEqual([
+          // 0 spaces
           [`transaction 1 : retrieved value of ${testAtom}`],
-        ]);
-        expect(consoleMock.groupCollapsed.mock.calls).toEqual([
+          // 3 spaces
           [`   initialized value of ${testAtom} to 0`],
         ]);
-        expect(consoleMock.log.mock.calls).toEqual([['      value', 0]]);
+        expect(consoleMock.groupCollapsed.mock.calls).toEqual([]);
+        expect(consoleMock.log.mock.calls).toEqual([
+          // 6 spaces
+          ['      value', 0],
+        ]);
         expect(consoleMock.groupEnd.mock.calls).toEqual([[], []]);
       });
     });
@@ -4216,8 +4226,11 @@ describe('bindAtomsLoggerToStore', () => {
   });
 
   describe('groups', () => {
-    it('should log groups when groupLogs is true', () => {
-      bindAtomsLoggerToStore(store, { ...defaultOptions, groupLogs: true });
+    it('should group transactions if groupTransactions is true', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        groupTransactions: true,
+      });
 
       const testAtom = atom(0);
       store.get(testAtom);
@@ -4227,17 +4240,17 @@ describe('bindAtomsLoggerToStore', () => {
       expect(consoleMock.group.mock.calls).toEqual([
         [`transaction 1 : retrieved value of ${testAtom}`],
       ]);
-      expect(consoleMock.groupCollapsed.mock.calls).toEqual([
-        [`initialized value of ${testAtom} to 0`],
+      expect(consoleMock.groupCollapsed.mock.calls).toEqual([]);
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`initialized value of ${testAtom} to 0`, { value: 0 }],
       ]);
-      expect(consoleMock.log.mock.calls).toEqual([['value', 0]]);
-      expect(consoleMock.groupEnd.mock.calls).toEqual([[], []]);
+      expect(consoleMock.groupEnd.mock.calls).toEqual([[]]);
     });
 
     it('should collapse transaction groups if collapseTransactions is true', () => {
       bindAtomsLoggerToStore(store, {
         ...defaultOptions,
-        groupLogs: true,
+        groupTransactions: true,
         collapseTransactions: true,
       });
 
@@ -4249,17 +4262,61 @@ describe('bindAtomsLoggerToStore', () => {
       expect(consoleMock.group.mock.calls).toEqual([]);
       expect(consoleMock.groupCollapsed.mock.calls).toEqual([
         [`transaction 1 : retrieved value of ${testAtom}`],
-        [`initialized value of ${testAtom} to 0`],
       ]);
-      expect(consoleMock.log.mock.calls).toEqual([['value', 0]]);
-      expect(consoleMock.groupEnd.mock.calls).toEqual([[], []]);
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`initialized value of ${testAtom} to 0`, { value: 0 }],
+      ]);
+      expect(consoleMock.groupEnd.mock.calls).toEqual([[]]);
     });
 
-    it('should not collapse event groups if collapseEvents is false', () => {
+    it('should group events if groupEvents is true', () => {
       bindAtomsLoggerToStore(store, {
         ...defaultOptions,
-        groupLogs: true,
-        collapseEvents: false,
+        groupEvents: true,
+      });
+
+      const testAtom = atom(0);
+      store.get(testAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.group.mock.calls).toEqual([[`initialized value of ${testAtom} to 0`]]);
+      expect(consoleMock.groupCollapsed.mock.calls).toEqual([]);
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of ${testAtom}`],
+        ['value', 0],
+      ]);
+      expect(consoleMock.groupEnd.mock.calls).toEqual([[]]);
+    });
+
+    it('should collapse event groups if collapseEvents is true', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        groupEvents: true,
+        collapseEvents: true,
+      });
+
+      const testAtom = atom(0);
+      store.get(testAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.group.mock.calls).toEqual([]);
+      expect(consoleMock.groupCollapsed.mock.calls).toEqual([
+        [`initialized value of ${testAtom} to 0`],
+      ]);
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of ${testAtom}`],
+        ['value', 0],
+      ]);
+      expect(consoleMock.groupEnd.mock.calls).toEqual([[]]);
+    });
+
+    it('should group transactions and events if both groupTransactions and groupEvents are true', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        groupTransactions: true,
+        groupEvents: true,
       });
 
       const testAtom = atom(0);
@@ -4276,34 +4333,11 @@ describe('bindAtomsLoggerToStore', () => {
       expect(consoleMock.groupEnd.mock.calls).toEqual([[], []]);
     });
 
-    it('should log additional transaction group', () => {
-      bindAtomsLoggerToStore(store, { ...defaultOptions, groupLogs: true });
-
-      const testAtom = atom(0);
-      store.set(testAtom, 1);
-
-      vi.runAllTimers();
-
-      expect(consoleMock.group.mock.calls).toEqual([
-        [`transaction 1 : set value of ${testAtom} to 1`, { value: 1 }],
-      ]);
-      expect(consoleMock.groupCollapsed.mock.calls).toEqual([
-        [`initialized value of ${testAtom} to 1`],
-      ]);
-      expect(consoleMock.log.mock.calls).toEqual([['value', 1]]);
-      expect(consoleMock.groupEnd.mock.calls).toEqual([[], []]);
-    });
-
-    it('should log collapsed groups even if logger.group is not defined', () => {
+    it('should group collapsed events and transactions if both collapseTransactions and collapseEvents are true', () => {
       bindAtomsLoggerToStore(store, {
         ...defaultOptions,
-        groupLogs: true,
-        logger: {
-          log: consoleMock.log,
-          group: undefined,
-          groupCollapsed: consoleMock.groupCollapsed,
-          groupEnd: consoleMock.groupEnd,
-        },
+        groupTransactions: true,
+        groupEvents: true,
         collapseTransactions: true,
         collapseEvents: true,
       });
@@ -4322,18 +4356,74 @@ describe('bindAtomsLoggerToStore', () => {
       expect(consoleMock.groupEnd.mock.calls).toEqual([[], []]);
     });
 
-    it('should log groups even if logger.groupCollapsed is not defined', () => {
+    it('should log collapsed transaction groups even if logger.group is not defined', () => {
       bindAtomsLoggerToStore(store, {
         ...defaultOptions,
-        groupLogs: true,
+        groupTransactions: true,
+        collapseTransactions: true,
+        logger: {
+          log: consoleMock.log,
+          group: undefined,
+          groupCollapsed: consoleMock.groupCollapsed,
+          groupEnd: consoleMock.groupEnd,
+        },
+      });
+
+      const testAtom = atom(0);
+      store.get(testAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.group.mock.calls).toEqual([]);
+      expect(consoleMock.groupCollapsed.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of ${testAtom}`],
+      ]);
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`initialized value of ${testAtom} to 0`, { value: 0 }],
+      ]);
+      expect(consoleMock.groupEnd.mock.calls).toEqual([[]]);
+    });
+
+    it('should log event groups even if logger.group is not defined', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        groupEvents: true,
+        collapseEvents: true,
+        logger: {
+          log: consoleMock.log,
+          group: undefined,
+          groupCollapsed: consoleMock.groupCollapsed,
+          groupEnd: consoleMock.groupEnd,
+        },
+      });
+
+      const testAtom = atom(0);
+      store.get(testAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.group.mock.calls).toEqual([]);
+      expect(consoleMock.groupCollapsed.mock.calls).toEqual([
+        [`initialized value of ${testAtom} to 0`],
+      ]);
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of ${testAtom}`],
+        ['value', 0],
+      ]);
+      expect(consoleMock.groupEnd.mock.calls).toEqual([[]]);
+    });
+
+    it('should log transaction groups even if logger.groupCollapsed is not defined', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        groupTransactions: true,
+        collapseTransactions: false,
         logger: {
           log: consoleMock.log,
           group: consoleMock.group,
           groupCollapsed: undefined,
           groupEnd: consoleMock.groupEnd,
         },
-        collapseTransactions: false,
-        collapseEvents: false,
       });
 
       const testAtom = atom(0);
@@ -4343,79 +4433,52 @@ describe('bindAtomsLoggerToStore', () => {
 
       expect(consoleMock.group.mock.calls).toEqual([
         [`transaction 1 : retrieved value of ${testAtom}`],
-        [`initialized value of ${testAtom} to 0`],
       ]);
       expect(consoleMock.groupCollapsed.mock.calls).toEqual([]);
-      expect(consoleMock.log.mock.calls).toEqual([['value', 0]]);
-      expect(consoleMock.groupEnd.mock.calls).toEqual([[], []]);
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`initialized value of ${testAtom} to 0`, { value: 0 }],
+      ]);
+      expect(consoleMock.groupEnd.mock.calls).toEqual([[]]);
     });
 
-    it('should not log groups if logger.groupEnd is not defined', () => {
+    it('should log event groups even if logger.groupCollapsed is not defined', () => {
       bindAtomsLoggerToStore(store, {
         ...defaultOptions,
-        groupLogs: true,
+        groupEvents: true,
+        collapseEvents: false,
+        logger: {
+          log: consoleMock.log,
+          group: consoleMock.group,
+          groupCollapsed: undefined,
+          groupEnd: consoleMock.groupEnd,
+        },
+      });
+
+      const testAtom = atom(0);
+      store.get(testAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.group.mock.calls).toEqual([[`initialized value of ${testAtom} to 0`]]);
+      expect(consoleMock.groupCollapsed.mock.calls).toEqual([]);
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : retrieved value of ${testAtom}`],
+        ['value', 0],
+      ]);
+      expect(consoleMock.groupEnd.mock.calls).toEqual([[]]);
+    });
+
+    it('should not log transaction and event groups if logger.groupEnd is not defined', () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        groupTransactions: true,
+        groupEvents: true,
         logger: {
           log: consoleMock.log,
           group: consoleMock.group,
           groupCollapsed: consoleMock.groupCollapsed,
           groupEnd: undefined,
         },
-      });
-
-      const testAtom = atom(0);
-      store.get(testAtom);
-
-      vi.runAllTimers();
-
-      expect(consoleMock.group.mock.calls).toEqual([]);
-      expect(consoleMock.groupCollapsed.mock.calls).toEqual([]);
-      expect(consoleMock.log.mock.calls).toEqual([
-        [`transaction 1 : retrieved value of ${testAtom}`],
-        [`initialized value of ${testAtom} to 0`, { value: 0 }],
-      ]);
-      expect(consoleMock.groupEnd.mock.calls).toEqual([]);
-    });
-
-    it('should not log collapsed transaction groups if logger.groupCollapsed is not defined', () => {
-      bindAtomsLoggerToStore(store, {
-        ...defaultOptions,
-        groupLogs: true,
-        logger: {
-          log: consoleMock.log,
-          group: consoleMock.group,
-          groupCollapsed: undefined,
-          groupEnd: consoleMock.groupEnd,
-        },
-        collapseTransactions: true,
-        collapseEvents: true,
-      });
-
-      const testAtom = atom(0);
-      store.get(testAtom);
-
-      vi.runAllTimers();
-
-      expect(consoleMock.group.mock.calls).toEqual([]);
-      expect(consoleMock.groupCollapsed.mock.calls).toEqual([]);
-      expect(consoleMock.log.mock.calls).toEqual([
-        [`transaction 1 : retrieved value of ${testAtom}`],
-        [`initialized value of ${testAtom} to 0`, { value: 0 }],
-      ]);
-      expect(consoleMock.groupEnd.mock.calls).toEqual([]);
-    });
-
-    it('should not log event group if logger.group is not defined', () => {
-      bindAtomsLoggerToStore(store, {
-        ...defaultOptions,
-        groupLogs: true,
-        logger: {
-          log: consoleMock.log,
-          group: undefined,
-          groupCollapsed: consoleMock.groupCollapsed,
-          groupEnd: consoleMock.groupEnd,
-        },
-        collapseTransactions: false,
-        collapseEvents: false,
       });
 
       const testAtom = atom(0);

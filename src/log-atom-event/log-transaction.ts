@@ -8,7 +8,7 @@ export function logTransaction(
 ): void {
   const { logger, collapseTransactions } = options;
 
-  let { groupLogs } = options;
+  let { groupTransactions } = options;
 
   const {
     logs,
@@ -21,14 +21,14 @@ export function logTransaction(
   }
 
   if (collapseTransactions ? !logger.groupCollapsed : !logger.group) {
-    groupLogs = false;
+    groupTransactions = false;
   } else if (!logger.groupEnd) {
-    groupLogs = false;
+    groupTransactions = false;
   }
 
   try {
     if (logs.length > 0) {
-      if (!groupLogs) {
+      if (!groupTransactions) {
         logger.log(...logs);
       } else if (collapseTransactions) {
         logger.groupCollapsed?.(...logs);
@@ -42,7 +42,7 @@ export function logTransaction(
       }
     }
   } finally {
-    if (logs.length > 0 && groupLogs) {
+    if (logs.length > 0 && groupTransactions) {
       logger.groupEnd?.();
     }
   }

@@ -109,8 +109,10 @@ type AtomsLoggerOptions = {
   shouldShowAtom?: (atom: Atom) => boolean;
   /** Custom logger to use instead of console */
   logger?: Logger;
-  /** Whether to group logs with logger.group (default: true) */
-  groupLogs?: boolean;
+  /** Whether to group transaction logs with logger.group (default: true) */
+  groupTransactions?: boolean;
+  /** Whether to group event logs with logger.group (default: false) */
+  groupEvents?: boolean;
   /** Number of spaces for each indentation level (default: 0) */
   indentSpaces?: number;
   /** Whether to use colors/formatting in the console (default: true) */
@@ -131,7 +133,7 @@ type AtomsLoggerOptions = {
   showTransactionElapsedTime?: boolean;
   /** Whether to collapse transaction logs (default: false) */
   collapseTransactions?: boolean;
-  /** Whether to collapse event logs (default: true) */
+  /** Whether to collapse event logs (default: false) */
   collapseEvents?: boolean;
   /** Maximum number of owner stack entries to show (default: 2) */
   ownerStackLimit?: number;

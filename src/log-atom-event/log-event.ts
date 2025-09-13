@@ -4,20 +4,20 @@ import { EventLogPipeline } from './event-log-pipeline.js';
 export function logEvent(event: AtomsLoggerEvent, options: AtomsLoggerState): void {
   const { collapseEvents, logger } = options;
 
-  let { groupLogs } = options;
+  let { groupEvents } = options;
 
   const { logs, subLogsArray, subLogsObject } = EventLogPipeline.execute({ event, options });
 
   if (collapseEvents ? !logger.groupCollapsed : !logger.group) {
-    groupLogs = false;
+    groupEvents = false;
   } else if (!logger.groupEnd) {
-    groupLogs = false;
+    groupEvents = false;
   } else if (subLogsArray.length <= 0) {
-    groupLogs = false;
+    groupEvents = false;
   }
 
   try {
-    if (!groupLogs) {
+    if (!groupEvents) {
       if (Object.keys(subLogsObject).length <= 0) {
         logger.log(...logs);
       } else {
@@ -34,7 +34,7 @@ export function logEvent(event: AtomsLoggerEvent, options: AtomsLoggerState): vo
       }
     }
   } finally {
-    if (groupLogs) {
+    if (groupEvents) {
       logger.groupEnd?.();
     }
   }
