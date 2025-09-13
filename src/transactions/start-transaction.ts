@@ -34,7 +34,13 @@ export function startTransaction(
   transaction.transactionNumber = store[ATOMS_LOGGER_SYMBOL].transactionNumber;
   transaction.events = [];
   transaction.eventsCount = 0;
-  transaction.startTimestamp = performance.now();
+
+  if (
+    store[ATOMS_LOGGER_SYMBOL].showTransactionElapsedTime ||
+    store[ATOMS_LOGGER_SYMBOL].showTransactionLocaleTime
+  ) {
+    transaction.startTimestamp = performance.now();
+  }
 
   if (!transaction.componentDisplayName && store[ATOMS_LOGGER_SYMBOL].getComponentDisplayName) {
     try {

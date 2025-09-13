@@ -556,6 +556,72 @@ describe('bindAtomsLoggerToStore', () => {
           [`initialized value of ${testAtom} to 0`, { value: 0 }],
         ]);
       });
+
+      it('should call performance.now when showTransactionElapsedTime is enabled', () => {
+        const performanceNowSpy = vi.spyOn(performance, 'now');
+
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          showTransactionElapsedTime: true,
+          showTransactionLocaleTime: false,
+          synchronous: true, // To avoid requestIdleCallback calls that would also call performance.now
+        });
+
+        const testAtom = atom(0);
+        store.get(testAtom);
+
+        vi.runAllTimers();
+
+        expect(performanceNowSpy).toHaveBeenCalledTimes(2); // Called at the start and the end of the transaction
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 : retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to 0`, { value: 0 }],
+        ]);
+      });
+
+      it('should call performance.now when showTransactionLocaleTime is enabled', () => {
+        const performanceNowSpy = vi.spyOn(performance, 'now');
+
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          showTransactionElapsedTime: false,
+          showTransactionLocaleTime: true,
+          synchronous: true, // To avoid requestIdleCallback calls that would also call performance.now
+        });
+
+        const testAtom = atom(0);
+        store.get(testAtom);
+
+        vi.runAllTimers();
+
+        expect(performanceNowSpy).toHaveBeenCalledTimes(2); // Called at the start and the end of the transaction
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 - 1970-01-01T00:00:00.000Z : retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to 0`, { value: 0 }],
+        ]);
+      });
+
+      it('should not call performance.now when showTransactionElapsedTime and showTransactionLocaleTime are disabled', () => {
+        const performanceNowSpy = vi.spyOn(performance, 'now');
+
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          showTransactionElapsedTime: false,
+          showTransactionLocaleTime: false,
+          synchronous: true, // To avoid requestIdleCallback calls that would also call performance.now
+        });
+
+        const testAtom = atom(0);
+        store.get(testAtom);
+
+        vi.runAllTimers();
+
+        expect(performanceNowSpy).not.toHaveBeenCalled();
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 : retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to 0`, { value: 0 }],
+        ]);
+      });
     });
 
     describe('showTransactionLocaleTime', () => {
