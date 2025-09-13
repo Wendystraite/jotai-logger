@@ -145,8 +145,7 @@ describe('stack traces', () => {
         [`transaction 1 : [MyApp.MyCounterParent] MyCounter retrieved value of ${countAtom}`],
         [`initialized value of ${countAtom} to 0`, { value: 0 }],
 
-        // React 19's getOwner doesn't work in `useEffect`
-        [`transaction 2 : [MyApp.MyCounterParent] subscribed to ${countAtom}`],
+        [`transaction 2 : [MyApp.MyCounterParent] MyCounter subscribed to ${countAtom}`],
         [`mounted ${countAtom}`, { value: 0 }],
       ]);
     });
@@ -180,8 +179,9 @@ describe('stack traces', () => {
         ],
         [`initialized value of ${countAtom} to 0`, { value: 0 }],
 
-        // React 19's getOwner doesn't work in `useEffect`
-        [`transaction 2 : [ComponentLevel2.ComponentLevel3] subscribed to ${countAtom}`],
+        [
+          `transaction 2 : [ComponentLevel2.ComponentLevel3] ComponentLevel4 subscribed to ${countAtom}`,
+        ],
         [`mounted ${countAtom}`, { value: 0 }],
       ]);
     });
@@ -280,12 +280,10 @@ describe('stack traces', () => {
         [`transaction 1 : [MyApp.MyCounterParent] MyCounter retrieved value of ${countAtom}`],
         [`initialized value of ${countAtom} to 0`, { value: 0 }],
 
-        // React 19's getOwner doesn't work in `useEffect`
-        [`transaction 2 : [MyApp.MyCounterParent] subscribed to ${countAtom}`],
+        [`transaction 2 : [MyApp.MyCounterParent] MyCounter subscribed to ${countAtom}`],
         [`mounted ${countAtom}`, { value: 0 }],
 
-        // React 19's getOwner doesn't work in callbacks
-        [`transaction 3 : [MyCounter.button] set value of ${countAtom}`],
+        [`transaction 3 : [MyCounter.button] MyCounter set value of ${countAtom}`],
         [`changed value of ${countAtom} from 0 to 1`, { newValue: 1, oldValue: 0 }],
       ]);
     });
