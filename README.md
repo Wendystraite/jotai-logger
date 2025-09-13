@@ -563,10 +563,15 @@ When both `getOwnerStack` and `getComponentDisplayName` are used, the logger wil
 
 ## Logging performances
 
-The logger logs all transactions asynchronously to avoid blocking the main thread.
+The logger logs all transactions asynchronously to avoid blocking the main thread and ensure optimal performance.
 
-Internally, the logger uses a debounce mechanism (250ms) to group multiple events into transactions.
-Then, it uses [requestIdleCallback](https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback) to log these transactions one by one when the browser is idle (with a limit of 250ms for each transaction).
+Internally, the logger uses a multi-stage approach:
+
+1. **Debouncing**: Events are grouped into transactions using a debounce mechanism (with a default debounce period of 250ms / see `transactionDebounceMs` option).
+2. **Idle scheduling**: Transactions are scheduled to be logged using [requestIdleCallback](https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback) when the browser is idle (with a default timeout of 250ms / see `requestIdleCallbackTimeoutMs` option).
+3. **Batch processing**: Transactions are processed in batches with a maximum processing time limit to prevent blocking the main thread (with 16ms per batch by default / see `maxProcessingTimeMs` option).
+
+This approach ensures that even when handling large queues of transactions, UI responsiveness is maintained by spreading the work across multiple idle periods.
 
 ## Lifecycle of atoms
 
