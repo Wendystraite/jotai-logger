@@ -1,6 +1,6 @@
 {
   "name": "jotai-logger",
-  "version": "2.5.2",
+  "version": "3.0.0",
   "description": "Logging utility for jotai",
   "keywords": [
     "jotai",

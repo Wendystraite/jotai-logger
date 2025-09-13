@@ -1,5 +1,70 @@
 # jotai-logger
 
+## 3.0.0
+
+### Major Changes
+
+- f3c2526: feat: update to jotai 2.14.0
+
+  Support the new jotai internal API `INTERNAL_buildStoreRev2` and drop
+  support for older versions of jotai and jotai-devtools.
+  Update all dev dependencies.
+  Remove all previous hacks made for working with jotai-devtools.
+
+  BREAKING CHANGE: only jotai 2.14.0 and up is supported due to changes
+  in their internal APIs.
+
+- 31c78e3: feat: add component owner stack and display name
+
+  Replace the `getStackTrace` option by three new options :
+  `getOwnerStack`, `ownerStackLimit` and `getComponentDisplayName`.
+  These options allows the logger to better track the React component
+  hierarchy by using React 19.1 APIs.
+
+  BREAKING CHANGE: `getStackTrace` is removed and replaced by the new
+  experimental options `getOwnerStack` and `getComponentDisplayName`.
+  See the README on how to setup these two new options.
+
+- e1561fa: feat: split `groupLogs` option in two options
+
+  Replace `groupLogs` option by the two new options `groupTransactions`
+  and `groupEvents`.
+  Transactions are still grouped and not collapsed by default.
+  Events are now not grouped and collapsed by default.
+
+  BREAKING CHANGE: `groupLogs` option has been removed in favor of
+  `groupTransactions` and `groupEvents` options. Just replace it by these
+  two new options for the same functionalities.
+
+### Minor Changes
+
+- 958356c: feat: add option `maxProcessingTimeMs` option
+
+  Add a new option `maxProcessingTimeMs` that further improves runtime
+  performances by limiting the time spent processing transactions in each
+  idle period.
+  Transactions are now processed in groups and each group and each group
+  is limited to a maximum processing time to prevent blocking the main
+  thread. When the time limit is reached, processing continues in the next
+  idle period, ensuring UI responsiveness is maintained even when handling
+  large queues of transactions.
+
+### Patch Changes
+
+- cceea60: perf: do not call performance.now if not needed
+
+  Do not call `performance.now` if `showTransactionElapsedTime` and
+  `showTransactionLocaleTime` are disabled to prevent unnecessary calls.
+
+- d4ff268: perf: do not call getOwnerStack if not needed
+
+  Only retrieve the component's owner stack when a transaction is logged.
+
+- 305481a: fix: retrieve component display name in edge cases
+
+  Retrieve the component's display name when using `useAtom` or
+  `useAtomValue` during `subscribed` and `set` calls.
+
 ## 2.5.2
 
 ### Patch Changes
