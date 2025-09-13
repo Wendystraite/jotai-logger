@@ -156,6 +156,9 @@ export interface AtomsLoggerOptionsInState {
 
   /** @see AtomsLoggerOptions.requestIdleCallbackTimeoutMs */
   requestIdleCallbackTimeoutMs: number;
+
+  /** @see AtomsLoggerOptions.maxProcessingTimeMs */
+  maxProcessingTimeMs: number;
 }
 
 /**
@@ -475,8 +478,8 @@ export interface AtomsLoggerOptions {
    * Whether to log transactions synchronously or asynchronously.
    *
    * - If set to `true`, the logger will log transactions synchronously
-   *   - This makes `transactionDebounceMs` and `requestIdleCallbackTimeoutMs`
-   *     options irrelevant.
+   *   - This makes `transactionDebounceMs`, `requestIdleCallbackTimeoutMs`
+   *     and `maxProcessingTimeMs` options irrelevant.
    *   - This is useful for debugging purposes or if you want to see the logs
    *     immediately.
    * - If set to `false`, the logger will log transactions asynchronously
@@ -485,6 +488,8 @@ export interface AtomsLoggerOptions {
    *   - Then, the transactions are scheduled to be logged using
    *     `requestIdleCallback` with a maximum timeout defined by
    *     `requestIdleCallbackTimeoutMs` option.
+   *   - Finally, the transactions are processed in chunks with a maximum
+   *     processing time defined by `maxProcessingTimeMs` option.
    *   - This is useful for reducing the impact of the logger on the application
    *     performance.
    *
@@ -516,18 +521,18 @@ export interface AtomsLoggerOptions {
    * Only used if `synchronous` is set to `false`.
    *
    * - `requestIdleCallback` queues transactions to be logged during a browser's
-   *   idle periods with this maximum timeout per transaction. This ensure that
-   *   the logger does not impact too much the application performances.
+   *   idle periods with this maximum timeout per group of transactions.
+   *   This ensure that the logger does not impact too much the application performances.
    *
    * - Use a positive value to set a maximum timeout for the
    *   `requestIdleCallback`.
    *   - This means that the logger will wait for the browser to be idle for at
-   *     least this amount of time before logging the transaction.
+   *     least this amount of time before logging the queued transactions.
    *   - It will fallback to `setTimeout` with a timeout of `0` if the browser
    *     does not support `requestIdleCallback`.
    *
    * - Use `0` to wait indefinitely for the browser to be idle before logging
-   *   the transaction.
+   *   the queued transactions.
    *   - It will fallback to `setTimeout` with a timeout of `0` if the browser
    *     does not support `requestIdleCallback`.
    *
@@ -537,6 +542,24 @@ export interface AtomsLoggerOptions {
    * @default 250
    */
   requestIdleCallbackTimeoutMs?: number;
+
+  /**
+   * Maximum number of milliseconds to process transactions in one go.
+   *
+   * Only used if `synchronous` is set to `false`.
+   *
+   * - This is to avoid blocking the main thread for too long.
+   * - If there are still transactions in the queue after this time, they will be
+   *   scheduled to be processed in the next idle period.
+   *
+   * - Use a positive value to set the maximum processing time per idle period.
+   * - Use `0` or lower to process all queued transactions in one go, which may block
+   *   the main thread for a long time.
+   *   This is the same as setting `synchronous` to `true`.
+   *
+   * @default 16 (approximately 1 frame at 60fps)
+   */
+  maxProcessingTimeMs?: number;
 }
 
 export const AtomsLoggerTransactionTypes = {

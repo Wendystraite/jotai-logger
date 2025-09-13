@@ -145,6 +145,8 @@ type AtomsLoggerOptions = {
   transactionDebounceMs?: number;
   /** Timeout in milliseconds for requestIdleCallback (default: 250ms) */
   requestIdleCallbackTimeoutMs?: number;
+  /** Maximum processing time per batch in milliseconds (default: 16ms) */
+  maxProcessingTimeMs?: number;
 };
 
 const options: AtomsLoggerOptions = {
@@ -294,7 +296,7 @@ useAtomsLogger({
 
 #### Asynchronous Logging Configuration
 
-For asynchronous logging, you can fine-tune two key parameters:
+For asynchronous logging, you can fine-tune three key parameters:
 
 1. `transactionDebounceMs` (default: `250ms`) - Controls how transactions are grouped:
    - Higher values (e.g., `500ms`) - Group more unknown events into fewer transactions, reducing console noise
@@ -306,6 +308,12 @@ For asynchronous logging, you can fine-tune two key parameters:
    - Setting to `0` - Only log when the browser is completely idle (may delay logs indefinitely)
    - Setting to `-1` - Disable `requestIdleCallback` completely, logging scheduled transactions immediately. This is the same as `synchronous: true`.
 
+3. `maxProcessingTimeMs` (default: `16ms`) - Controls how long to process transactions in a single batch:
+   - Higher values (e.g., `50ms`) - Process more transactions per batch, potentially improving throughput but may impact UI responsiveness
+   - Lower values (e.g., `5ms`) - Process fewer transactions per batch, keeping the main thread more responsive
+   - Setting to `0` or negative - Process all queued transactions in one go without time limits (same as `synchronous: true`)
+   - The default `16ms` corresponds to approximately one frame at 60fps, balancing performance and responsiveness
+
 Here are some examples of how to configure these options based on your needs:
 
 ```tsx
@@ -313,18 +321,21 @@ Here are some examples of how to configure these options based on your needs:
 useAtomsLogger({
   transactionDebounceMs: 50,
   requestIdleCallbackTimeoutMs: 100,
+  maxProcessingTimeMs: 10, // Short bursts to keep UI responsive
 });
 
 // Performance priority: group events aggressively, only log during idle time
 useAtomsLogger({
   transactionDebounceMs: 500,
   requestIdleCallbackTimeoutMs: 0, // No maximum timeout, only log when truly idle
+  maxProcessingTimeMs: 50, // Longer processing time for better throughput
 });
 
 // Balanced approach (default behavior)
 useAtomsLogger({
   transactionDebounceMs: 250,
   requestIdleCallbackTimeoutMs: 250,
+  maxProcessingTimeMs: 16,
 });
 ```
 

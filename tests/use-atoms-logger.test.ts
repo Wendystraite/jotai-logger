@@ -136,6 +136,7 @@ describe('useAtomsLogger', () => {
       ownerStackLimit: 2,
       transactionDebounceMs: 250,
       requestIdleCallbackTimeoutMs: 250,
+      maxProcessingTimeMs: 16,
     };
     expect(isAtomsLoggerBoundToStore(store)).toBeTruthy();
     expect((store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL]).toEqual(

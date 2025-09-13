@@ -12,6 +12,7 @@ import {
   describe,
   expect,
   it,
+  onTestFinished,
   vi,
 } from 'vitest';
 
@@ -1244,12 +1245,13 @@ describe('bindAtomsLoggerToStore', () => {
         ]);
       });
 
-      it('should ignore transactionDebounceMs and requestIdleCallbackTimeoutMs options when synchronous is true', () => {
+      it('should ignore transactionDebounceMs, requestIdleCallbackTimeoutMs and maxProcessingTimeMs options when synchronous is true', () => {
         bindAtomsLoggerToStore(store, {
           ...defaultOptions,
           synchronous: true,
           requestIdleCallbackTimeoutMs: 345,
           transactionDebounceMs: 456,
+          maxProcessingTimeMs: 789,
         });
 
         const options = (store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL];
@@ -1258,6 +1260,7 @@ describe('bindAtomsLoggerToStore', () => {
           expect.objectContaining({
             requestIdleCallbackTimeoutMs: -1,
             transactionDebounceMs: -1,
+            maxProcessingTimeMs: -1,
           }),
         );
         expect(options).not.toEqual(
@@ -1409,12 +1412,10 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     describe('requestIdleCallbackTimeoutMs', () => {
-      let originalRequestIdleCallback: typeof globalThis.requestIdleCallback;
       const transactionCallbacks: (() => void)[] = [];
       let requestIdleCallbackMockFn: Mock;
 
       beforeEach(() => {
-        originalRequestIdleCallback = globalThis.requestIdleCallback;
         requestIdleCallbackMockFn = vi.fn((cb: IdleRequestCallback) => {
           transactionCallbacks.push(() => {
             cb({ didTimeout: false, timeRemaining: () => 50 } as IdleDeadline);
@@ -1425,8 +1426,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       afterEach(() => {
-        globalThis.requestIdleCallback = originalRequestIdleCallback;
-        vi.clearAllMocks();
+        delete (globalThis as Partial<typeof globalThis>).requestIdleCallback;
       });
 
       it('should schedule and log transactions using requestIdleCallback by default', () => {
@@ -1557,6 +1557,79 @@ describe('bindAtomsLoggerToStore', () => {
           [`transaction 1 : retrieved value of ${testAtom}`],
           [`initialized value of ${testAtom} to 0`, { value: 0 }],
         ]);
+      });
+    });
+
+    describe('maxProcessingTimeMs', () => {
+      it('should process and log transactions in chunks when processing takes too long by default', () => {
+        const performanceNowSpy = vi.spyOn(performance, 'now').mockReturnValue(0);
+
+        let callCount = 0;
+        performanceNowSpy.mockImplementation(() => {
+          callCount++;
+          return callCount === 1 ? 0 : 100; // First call: 0ms (start), second call: 100ms (exceeded)
+        });
+
+        const requestIdleCallbacks: (() => void)[] = []; // Store scheduled callbacks
+        const requestIdleCallbackMockFn = vi.fn().mockImplementation((cb: IdleRequestCallback) => {
+          requestIdleCallbacks.push(() => {
+            cb({ didTimeout: false, timeRemaining: () => 50 } as IdleDeadline);
+          });
+          return 1;
+        });
+        globalThis.requestIdleCallback = requestIdleCallbackMockFn;
+        onTestFinished(() => {
+          delete (globalThis as Partial<typeof globalThis>).requestIdleCallback;
+        });
+
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+
+          // Don't call `performance.now()` with timings options to avoid interfering with the test
+          showTransactionElapsedTime: false,
+          showTransactionLocaleTime: false,
+        });
+
+        // Create 12 atoms : 10 will be logged in the first chunk, 2 in the second chunk
+        const testAtoms = Array.from({ length: 12 }, (_, i) => atom(i + 1));
+        for (const testAtom of testAtoms) {
+          store.get(testAtom);
+        }
+
+        vi.runAllTimers();
+
+        // Waiting for requestIdleCallback
+        expect(requestIdleCallbackMockFn).toHaveBeenCalledTimes(1);
+        expect(performanceNowSpy).not.toHaveBeenCalled();
+        expect(consoleMock.log.mock.calls).toEqual([]);
+        requestIdleCallbackMockFn.mockClear();
+        performanceNowSpy.mockClear();
+        consoleMock.log.mockClear();
+
+        requestIdleCallbacks.shift()!(); // Invoke the 1st scheduled callback
+
+        expect(requestIdleCallbackMockFn).toHaveBeenCalledTimes(1); // Called again due to time limit
+        expect(performanceNowSpy).toHaveBeenCalledTimes(2); // Start + first check
+        expect(consoleMock.log.mock.calls).toEqual(
+          Array.from({ length: 10 }, (_, i) => [
+            [`transaction ${i + 1} : retrieved value of ${testAtoms[i]}`],
+            [`initialized value of ${testAtoms[i]} to ${i + 1}`, { value: i + 1 }],
+          ]).flat(1),
+        );
+        requestIdleCallbackMockFn.mockClear();
+        performanceNowSpy.mockClear();
+        consoleMock.log.mockClear();
+
+        requestIdleCallbacks.shift()!(); // Invoke the 2nd scheduled callback
+
+        expect(requestIdleCallbackMockFn).not.toHaveBeenCalled(); // Finished processing
+        expect(performanceNowSpy).toHaveBeenCalledTimes(1); // Start only (not reached checkTimeInterval)
+        expect(consoleMock.log.mock.calls).toEqual(
+          Array.from({ length: 2 }, (_, i) => [
+            [`transaction ${i + 11} : retrieved value of ${testAtoms[i + 10]}`],
+            [`initialized value of ${testAtoms[i + 10]} to ${i + 11}`, { value: i + 11 }],
+          ]).flat(1),
+        );
       });
     });
   });
@@ -3332,26 +3405,18 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     describe('requestIdleCallback', () => {
-      let originalRequestIdleCallback: typeof globalThis.requestIdleCallback;
-
-      beforeEach(() => {
-        originalRequestIdleCallback = globalThis.requestIdleCallback;
-      });
-
-      afterEach(() => {
-        globalThis.requestIdleCallback = originalRequestIdleCallback;
-        vi.clearAllMocks();
-      });
-
-      it('should schedule and log transactions one by one using requestIdleCallback', () => {
-        const transactionCallbacks: (() => void)[] = [];
+      it('should schedule and log queued transactions by using requestIdleCallback', () => {
+        const requestIdleCallbacks: (() => void)[] = [];
         const requestIdleCallbackMockFn = vi.fn((cb: IdleRequestCallback) => {
-          transactionCallbacks.push(() => {
+          requestIdleCallbacks.push(() => {
             cb({ didTimeout: false, timeRemaining: () => 50 } as IdleDeadline);
           });
           return 1;
         });
         globalThis.requestIdleCallback = requestIdleCallbackMockFn;
+        onTestFinished(() => {
+          delete (globalThis as Partial<typeof globalThis>).requestIdleCallback;
+        });
 
         bindAtomsLoggerToStore(store, defaultOptions);
 
@@ -3365,38 +3430,18 @@ describe('bindAtomsLoggerToStore', () => {
         store.set(testAtom, 1);
         store.set(testAtom, 2);
         vi.runAllTimers();
-
         expect(requestIdleCallbackMockFn).toHaveBeenCalledOnce(); // First transaction scheduled
-        expect(consoleMock.log.mock.calls).toEqual([]);
         requestIdleCallbackMockFn.mockClear();
+        expect(consoleMock.log.mock.calls).toEqual([]); // Nothing logged yet
 
-        transactionCallbacks.shift()!(); // Run the first transaction
+        requestIdleCallbacks.shift()!(); // Run the queued transactions
         vi.runAllTimers();
-
-        expect(requestIdleCallbackMockFn).toHaveBeenCalledOnce(); // Second transaction scheduled
+        expect(requestIdleCallbackMockFn).not.toHaveBeenCalled(); // No more transactions scheduled
         expect(consoleMock.log.mock.calls).toEqual([
           [`transaction 1 : retrieved value of ${testAtom}`],
           [`initialized value of ${testAtom} to 0`, { value: 0 }],
-        ]);
-        requestIdleCallbackMockFn.mockClear();
-        consoleMock.log.mockClear();
-
-        transactionCallbacks.shift()!(); // Run the second transaction
-        vi.runAllTimers();
-
-        expect(requestIdleCallbackMockFn).toHaveBeenCalledOnce(); // Third transaction scheduled
-        expect(consoleMock.log.mock.calls).toEqual([
           [`transaction 2 : set value of ${testAtom} to 1`, { value: 1 }],
           [`changed value of ${testAtom} from 0 to 1`, { newValue: 1, oldValue: 0 }],
-        ]);
-        requestIdleCallbackMockFn.mockClear();
-        consoleMock.log.mockClear();
-
-        transactionCallbacks.shift()!(); // Run the third transaction
-        vi.runAllTimers();
-
-        expect(requestIdleCallbackMockFn).not.toHaveBeenCalled(); // No more transactions scheduled
-        expect(consoleMock.log.mock.calls).toEqual([
           [`transaction 3 : set value of ${testAtom} to 2`, { value: 2 }],
           [`changed value of ${testAtom} from 1 to 2`, { newValue: 2, oldValue: 1 }],
         ]);

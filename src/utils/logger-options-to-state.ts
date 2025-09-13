@@ -28,6 +28,7 @@ export function atomsLoggerOptionsToState(
     synchronous = false,
     transactionDebounceMs = 250,
     requestIdleCallbackTimeoutMs = 250,
+    maxProcessingTimeMs = 16,
   } = options;
   return {
     enabled,
@@ -56,5 +57,6 @@ export function atomsLoggerOptionsToState(
     getComponentDisplayName,
     transactionDebounceMs: synchronous ? -1 : transactionDebounceMs,
     requestIdleCallbackTimeoutMs: synchronous ? -1 : requestIdleCallbackTimeoutMs,
+    maxProcessingTimeMs: synchronous ? -1 : maxProcessingTimeMs,
   };
 }
