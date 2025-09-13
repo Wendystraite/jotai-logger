@@ -46,7 +46,8 @@ describe('logTransactionsScheduler', () => {
       endTimestamp: -1,
       events: [],
       eventsCount: 0,
-      stackTrace: undefined,
+      ownerStack: undefined,
+      componentDisplayName: undefined,
       startTimestamp: -1,
       transactionNumber: -1,
     };
@@ -82,7 +83,8 @@ describe('logTransactionsScheduler', () => {
       endTimestamp: -1,
       events: [],
       eventsCount: 0,
-      stackTrace: undefined,
+      ownerStack: undefined,
+      componentDisplayName: undefined,
       startTimestamp: -1,
       transactionNumber: -1,
     };

@@ -1,9 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react';
 import { Provider, atom, createStore, useAtom, useAtomValue, useSetAtom, useStore } from 'jotai';
-import { withAtomEffect } from 'jotai-effect';
-import React, { useEffect } from 'react';
-import StackTrace from 'stacktrace-js';
+import React, { captureOwnerStack, useEffect } from 'react';
 import {
   type Mock,
   type MockInstance,
@@ -24,17 +22,6 @@ beforeEach(() => {
   vi.useFakeTimers({ now: 0 });
   vi.stubEnv('TZ', 'UTC');
   mockDate = vi.spyOn(Date.prototype, 'toLocaleTimeString').mockImplementation(() => '00:00:00');
-  vi.spyOn(console, 'error').mockImplementation((error) => {
-    // Ignore StackTrace error 'Error: TypeError [ERR_INVALID_PROTOCOL]: Protocol "c:" not supported. Expected "http:"'
-    if (typeof error === 'string' && error.includes('ERR_INVALID_PROTOCOL')) {
-      return;
-    }
-
-    // Use the actual console.error for other errors
-    void vi.importActual('console').then((originalConsole) => {
-      (originalConsole as unknown as typeof console).error(error);
-    });
-  });
 });
 
 afterEach(() => {
@@ -43,7 +30,23 @@ afterEach(() => {
   mockDate.mockRestore();
 });
 
-describe('useAtomsLogger', () => {
+function getReact19ComponentDisplayName(): string | undefined {
+  const React19 = React as {
+    __CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE?: {
+      A?: { getOwner?: () => { type?: { displayName?: string; name?: string } } };
+    };
+    __SERVER_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE?: {
+      A?: { getOwner?: () => { type?: { displayName?: string; name?: string } } };
+    };
+  };
+  const component = (
+    React19.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE ??
+    React19.__SERVER_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE
+  )?.A?.getOwner?.().type;
+  return component?.displayName ?? component?.name;
+}
+
+describe('stack traces', () => {
   let consoleMock: {
     log: Mock;
     group: Mock;
@@ -65,13 +68,8 @@ describe('useAtomsLogger', () => {
       formattedOutput: false,
       showTransactionElapsedTime: false,
       shouldShowPrivateAtoms: false,
-      getStackTrace() {
-        try {
-          throw new Error('Stack trace');
-        } catch (error) {
-          return StackTrace.fromError(error as Error, { offline: true });
-        }
-      },
+      getOwnerStack: captureOwnerStack,
+      getComponentDisplayName: getReact19ComponentDisplayName,
     };
   });
 
@@ -106,30 +104,121 @@ describe('useAtomsLogger', () => {
     );
   }
 
-  it('should log stack traces when using useAtomValue', async () => {
-    function MyCounter() {
-      const count = useAtomValue(countAtom);
-      return <div>count = {count}</div>;
-    }
+  describe('useAtomValue', () => {
+    it('should log owner stack without component display name if its the root component', async () => {
+      function MyCounter() {
+        const count = useAtomValue(countAtom);
+        return <div>count = {count}</div>;
+      }
 
-    renderWithLogger(<MyCounter />);
+      renderWithLogger(<MyCounter />);
 
-    await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(1000);
 
-    expect(consoleMock.log.mock.calls).toEqual([
-      [`transaction 1 : [stack-traces] MyCounter retrieved value of ${countAtom}`],
-      [`initialized value of ${countAtom} to 0`, { value: 0 }],
-      [`transaction 2 : subscribed to ${countAtom}`],
-      [`mounted ${countAtom}`, { value: 0 }],
-    ]);
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : [MyCounter] retrieved value of ${countAtom}`],
+        [`initialized value of ${countAtom} to 0`, { value: 0 }],
+        [`transaction 2 : [MyCounter] subscribed to ${countAtom}`],
+        [`mounted ${countAtom}`, { value: 0 }],
+      ]);
+    });
+
+    it('should log owner stack with component display name', async () => {
+      function MyApp() {
+        return <MyCounterParent />;
+      }
+
+      function MyCounterParent() {
+        return <MyCounter />;
+      }
+
+      function MyCounter() {
+        const count = useAtomValue(countAtom);
+        return <div>count = {count}</div>;
+      }
+
+      renderWithLogger(<MyApp />);
+
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : [MyApp.MyCounterParent] MyCounter retrieved value of ${countAtom}`],
+        [`initialized value of ${countAtom} to 0`, { value: 0 }],
+
+        // React 19's getOwner doesn't work in `useEffect`
+        [`transaction 2 : [MyApp.MyCounterParent] subscribed to ${countAtom}`],
+        [`mounted ${countAtom}`, { value: 0 }],
+      ]);
+    });
+
+    it('should log a maximum of 2 components in the owner stack', async () => {
+      function ComponentLevel4() {
+        const count = useAtomValue(countAtom);
+        return <div>count = {count}</div>;
+      }
+      function ComponentLevel3() {
+        return <ComponentLevel4 />;
+      }
+      function ComponentLevel2() {
+        return <ComponentLevel3 />;
+      }
+      function ComponentLevel1() {
+        return <ComponentLevel2 />;
+      }
+      function MyApp() {
+        return <ComponentLevel1 />;
+      }
+
+      renderWithLogger(<MyApp />);
+
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [
+          // Does not log MyApp and ComponentLevel1
+          `transaction 1 : [ComponentLevel2.ComponentLevel3] ComponentLevel4 retrieved value of ${countAtom}`,
+        ],
+        [`initialized value of ${countAtom} to 0`, { value: 0 }],
+
+        // React 19's getOwner doesn't work in `useEffect`
+        [`transaction 2 : [ComponentLevel2.ComponentLevel3] subscribed to ${countAtom}`],
+        [`mounted ${countAtom}`, { value: 0 }],
+      ]);
+    });
+
+    it('should not log custom hooks', async () => {
+      function useMyCounter() {
+        return useAtomValue(countAtom);
+      }
+
+      function MyCounter() {
+        const count = useMyCounter();
+        return <div>count = {count}</div>;
+      }
+
+      renderWithLogger(<MyCounter />);
+
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : [MyCounter] retrieved value of ${countAtom}`],
+        [`initialized value of ${countAtom} to 0`, { value: 0 }],
+        [`transaction 2 : [MyCounter] subscribed to ${countAtom}`],
+        [`mounted ${countAtom}`, { value: 0 }],
+      ]);
+    });
   });
 
-  it(
-    'should log stack traces when using useSetAtom',
-    {
-      fails: true, // Not working in a React callback
-    },
-    async () => {
+  describe('useSetAtom', () => {
+    it('should log owner stack with component display name', async () => {
+      function MyApp() {
+        return <MyCounterParent />;
+      }
+
+      function MyCounterParent() {
+        return <MyCounter />;
+      }
+
       function MyCounter() {
         const count = useAtomValue(countAtom);
         const increment = useSetAtom(incrementAtom);
@@ -144,159 +233,117 @@ describe('useAtomsLogger', () => {
         );
       }
 
-      renderWithLogger(<MyCounter />);
+      renderWithLogger(<MyApp />);
 
       screen.getByRole('button', { name: 'Increment 0' }).click();
 
       await vi.advanceTimersByTimeAsync(1000);
 
       expect(consoleMock.log.mock.calls).toEqual([
-        [`transaction 1 : [stack-traces] MyCounter retrieved value of ${countAtom}`],
+        [`transaction 1 : [MyApp.MyCounterParent] MyCounter retrieved value of ${countAtom}`],
         [`initialized value of ${countAtom} to 0`, { value: 0 }],
 
-        [`transaction 2 : [stack-traces] MyCounter subscribed to ${countAtom}`],
+        // React 19's getOwner doesn't work in `useEffect`
+        [`transaction 2 : [MyApp.MyCounterParent] subscribed to ${countAtom}`],
         [`mounted ${countAtom}`, { value: 0 }],
 
-        [`transaction 3 : [stack-traces] MyCounter called set of ${incrementAtom}`],
+        // React 19's getOwner doesn't work in callbacks
+        [`transaction 3 : [MyCounter.button] called set of ${incrementAtom}`],
         [`changed value of ${countAtom} from 0 to 1`, { newValue: 1, oldValue: 0 }],
       ]);
-    },
-  );
-
-  it('should log stack traces when using useAtom', async () => {
-    function MyCounter() {
-      const [count] = useAtom(countAtom);
-      return <div>count = {count}</div>;
-    }
-
-    renderWithLogger(<MyCounter />);
-
-    await vi.advanceTimersByTimeAsync(1000);
-
-    expect(consoleMock.log.mock.calls).toEqual([
-      [`transaction 1 : [stack-traces] MyCounter retrieved value of ${countAtom}`],
-      [`initialized value of ${countAtom} to 0`, { value: 0 }],
-      [`transaction 2 : subscribed to ${countAtom}`],
-      [`mounted ${countAtom}`, { value: 0 }],
-    ]);
+    });
   });
 
-  it('should log stack traces when directly using store.get', async () => {
-    function MyCounter() {
-      const store = useStore();
-      const count = store.get(countAtom);
-      return <div>count = {count}</div>;
-    }
-
-    renderWithLogger(<MyCounter />);
-
-    await vi.advanceTimersByTimeAsync(1000);
-
-    expect(consoleMock.log.mock.calls).toEqual([
-      [`transaction 1 : [stack-traces] MyCounter retrieved value of ${countAtom}`],
-      [`initialized value of ${countAtom} to 0`, { value: 0 }],
-    ]);
-  });
-
-  it(
-    'should log stack traces when directly using store.set',
-    {
-      fails: true, // Not working inside useEffect
-    },
-    async () => {
-      function MyCounter() {
-        const store = useStore();
-        useEffect(() => {
-          store.set(countAtom, (count) => count + 1);
-        }, []);
-        return <div>counter</div>;
+  describe('useAtom', () => {
+    it('should log owner stack with component display name', async () => {
+      function MyApp() {
+        return <MyCounterParent />;
       }
 
-      renderWithLogger(<MyCounter />);
+      function MyCounterParent() {
+        return <MyCounter />;
+      }
+
+      function MyCounter() {
+        const [count, setCount] = useAtom(countAtom);
+        return (
+          <button
+            onClick={() => {
+              setCount((c) => c + 1);
+            }}
+          >
+            Increment {count}
+          </button>
+        );
+      }
+
+      renderWithLogger(<MyApp />);
+
+      screen.getByRole('button', { name: 'Increment 0' }).click();
 
       await vi.advanceTimersByTimeAsync(1000);
 
       expect(consoleMock.log.mock.calls).toEqual([
-        [`transaction 1 :  [stack-traces] MyCounter set value of ${countAtom}`],
+        [`transaction 1 : [MyApp.MyCounterParent] MyCounter retrieved value of ${countAtom}`],
         [`initialized value of ${countAtom} to 0`, { value: 0 }],
+
+        // React 19's getOwner doesn't work in `useEffect`
+        [`transaction 2 : [MyApp.MyCounterParent] subscribed to ${countAtom}`],
+        [`mounted ${countAtom}`, { value: 0 }],
+
+        // React 19's getOwner doesn't work in callbacks
+        [`transaction 3 : [MyCounter.button] set value of ${countAtom}`],
         [`changed value of ${countAtom} from 0 to 1`, { newValue: 1, oldValue: 0 }],
       ]);
-    },
-  );
+    });
+  });
 
-  it(
-    'should log stack traces when using store.sub',
-    {
-      fails: true, // Not working inside useEffect
-    },
-    async () => {
+  describe('direct store access', () => {
+    it('should log owner stack with component display name', async () => {
+      function MyApp() {
+        return <MyCounterParent />;
+      }
+
+      function MyCounterParent() {
+        return <MyCounter />;
+      }
+
       function MyCounter() {
         const store = useStore();
+        const count = store.get(countAtom);
         useEffect(() => {
           const unsubscribe = store.sub(countAtom, vi.fn());
           return unsubscribe;
         }, []);
-        return <div>counter</div>;
+        return (
+          <button
+            onClick={() => {
+              store.set(countAtom, (c) => c + 1);
+            }}
+          >
+            Increment {count}
+          </button>
+        );
       }
 
-      renderWithLogger(<MyCounter />);
+      renderWithLogger(<MyApp />);
+
+      screen.getByRole('button', { name: 'Increment 0' }).click();
 
       await vi.advanceTimersByTimeAsync(1000);
 
       expect(consoleMock.log.mock.calls).toEqual([
-        [`transaction 1 :  [stack-traces] MyCounter subscribed to ${countAtom}`],
+        [`transaction 1 : [MyApp.MyCounterParent] MyCounter retrieved value of ${countAtom}`],
         [`initialized value of ${countAtom} to 0`, { value: 0 }],
+
+        // React 19's getOwner doesn't work in `useEffect`
+        [`transaction 2 : [MyApp.MyCounterParent] subscribed to ${countAtom}`],
         [`mounted ${countAtom}`, { value: 0 }],
+
+        // React 19's getOwner doesn't work in callbacks
+        [`transaction 3 : [MyCounter.button] set value of ${countAtom}`],
+        [`changed value of ${countAtom} from 0 to 1`, { newValue: 1, oldValue: 0 }],
       ]);
-    },
-  );
-
-  it('should log stack traces with hooks when using useAtomValue', async () => {
-    function useMyCounter() {
-      return useAtomValue(countAtom);
-    }
-
-    function MyCounter() {
-      const count = useMyCounter();
-      return <div>count = {count}</div>;
-    }
-
-    renderWithLogger(<MyCounter />);
-
-    await vi.advanceTimersByTimeAsync(1000);
-
-    expect(consoleMock.log.mock.calls).toEqual([
-      [`transaction 1 : [stack-traces] MyCounter.useMyCounter retrieved value of ${countAtom}`],
-      [`initialized value of ${countAtom} to 0`, { value: 0 }],
-      [`transaction 2 : subscribed to ${countAtom}`],
-      [`mounted ${countAtom}`, { value: 0 }],
-    ]);
-  });
-
-  it('should not log stack traces of libraries', async () => {
-    const countWithEffect = withAtomEffect(countAtom, vi.fn());
-    countWithEffect.debugLabel = 'countWithEffect';
-
-    function MyCounter() {
-      const count = useAtomValue(countWithEffect);
-      return <div>count = {count}</div>;
-    }
-
-    renderWithLogger(<MyCounter />);
-
-    await vi.advanceTimersByTimeAsync(1000);
-
-    expect(consoleMock.log.mock.calls).toEqual([
-      [`transaction 1 : [stack-traces] MyCounter retrieved value of ${countWithEffect}`],
-      [`initialized value of ${countAtom} to 0`, { value: 0 }],
-      [
-        `initialized value of ${countWithEffect} to 0`,
-        { value: 0, dependencies: [`${countAtom}`] },
-      ],
-
-      [`transaction 2 : subscribed to ${countWithEffect}`],
-      [`mounted ${countAtom}`, { value: 0 }],
-      [`mounted ${countWithEffect}`, { dependencies: [`${countAtom}`], value: 0 }],
-    ]);
+    });
   });
 });

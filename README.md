@@ -133,8 +133,12 @@ type AtomsLoggerOptions = {
   collapseTransactions?: boolean;
   /** Whether to collapse event logs (default: true) */
   collapseEvents?: boolean;
-  /** Custom function to retrieve calling React components' names from stack traces */
-  getStackTrace?: () => { functionName?: string; fileName?: string }[] | undefined;
+  /** Maximum number of owner stack entries to show (default: 2) */
+  ownerStackLimit?: number;
+  /** Custom function to retrieve the React component stack that triggered the transaction */
+  getOwnerStack?: () => string | null | undefined;
+  /** Custom function to retrieve the current React component's display name */
+  getComponentDisplayName?: () => string | undefined;
   /** Whether to log synchronously or asynchronously (default: false) */
   synchronous?: boolean;
   /** Debounce time in milliseconds for grouping transactions (default: 250ms) */
@@ -207,28 +211,66 @@ useAtomsLogger({
 });
 ```
 
-### Stack traces
+### Component Tracking (Experimental)
 
-This is an experimental feature that may not work in all cases.
+These are experimental features designed for React applications that may not work in all cases.
 
-If defined, the logger will try to find the React component that triggered a transaction by calling the `getStackTrace` function and, if found, will log its name and file name in the console.
+#### Owner Stack Tracking (`getOwnerStack`)
 
-Here's an example using [stacktrace-js](https://github.com/stacktracejs/stacktrace.js/) library:
+This feature allows the logger to track the React component hierarchy that triggered a transaction. When provided, the logger will display the parent components in the logs to help identify where state changes originate.
+
+It accepts React 19.1+'s [`captureOwnerStack`](https://react.dev/reference/react/captureOwnerStack) function to retrieve the component stack.
 
 ```tsx
 import { useAtomsLogger } from 'jotai-logger';
-import StackTrace from 'stacktrace-js';
+import { captureOwnerStack } from 'react';
+
+// React 19.1+
 
 useAtomsLogger({
-  getStackTrace() {
-    try {
-      throw new Error('Stack trace');
-    } catch (error) {
-      return StackTrace.fromError(error as Error, { offline: true });
-    }
-  },
+  getOwnerStack: captureOwnerStack,
 });
 ```
+
+The logger displays up to `ownerStackLimit` parent components.
+
+#### Component Display Name (`getComponentDisplayName`)
+
+This feature shows the current React component's display name in transaction logs. It's particularly useful when combined with owner stack tracking.
+
+```tsx
+import React, { useAtomsLogger } from 'jotai-logger';
+
+/**
+ * Get the current React component's display name using React 19 internals.
+ *
+ * This only works when used directly within a React component's render
+ * and will not work in other lifecycle methods like useEffect or event handlers.
+ *
+ * This is an experimental feature and may break in future React versions.
+ */
+function getReact19ComponentDisplayName(): string | undefined {
+  const React19 = React as {
+    __CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE?: {
+      A?: { getOwner?: () => { type?: { displayName?: string; name?: string } } };
+    };
+    __SERVER_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE?: {
+      A?: { getOwner?: () => { type?: { displayName?: string; name?: string } } };
+    };
+  };
+  const component = (
+    React19.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE ??
+    React19.__SERVER_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE
+  )?.A?.getOwner?.().type;
+  return component?.displayName ?? component?.name;
+}
+
+useAtomsLogger({
+  getComponentDisplayName: getReact19ComponentDisplayName,
+});
+```
+
+If the component display name is already shown at the end of the owner stack, it won't be duplicated.
 
 ### Synchronous vs. Asynchronous Logging
 
@@ -484,12 +526,27 @@ const atomWithVariableDeps = atom((get) => {
 
 ### React components
 
-If the `getStackTrace` option is used, the logger will try to find the React component that triggered the transaction.
-
-This can fail in some cases like calling from an `useEffect` but, if found, the log look like this :
+If the `getOwnerStack` option is used the logger will log the parent React component that triggered the transaction.
 
 ```
-▶ transaction 11 : [my-component-file-name] MyComponent.useMyAtomValue retrieved value of atom10
+▶ transaction 11 : [MyApp.MyParent] retrieved value of atom10
+  ▶ initialized value of atom10 to false
+```
+
+If the `getComponentDisplayName` option is used the logger will log the current React component that triggered the transaction.
+
+Note that, if using `getReact19ComponentDisplayName`, the component display name will only be shown when initializing atoms.
+It will not be shown for other events like retrieving or setting atom values.
+
+```
+▶ transaction 11 : MyComponent retrieved value of atom10
+  ▶ initialized value of atom10 to false
+```
+
+When both `getOwnerStack` and `getComponentDisplayName` are used, the logger will show both the parent components and the current component.
+
+```
+▶ transaction 11 : [MyApp.MyParent] MyComponent retrieved value of atom10
   ▶ initialized value of atom10 to false
 ```
 

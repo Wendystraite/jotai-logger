@@ -1,14 +1,9 @@
-import { INTERNAL_isPromiseLike } from 'jotai/vanilla/internals';
-
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import type {
-  AtomsLoggerStackTrace,
   AtomsLoggerTransaction,
   AtomsLoggerTransactionMap,
-  StackFrame,
   StoreWithAtomsLogger,
 } from '../types/atoms-logger.js';
-import { parseStackFrames } from '../utils/parse-stack-frames.js';
 import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { endTransaction } from './end-transaction.js';
 
@@ -22,7 +17,8 @@ export function startTransaction(
       | 'eventsCount'
       | 'startTimestamp'
       | 'endTimestamp'
-      | 'stackTrace'
+      | 'ownerStack'
+      | 'componentDisplayName'
     >;
   }[keyof AtomsLoggerTransactionMap],
 ): void {
@@ -40,16 +36,18 @@ export function startTransaction(
   transaction.eventsCount = 0;
   transaction.startTimestamp = performance.now();
 
-  if (!transaction.stackTrace && store[ATOMS_LOGGER_SYMBOL].getStackTrace) {
+  if (!transaction.ownerStack && store[ATOMS_LOGGER_SYMBOL].getOwnerStack) {
     try {
-      const stackTrace = store[ATOMS_LOGGER_SYMBOL].getStackTrace();
-      if (INTERNAL_isPromiseLike(stackTrace)) {
-        transaction.stackTrace = parseStackFramesPromise(transaction, stackTrace);
-      } else if (stackTrace) {
-        transaction.stackTrace = parseStackFrames(stackTrace);
-      }
+      transaction.ownerStack = store[ATOMS_LOGGER_SYMBOL].getOwnerStack();
     } catch {
-      transaction.stackTrace = undefined;
+      transaction.ownerStack = undefined;
+    }
+  }
+  if (!transaction.componentDisplayName && store[ATOMS_LOGGER_SYMBOL].getComponentDisplayName) {
+    try {
+      transaction.componentDisplayName = store[ATOMS_LOGGER_SYMBOL].getComponentDisplayName();
+    } catch {
+      transaction.componentDisplayName = undefined;
     }
   }
 
@@ -58,22 +56,4 @@ export function startTransaction(
   }
 
   store[ATOMS_LOGGER_SYMBOL].currentTransaction = transaction;
-}
-
-function parseStackFramesPromise(
-  transaction: AtomsLoggerTransaction,
-  stackTracePromise: Promise<StackFrame[] | undefined>,
-): Promise<AtomsLoggerStackTrace | undefined> {
-  return stackTracePromise.then(
-    (stackFrames) => {
-      if (stackFrames) {
-        return (transaction.stackTrace = parseStackFrames(stackFrames));
-      } else {
-        return (transaction.stackTrace = { stackFrames: [] });
-      }
-    },
-    () => {
-      return (transaction.stackTrace = { stackFrames: [] });
-    },
-  );
 }

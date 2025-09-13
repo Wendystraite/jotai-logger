@@ -4,12 +4,12 @@ import {
   AtomsLoggerTransactionTypes,
   type AnyAtom,
   type AtomId,
-  type AtomsLoggerStackTrace,
   type AtomsLoggerState,
   type AtomsLoggerTransaction,
   type AtomsLoggerTransactionType,
 } from '../types/atoms-logger.js';
 import { hasAtomCustomWriteMethod } from '../utils/has-atom-custom-write-method.js';
+import { parseOwnerStack } from '../utils/parse-owner-stack.js';
 import { stringifyValue } from '../utils/stringify-value.js';
 import { addAtomToLogs } from './add-atom-to-logs.js';
 import { addDashToLogs } from './add-dash-to-logs.js';
@@ -179,19 +179,34 @@ export const TransactionLogPipeline = new LogPipeline()
   })
 
   .withMeta<
-    | { showStackTrace: true; stackTrace: AtomsLoggerStackTrace }
-    | { showStackTrace?: undefined; stackTrace?: undefined }
-  >(function addStackTraceToTransactionMeta(context) {
-    const stackTrace = context.transaction.stackTrace as Exclude<
-      AtomsLoggerTransaction['stackTrace'],
-      Promise<AtomsLoggerStackTrace | undefined> // Promise was resolved in log scheduler
-    >;
+    | { showOwnerStack: true; components: string }
+    | { showOwnerStack?: undefined; components?: undefined }
+  >(function addOwnerStackToTransactionMeta(context) {
+    if (typeof context.transaction.ownerStack === 'string') {
+      context.components = parseOwnerStack(
+        context.transaction.ownerStack,
+        context.options.ownerStackLimit,
+      )
+        ?.reverse()
+        .join('.');
+      if (context.components) {
+        context.showOwnerStack = true;
+      }
+    }
+  })
+
+  .withMeta<
+    | { showComponentDisplayName: true; componentDisplayName: string }
+    | { showComponentDisplayName?: undefined; componentDisplayName?: undefined }
+  >(function addComponentDisplayNameToTransactionMeta(context) {
     if (
-      stackTrace !== undefined &&
-      (stackTrace.react !== undefined || stackTrace.file !== undefined)
+      typeof context.transaction.componentDisplayName === 'string' &&
+      // Don't show the component display name if it's already shown at the end of the owner stack
+      (!context.showOwnerStack ||
+        !context.components.endsWith(context.transaction.componentDisplayName))
     ) {
-      context.showStackTrace = true;
-      context.stackTrace = stackTrace;
+      context.showComponentDisplayName = true;
+      context.componentDisplayName = context.transaction.componentDisplayName;
     }
   })
 
@@ -266,7 +281,8 @@ export const TransactionLogPipeline = new LogPipeline()
     showTransactionNumber,
     showLocaleTime,
     showElapsedTime,
-    showStackTrace,
+    showOwnerStack,
+    showComponentDisplayName,
     showTransactionName,
     showAtom,
     showArgs,
@@ -274,7 +290,12 @@ export const TransactionLogPipeline = new LogPipeline()
   }) {
     if (
       (showDomain || showTransactionNumber || showLocaleTime || showElapsedTime) &&
-      (showStackTrace || showTransactionName || showAtom || showArgs || showResult)
+      (showOwnerStack ||
+        showComponentDisplayName ||
+        showTransactionName ||
+        showAtom ||
+        showArgs ||
+        showResult)
     ) {
       addToLogs(logs, options, {
         plainText: () => ':',
@@ -283,34 +304,24 @@ export const TransactionLogPipeline = new LogPipeline()
     }
   })
 
-  // {stackTrace}
-  .withLog(function addStackTraceToTransactionLogs(context) {
-    if (!context.showStackTrace) return;
-    const {
-      logs,
-      options,
-      stackTrace: { react, file },
-    } = context;
-    if (file) {
-      addToLogs(logs, options, {
-        plainText: () => `[${file.name}]`,
-        formatted: () => [`%c[${file.name}]`, 'grey'],
-      });
-    }
-    if (react) {
-      if (react.hooks && react.hooks.length > 0) {
-        const hooksNames = react.hooks.join('.');
-        addToLogs(logs, options, {
-          plainText: () => `${react.component}.${hooksNames}`,
-          formatted: () => [`%c${react.component}%c.${hooksNames}`, 'default', 'grey'],
-        });
-      } else {
-        addToLogs(logs, options, {
-          plainText: () => react.component,
-          formatted: () => [`%c${react.component}`, 'default'],
-        });
-      }
-    }
+  // [{ownerStack}]
+  .withLog(function addOwnerStackToTransactionLogs(context) {
+    if (!context.showOwnerStack) return;
+    const { logs, options, components } = context;
+    addToLogs(logs, options, {
+      plainText: () => `[${components}]`,
+      formatted: () => [`%c[${components}]`, 'grey'],
+    });
+  })
+
+  // {componentDisplayName}
+  .withLog(function addComponentDisplayNameToTransactionLogs(context) {
+    if (!context.showComponentDisplayName) return;
+    const { logs, options, componentDisplayName } = context;
+    addToLogs(logs, options, {
+      plainText: () => componentDisplayName,
+      formatted: () => [`%c${componentDisplayName}`, 'default'],
+    });
   })
 
   // {event}

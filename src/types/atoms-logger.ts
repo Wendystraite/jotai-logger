@@ -142,8 +142,14 @@ export interface AtomsLoggerOptionsInState {
   /** @see AtomsLoggerOptions.collapseEvents */
   collapseEvents: boolean;
 
-  /** @see AtomsLoggerOptions.getStackTrace */
-  getStackTrace?(): StackFrame[] | undefined | Promise<StackFrame[] | undefined>;
+  /** @see AtomsLoggerOptions.ownerStackLimit */
+  ownerStackLimit: number;
+
+  /** @see AtomsLoggerOptions.getOwnerStack */
+  getOwnerStack?(this: void): string | null | undefined;
+
+  /** @see AtomsLoggerOptions.getComponentDisplayName */
+  getComponentDisplayName?(this: void): string | undefined;
 
   /** @see AtomsLoggerOptions.transactionDebounceMs */
   transactionDebounceMs: number;
@@ -382,29 +388,88 @@ export interface AtomsLoggerOptions {
   collapseEvents?: boolean;
 
   /**
-   * Custom function to get a stack trace.
+   * **Experimental feature** - Limit the number of components shown in the owner stack.
    *
-   * If not provided, stack traces will not be included in the logs.
-   * The returned stack trace will be used to identify the component and the hooks that triggered the event.
-   * Promises are supported and will be resolved before logging the transaction.
+   * This option limits how many parent components are shown in the owner stack
+   * retrieved by `getOwnerStack`. This can be useful to reduce clutter in the
+   * logs.
    *
-   * This makes the logger library agnostic to the stack trace library used and in which ways to retrieve it.
+   * - If set to a positive number, it will show up to that many parent components
+   *   in the logs.
+   * - If set to `0`, it will not show any parent components in the logs.
+   * - If set to a negative number or `Infinity`, it will show all parent components
+   *   in the logs.
    *
-   * @example
-   * ```ts
-   * // Example using stacktrace-js library:
+   * @default 2
+   */
+  ownerStackLimit?: number;
+
+  /**
+   * **Experimental feature** - Get the React component owner stack.
+   *
+   * This function should return a stack trace string showing the React component hierarchy
+   * that triggered the current transaction. The logger will parse this to show up to
+   * `ownerStackLimit` parent components in the logs.
+   *
+   * **React 19.1+ Example:**
+   * ```tsx
+   * import { captureOwnerStack } from 'react';
+   *
+   * useAtomsLogger({ getOwnerStack: captureOwnerStack });
+   * ```
+   *
+   * **Expected format:**
+   * ```
+   * at MiddleWrapper (http://localhost:5173/src/App.tsx:70:21)
+   * at ParentContainer (http://localhost:5173/src/App.tsx:31:21)
+   * at App (http://localhost:5173/src/App.tsx:108:21)
+   * ```
+   *
+   * **Output example:**
+   * ```
+   * transaction 1 : [ParentContainer.MiddleWrapper] retrieved value of countAtom
+   * ```
+   *
+   * @returns Stack trace string, null, or undefined
+   */
+  getOwnerStack?(this: void): string | null | undefined;
+
+  /**
+   * **Experimental feature** - Get the current React component's display name.
+   *
+   * This function should return the display name or name of the currently rendering
+   * React component. The logger will show this in transaction logs to help identify
+   * which component triggered the state change.
+   *
+   * **React 19+ Example:**
+   * ```tsx
+   * import React from 'react';
+   *
+   * function getReact19ComponentDisplayName(): string | undefined {
+   *   const React19 = React as any;
+   *   const component = (
+   *     React19.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE ??
+   *     React19.__SERVER_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE
+   *   )?.A?.getOwner?.().type;
+   *   return component?.displayName ?? component?.name;
+   * }
+   *
    * useAtomsLogger({
-   *   getStackTrace() {
-   *     try {
-   *       throw new Error('Stack trace');
-   *     } catch (error) {
-   *       return StackTrace.fromError(error as Error, { offline: true });
-   *     }
-   *   },
+   *   getComponentDisplayName: getReact19ComponentDisplayName
    * });
    * ```
+   *
+   * **Output example:**
+   * ```
+   * transaction 1 : MyCounter retrieved value of countAtom
+   * ```
+   *
+   * **Note:** When used with `getOwnerStack`, the component display name will only
+   * be shown if it's different from the last component shown in the owner stack.
+   *
+   * @returns Component display name or undefined
    */
-  getStackTrace?(this: void): StackFrame[] | undefined | Promise<StackFrame[] | undefined>;
+  getComponentDisplayName?(this: void): string | undefined;
 
   /**
    * Whether to log transactions synchronously or asynchronously.
@@ -414,8 +479,6 @@ export interface AtomsLoggerOptions {
    *     options irrelevant.
    *   - This is useful for debugging purposes or if you want to see the logs
    *     immediately.
-   *   - Note : if `getStackTrace` is provided and returns a promise, the
-   *     transaction will be logged only after the promise is resolved.
    * - If set to `false`, the logger will log transactions asynchronously
    *   - First, transaction events are debounced using `transactionDebounceMs`
    *     option.
@@ -498,7 +561,8 @@ export type AtomsLoggerTransactionBase<
 > = TData & {
   atom: AnyAtom | AtomId | undefined;
   transactionNumber: number;
-  stackTrace: AtomsLoggerStackTrace | Promise<AtomsLoggerStackTrace | undefined> | undefined;
+  ownerStack?: string | null | undefined;
+  componentDisplayName?: string | undefined;
   events: (AtomsLoggerEvent | undefined)[];
   eventsCount: number;
   startTimestamp: ReturnType<typeof performance.now>;
@@ -648,69 +712,3 @@ export interface AtomsLoggerEventMap {
 }
 
 export type AtomsLoggerEvent = AtomsLoggerEventMap[keyof AtomsLoggerEventMap];
-
-/**
- * Stack frame information for the logger to identify the component and the hooks that triggered the event.
- * The function names are required but the file names are optional.
- */
-export interface StackFrame {
-  /**
-   * Name of the function that triggered the event.
-   * This is used to identify the component and the hooks that triggered the event.
-   * Required.
-   */
-  functionName?: string;
-
-  /**
-   * Full path of the file where the event was triggered.
-   * The file name is extracted from this path.
-   * Optional.
-   */
-  fileName?: string;
-}
-
-/**
- * Information about the stack trace of the event that triggered the logger.
- * This information is used to identify the component and the hooks that triggered the event.
- */
-export interface AtomsLoggerStackTrace {
-  /**
-   * All the stack frames of the event.
-   * Retrieved using the logger's `getStackTrace` option.
-   */
-  stackFrames: StackFrame[];
-
-  /**
-   * Parsed file information.
-   */
-  file?: {
-    /**
-     * Full path of the file where the event was triggered.
-     * The file name is extracted from the stack trace.
-     */
-    path: string;
-
-    /**
-     * Name of the file where the event was triggered.
-     * The file name is extracted from the stack trace.
-     * The file name is the last part of the path, without the extension.
-     */
-    name: string;
-  };
-
-  /**
-   * Parsed React information.
-   */
-  react?: {
-    /**
-     * Name of the hooks that triggered the event.
-     * `useAtomValue`, `useSetAtom` and `useAtom` are ignored.
-     */
-    hooks: string[] | undefined;
-
-    /**
-     * Name of the React component that triggered the event.
-     */
-    component: string;
-  };
-}
