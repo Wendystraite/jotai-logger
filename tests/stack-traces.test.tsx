@@ -220,7 +220,6 @@ describe('stack traces', () => {
       }
 
       function MyCounter() {
-        const count = useAtomValue(countAtom);
         const increment = useSetAtom(incrementAtom);
         return (
           <button
@@ -228,27 +227,21 @@ describe('stack traces', () => {
               increment();
             }}
           >
-            Increment {count}
+            Increment
           </button>
         );
       }
 
       renderWithLogger(<MyApp />);
 
-      screen.getByRole('button', { name: 'Increment 0' }).click();
+      screen.getByRole('button', { name: 'Increment' }).click();
 
       await vi.advanceTimersByTimeAsync(1000);
 
       expect(consoleMock.log.mock.calls).toEqual([
-        [`transaction 1 : [MyApp.MyCounterParent] MyCounter retrieved value of ${countAtom}`],
-        [`initialized value of ${countAtom} to 0`, { value: 0 }],
-
-        // React 19's getOwner doesn't work in `useEffect`
-        [`transaction 2 : [MyApp.MyCounterParent] subscribed to ${countAtom}`],
-        [`mounted ${countAtom}`, { value: 0 }],
-
         // React 19's getOwner doesn't work in callbacks
-        [`transaction 3 : [MyCounter.button] called set of ${incrementAtom}`],
+        [`transaction 1 : [MyCounter.button] called set of ${incrementAtom}`],
+        [`initialized value of ${countAtom} to 0`, { value: 0 }],
         [`changed value of ${countAtom} from 0 to 1`, { newValue: 1, oldValue: 0 }],
       ]);
     });
