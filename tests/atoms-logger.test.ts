@@ -4688,6 +4688,56 @@ describe('bindAtomsLoggerToStore', () => {
       ]);
     });
 
+    it('should not call getOwnerStack if not needed', async () => {
+      const getOwnerStackMock = vi.fn(() => {
+        return `at MyCounterParent (http://localhost:5173/src/myComponent.tsx?t=1757750948197:31:21)`;
+      });
+
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        getOwnerStack: getOwnerStackMock,
+      });
+
+      const countAtom = atom(0);
+
+      expect(getOwnerStackMock).not.toHaveBeenCalled();
+
+      store.get(countAtom); // 1st call
+      store.get(countAtom); // should not call again (value already initialized)
+      store.get(countAtom);
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(getOwnerStackMock).toHaveBeenCalledTimes(1);
+
+      const unSub1 = store.sub(countAtom, vi.fn()); // 2nd call (mounted)
+      const unSub2 = store.sub(countAtom, vi.fn());
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(getOwnerStackMock).toHaveBeenCalledTimes(2);
+
+      store.get(countAtom);
+      const unSub3 = store.sub(countAtom, vi.fn());
+      unSub1();
+      unSub2(); // still mounted
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(getOwnerStackMock).toHaveBeenCalledTimes(2);
+
+      unSub3(); // 3rd call (unmounted)
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(getOwnerStackMock).toHaveBeenCalledTimes(3);
+
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : [MyCounterParent] retrieved value of ${countAtom}`],
+        [`initialized value of ${countAtom} to 0`, { value: 0 }],
+        [`transaction 2 : [MyCounterParent] subscribed to ${countAtom}`],
+        [`mounted ${countAtom}`, { value: 0 }],
+        [`transaction 3 : [MyCounterParent] unsubscribed from ${countAtom}`],
+        [`unmounted ${countAtom}`],
+      ]);
+    });
+
     describe('ownerStackLimit', () => {
       const BIG_OWNER_STACK = `at ChildComponent (http://localhost:5173/src/child.tsx:10:21)
     at MiddleComponent (http://localhost:5173/src/middle.tsx:20:21)

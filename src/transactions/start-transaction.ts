@@ -36,15 +36,10 @@ export function startTransaction(
   transaction.eventsCount = 0;
   transaction.startTimestamp = performance.now();
 
-  if (!transaction.ownerStack && store[ATOMS_LOGGER_SYMBOL].getOwnerStack) {
-    try {
-      transaction.ownerStack = store[ATOMS_LOGGER_SYMBOL].getOwnerStack();
-    } catch {
-      transaction.ownerStack = undefined;
-    }
-  }
   if (!transaction.componentDisplayName && store[ATOMS_LOGGER_SYMBOL].getComponentDisplayName) {
     try {
+      // Try to get the component display name.
+      // Do it at the start AND the end of the transaction to cover more cases since this can fail.
       transaction.componentDisplayName = store[ATOMS_LOGGER_SYMBOL].getComponentDisplayName();
     } catch {
       transaction.componentDisplayName = undefined;

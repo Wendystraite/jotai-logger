@@ -14,6 +14,19 @@ export function endTransaction(
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- should never happen since it is called after startTransaction
   const transaction = store[ATOMS_LOGGER_SYMBOL].currentTransaction!;
 
+  // Retrieve the owner stack if there are events to log (for better logging performance)
+  if (
+    transaction.eventsCount > 0 &&
+    !transaction.ownerStack &&
+    store[ATOMS_LOGGER_SYMBOL].getOwnerStack
+  ) {
+    try {
+      transaction.ownerStack = store[ATOMS_LOGGER_SYMBOL].getOwnerStack();
+    } catch {
+      transaction.ownerStack = undefined;
+    }
+  }
+
   /**
    * Re-try to get the component display name if not already set.
    *
