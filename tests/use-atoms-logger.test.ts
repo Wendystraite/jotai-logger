@@ -136,7 +136,7 @@ describe('useAtomsLogger', () => {
       showTransactionEventsCount: true,
       showTransactionLocaleTime: false,
       showTransactionElapsedTime: true,
-      collapseTransactions: false,
+      collapseTransactions: true,
       collapseEvents: false,
       ownerStackLimit: 2,
       transactionDebounceMs: 250,

@@ -63,6 +63,8 @@ describe('bindAtomsLoggerToStore', () => {
       formattedOutput: false,
       showTransactionElapsedTime: false,
       showTransactionEventsCount: false,
+      collapseTransactions: false,
+      collapseEvents: false,
     };
   });
 
@@ -285,7 +287,7 @@ describe('bindAtomsLoggerToStore', () => {
         groupTransactions: false,
         groupEvents: true,
         collapseEvents: true,
-        collapseTransactions: true,
+        collapseTransactions: false,
         ownerStackLimit: 5,
       };
 
@@ -300,7 +302,7 @@ describe('bindAtomsLoggerToStore', () => {
       expect(store[ATOMS_LOGGER_SYMBOL].groupTransactions).toBe(false);
       expect(store[ATOMS_LOGGER_SYMBOL].groupEvents).toBe(true);
       expect(store[ATOMS_LOGGER_SYMBOL].collapseEvents).toBe(true);
-      expect(store[ATOMS_LOGGER_SYMBOL].collapseTransactions).toBe(true);
+      expect(store[ATOMS_LOGGER_SYMBOL].collapseTransactions).toBe(false);
       expect(store[ATOMS_LOGGER_SYMBOL].ownerStackLimit).toBe(5);
     });
 
