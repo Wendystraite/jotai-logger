@@ -132,6 +132,8 @@ type AtomsLoggerOptions = {
   showTransactionLocaleTime?: boolean;
   /** Whether to show elapsed time (default: true) */
   showTransactionElapsedTime?: boolean;
+  /** Whether to automatically align transaction components for better readability (default: true) */
+  autoAlignTransactions?: boolean;
   /** Whether to collapse transaction logs (default: true) */
   collapseTransactions?: boolean;
   /** Whether to collapse event logs (default: false) */

@@ -13,8 +13,6 @@ import { parseOwnerStack } from '../utils/parse-owner-stack.js';
 import { stringifyValue } from '../utils/stringify-value.js';
 import { addAtomToLogs } from './add-atom-to-logs.js';
 import { addDashToLogs } from './add-dash-to-logs.js';
-import { addElapsedTimeToLogs } from './add-elapsed-time-to-logs.js';
-import { addLocaleTimeToLogs } from './add-locale-time-to-logs.js';
 import { addToLogs } from './add-to-logs.js';
 import { LogPipeline } from './log-pipeline.js';
 
@@ -117,9 +115,12 @@ export const TransactionLogPipeline = new LogPipeline()
       options,
       transaction: { transactionNumber },
     } = context;
+
+    const numberContent = transactionNumber.toString();
+
     addToLogs(logs, options, {
-      plainText: () => `transaction ${transactionNumber.toString()}`,
-      formatted: () => [`%ctransaction %c${transactionNumber.toString()}`, 'grey', 'default'],
+      plainText: () => `transaction ${numberContent}`,
+      formatted: () => [`%ctransaction %c${numberContent}`, 'grey', 'default'],
     });
   })
 
@@ -144,10 +145,13 @@ export const TransactionLogPipeline = new LogPipeline()
   .withMeta<{ showElapsedTime?: true }>(function addElapsedTimeToTransactionMeta(context) {
     const {
       transaction: { startTimestamp, endTimestamp },
-      options: { showTransactionElapsedTime },
+      options: { showTransactionElapsedTime, autoAlignTransactions },
     } = context;
-    if (showTransactionElapsedTime && startTimestamp !== endTimestamp) {
-      context.showElapsedTime = true;
+    if (showTransactionElapsedTime) {
+      // Show elapsed time if auto-aligning or if it's non-zero
+      if (autoAlignTransactions || startTimestamp < endTimestamp) {
+        context.showElapsedTime = true;
+      }
     }
   })
 
@@ -169,12 +173,42 @@ export const TransactionLogPipeline = new LogPipeline()
     const {
       logs,
       options,
+      options: { autoAlignTransactions, maxWidths },
       transaction: { eventsCount },
     } = context;
+
+    const numberContent = eventsCount.toString();
     const eventsText = eventsCount === 1 ? 'event' : 'events';
+
+    /**
+     * Auto alignment to the left :
+     * ```
+     * transaction 1 - 1 event  - 10.00 ms : ...
+     * transaction 2 - 2 events - 10.00 ms : ...
+     * transaction 3 - 12 events - 10.00 ms : ...
+     * transaction 4 - 1  event  - 10.00 ms : ...
+     * transaction 5 - 2  events - 10.00 ms : ...
+     * ```
+     */
+    let centerPadding = '';
+    let rightPadding = '';
+    if (autoAlignTransactions) {
+      const currentWidth = numberContent.length;
+      const maxWidth = (maxWidths.eventsCount = Math.max(currentWidth, maxWidths.eventsCount));
+      if (maxWidth > currentWidth) {
+        centerPadding = ' '.repeat(maxWidth - currentWidth);
+      }
+      if (eventsCount === 1) {
+        // Add extra padding to pad "event" and "events" to the same length
+        rightPadding = ' ';
+      }
+    }
+
+    const fullContent = `${numberContent} ${centerPadding}${eventsText}${rightPadding}`;
+
     addToLogs(logs, options, {
-      plainText: () => `${eventsCount.toString()} ${eventsText}`,
-      formatted: () => [`%c${eventsCount.toString()} ${eventsText}`, 'grey'],
+      plainText: () => fullContent,
+      formatted: () => [`%c${fullContent}`, 'grey'],
     });
   })
 
@@ -199,7 +233,14 @@ export const TransactionLogPipeline = new LogPipeline()
       options,
       transaction: { startTimestamp },
     } = context;
-    addLocaleTimeToLogs(logs, startTimestamp, options);
+
+    const date = new Date(performance.timeOrigin + startTimestamp);
+    const content = date.toLocaleTimeString();
+
+    addToLogs(logs, options, {
+      plainText: () => content,
+      formatted: () => [`%c${content}`, 'grey'],
+    });
   })
 
   // -
@@ -226,9 +267,37 @@ export const TransactionLogPipeline = new LogPipeline()
     const {
       logs,
       options,
+      options: { autoAlignTransactions, maxWidths },
       transaction: { startTimestamp, endTimestamp },
     } = context;
-    addElapsedTimeToLogs(logs, startTimestamp, endTimestamp, options);
+
+    const msElapsed = endTimestamp - startTimestamp;
+    const msElapsedRounded = (Math.round(msElapsed * 100) / 100).toFixed(2);
+
+    /**
+     * Auto alignment to the left:
+     * ```
+     * transaction 1 - 1.00 ms : ...
+     * transaction 2 - 123.00 ms : ...
+     * transaction 3 - 10.00  ms : ...
+     * transaction 4 - 1.00   ms : ...
+     * ```
+     */
+    let centerPadding = '';
+    if (autoAlignTransactions) {
+      const currentWidth = msElapsedRounded.length;
+      const maxWidth = (maxWidths.elapsedTime = Math.max(currentWidth, maxWidths.elapsedTime));
+      if (maxWidth > currentWidth) {
+        centerPadding = ' '.repeat(maxWidth - currentWidth);
+      }
+    }
+
+    const fullContent = `${msElapsedRounded} ${centerPadding}ms`;
+
+    addToLogs(logs, options, {
+      plainText: () => fullContent,
+      formatted: () => [`%c${fullContent}`, 'grey'],
+    });
   })
 
   .withMeta<

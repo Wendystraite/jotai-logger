@@ -81,6 +81,10 @@ export function bindAtomsLoggerToStore(
     dependenciesMap: new WeakMap(),
     prevTransactionDependenciesMap: new WeakMap(),
     transactionsDebounceTimeoutId: undefined,
+    maxWidths: {
+      eventsCount: 0,
+      elapsedTime: 0,
+    },
   };
 
   return true;

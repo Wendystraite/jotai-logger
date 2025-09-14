@@ -69,6 +69,7 @@ describe('stack traces', () => {
       formattedOutput: false,
       showTransactionElapsedTime: false,
       shouldShowPrivateAtoms: false,
+      autoAlignTransactions: false,
       getOwnerStack: captureOwnerStack,
       getComponentDisplayName: getReact19ComponentDisplayName,
     };

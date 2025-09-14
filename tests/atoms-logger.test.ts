@@ -28,7 +28,7 @@ beforeEach(() => {
   mockDate = vi
     .spyOn(Date.prototype, 'toLocaleTimeString')
     .mockImplementation(function toLocaleTimeStringMock(this: Date) {
-      return this.toISOString();
+      return this.toISOString().split('T')[1]!.split('.')[0]!; // 14:39:27
     });
 });
 
@@ -65,6 +65,7 @@ describe('bindAtomsLoggerToStore', () => {
       showTransactionEventsCount: false,
       collapseTransactions: false,
       collapseEvents: false,
+      autoAlignTransactions: false,
     };
   });
 
@@ -503,7 +504,7 @@ describe('bindAtomsLoggerToStore', () => {
         ]);
       });
 
-      it('should not log elapsed time if endTimestamp is equal to startTimestamp', () => {
+      it('should not log elapsed time if endTimestamp is equal or less than startTimestamp', () => {
         bindAtomsLoggerToStore(store, {
           ...defaultOptions,
           showTransactionElapsedTime: true,
@@ -562,7 +563,7 @@ describe('bindAtomsLoggerToStore', () => {
 
         expect(performanceNowSpy).toHaveBeenCalledTimes(2); // Called at the start and the end of the transaction
         expect(consoleMock.log.mock.calls).toEqual([
-          [`transaction 1 - 1970-01-01T00:00:00.000Z : retrieved value of ${testAtom}`],
+          [`transaction 1 - 00:00:00 : retrieved value of ${testAtom}`],
           [`initialized value of ${testAtom} to 0`, { value: 0 }],
         ]);
       });
@@ -603,7 +604,7 @@ describe('bindAtomsLoggerToStore', () => {
         vi.runAllTimers();
 
         expect(consoleMock.log.mock.calls).toEqual([
-          [`transaction 1 - 1970-01-01T00:00:00.000Z : retrieved value of ${testAtom}`],
+          [`transaction 1 - 00:00:00 : retrieved value of ${testAtom}`],
           [`initialized value of ${testAtom} to 0`, { value: 0 }],
         ]);
       });
@@ -641,7 +642,7 @@ describe('bindAtomsLoggerToStore', () => {
         vi.runAllTimers();
 
         expect(consoleMock.log.mock.calls).toEqual([
-          [`transaction 1 - 1970-01-01T00:00:00.000Z - 234.00 ms : retrieved value of ${testAtom}`],
+          [`transaction 1 - 00:00:00 - 234.00 ms : retrieved value of ${testAtom}`],
           [`initialized value of ${testAtom} to 0`, { value: 0 }],
         ]);
       });
@@ -667,11 +668,11 @@ describe('bindAtomsLoggerToStore', () => {
 
         expect(consoleMock.log.mock.calls).toEqual([
           [
-            `%ctransaction %c1 %c- %c1970-01-01T00:00:00.000Z %c- %c456.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            `%ctransaction %c1 %c- %c00:00:00 %c- %c456.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
             'color: #757575; font-weight: normal;', // transaction
             'color: default; font-weight: normal;', // 1
             'color: #757575; font-weight: normal;', // -
-            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
+            'color: #757575; font-weight: normal;', // 00:00:00
             'color: #757575; font-weight: normal;', // -
             'color: #757575; font-weight: normal;', // 456.00 ms
             'color: #757575; font-weight: normal;', // :
@@ -809,6 +810,260 @@ describe('bindAtomsLoggerToStore', () => {
             'color: default; font-weight: normal;', // 0
             { value: 0 },
           ],
+        ]);
+      });
+    });
+
+    describe('autoAlignTransactions', () => {
+      it('should automatically align transaction components when autoAlignTransactions is enabled', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          showTransactionNumber: true,
+          showTransactionEventsCount: true,
+          showTransactionElapsedTime: true,
+          autoAlignTransactions: true,
+        });
+
+        // transaction 1 - 1 event - 1.00 ms
+        const atom1 = atom(() => {
+          vi.advanceTimersByTime(1);
+          return 0;
+        });
+        store.get(atom1);
+        vi.runAllTimers();
+
+        // transaction 2 - 2 events - 123.00 ms
+        const atom2 = atom(() => {
+          vi.advanceTimersByTime(123);
+          return 0;
+        });
+        const atom3 = atom((get) => get(atom2));
+        store.get(atom3);
+        vi.runAllTimers();
+
+        // transaction 3 - 12 events - 10.00 ms
+        const atom4 = atom(() => {
+          vi.advanceTimersByTime(10);
+          return 0;
+        });
+        const atoms = Array.from({ length: 10 }, () => atom(0));
+        const atom5 = atom((get) => atoms.reduce((sum, a) => sum + get(a), get(atom4)));
+        store.get(atom5);
+        vi.runAllTimers();
+
+        // transaction 4 - 1 event - 11.11 ms
+        const atom6 = atom(() => {
+          vi.advanceTimersByTime(11.11);
+          return 0;
+        });
+        store.get(atom6);
+        vi.runAllTimers();
+
+        // transaction 5 - 2 events - 1.00 ms
+        const atom7 = atom(() => {
+          vi.advanceTimersByTime(1);
+          return 0;
+        });
+        const atom8 = atom((get) => get(atom7));
+        store.get(atom8);
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 - 1 event  - 1.00 ms : retrieved value of ${atom1}`],
+          //                       ^-- "s" padding
+          [`initialized value of ${atom1} to 0`, { value: 0 }],
+
+          [`transaction 2 - 2 events - 123.00 ms : retrieved value of ${atom3}`],
+          [`initialized value of ${atom2} to 0`, { value: 0 }],
+          [`initialized value of ${atom3} to 0`, { value: 0, dependencies: [`${atom2}`] }],
+
+          //                                 v-- align
+          [`transaction 3 - 12 events - 10.00  ms : retrieved value of ${atom5}`],
+          [`initialized value of ${atom4} to 0`, { value: 0 }],
+          ...atoms.map((a) => [`initialized value of ${a} to 0`, { value: 0 }]),
+          [
+            `initialized value of ${atom5} to 0`,
+            {
+              value: 0,
+              dependencies: [`${atom4}`, ...atoms.map((a) => `${a}`)],
+            },
+          ],
+
+          //                 v---- align ----v
+          [`transaction 4 - 1  event  - 11.11  ms : retrieved value of ${atom6}`],
+          //                        ^-- "s" padding
+          [`initialized value of ${atom6} to 0`, { value: 0 }],
+
+          //                 v---- align ---v
+          [`transaction 5 - 2  events - 1.00   ms : retrieved value of ${atom8}`],
+          [`initialized value of ${atom7} to 0`, { value: 0 }],
+          [`initialized value of ${atom8} to 0`, { value: 0, dependencies: [`${atom7}`] }],
+        ]);
+      });
+
+      it('should align left events count when autoAlignTransactions is true', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          showTransactionNumber: false,
+          showTransactionEventsCount: true,
+          autoAlignTransactions: true,
+        });
+
+        // 1 event
+        const atom1 = atom(0);
+        store.get(atom1);
+        vi.runAllTimers();
+
+        // 2 events
+        const atom2 = atom(0);
+        const atom3 = atom((get) => get(atom2));
+        store.get(atom3);
+        vi.runAllTimers();
+
+        // 11 events
+        const atoms = Array.from({ length: 10 }, () => atom(0));
+        const atom4 = atom((get) => atoms.reduce((sum, a) => sum + get(a), 0));
+        store.get(atom4);
+        vi.runAllTimers();
+
+        // 1 event
+        const atom5 = atom(0);
+        store.get(atom5);
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`1 event  : retrieved value of ${atom1}`],
+          //       ^-- "s" padding
+          [`initialized value of ${atom1} to 0`, { value: 0 }],
+
+          [`2 events : retrieved value of ${atom3}`],
+          [`initialized value of ${atom2} to 0`, { value: 0 }],
+          [`initialized value of ${atom3} to 0`, { value: 0, dependencies: [`${atom2}`] }],
+
+          [`11 events : retrieved value of ${atom4}`],
+          ...atoms.map((a) => [`initialized value of ${a} to 0`, { value: 0 }]),
+          [
+            `initialized value of ${atom4} to 0`,
+            { value: 0, dependencies: atoms.map((a) => `${a}`) },
+          ],
+          // v-- align
+          [`1  event  : retrieved value of ${atom5}`],
+          //        ^-- "s" padding
+          [`initialized value of ${atom5} to 0`, { value: 0 }],
+        ]);
+      });
+
+      it('should align left elapsed time when autoAlignTransactions is true', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          showTransactionNumber: false,
+          showTransactionEventsCount: false,
+          showTransactionLocaleTime: false,
+          showTransactionElapsedTime: true,
+          autoAlignTransactions: true,
+        });
+
+        // Short elapsed time
+        const atom1 = atom(() => {
+          vi.advanceTimersByTime(5.5);
+          return 0;
+        });
+        store.get(atom1);
+        vi.runAllTimers();
+
+        // Longer elapsed time
+        const atom2 = atom(() => {
+          vi.advanceTimersByTime(123.45);
+          return 0;
+        });
+        store.get(atom2);
+        vi.runAllTimers();
+
+        // Short elapsed time again
+        const atom3 = atom(() => {
+          vi.advanceTimersByTime(7.89);
+          return 0;
+        });
+        store.get(atom3);
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`5.50 ms : retrieved value of ${atom1}`],
+          [`initialized value of ${atom1} to 0`, { value: 0 }],
+
+          [`123.45 ms : retrieved value of ${atom2}`],
+          [`initialized value of ${atom2} to 0`, { value: 0 }],
+          //    v-- align
+          [`7.89   ms : retrieved value of ${atom3}`],
+          [`initialized value of ${atom3} to 0`, { value: 0 }],
+        ]);
+      });
+
+      it('should log zero elapsed time when autoAlignTransactions is true', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          showTransactionElapsedTime: true,
+          autoAlignTransactions: true,
+        });
+
+        const atom1 = atom(() => {
+          vi.advanceTimersByTime(1234);
+          return 0;
+        });
+        store.get(atom1);
+        vi.runAllTimers();
+
+        const atom2 = atom(0);
+        store.get(atom2);
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 - 1234.00 ms : retrieved value of ${atom1}`],
+          [`initialized value of ${atom1} to 0`, { value: 0 }],
+
+          //                v-- still present to align with previous transaction
+          [`transaction 2 - 0.00    ms : retrieved value of ${atom2}`],
+          [`initialized value of ${atom2} to 0`, { value: 0 }],
+        ]);
+      });
+
+      it('should not apply alignment when autoAlignTransactions is disabled', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          showTransactionEventsCount: true,
+          showTransactionElapsedTime: true,
+          autoAlignTransactions: false,
+        });
+
+        // 12 events
+        const atom1 = atom(() => {
+          vi.advanceTimersByTime(1234);
+          return 0;
+        });
+        const atoms = Array.from({ length: 11 }, () => atom(0));
+        const atom2 = atom((get) => atoms.reduce((sum, a) => sum + get(a), get(atom1)));
+        store.get(atom2);
+        vi.runAllTimers();
+
+        // 1 event
+        const atom3 = atom(() => {
+          vi.advanceTimersByTime(1);
+          return 0;
+        });
+        store.get(atom3);
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 - 13 events - 1234.00 ms : retrieved value of ${atom2}`],
+          [`initialized value of ${atom1} to 0`, { value: 0 }],
+          ...atoms.map((a) => [`initialized value of ${a} to 0`, { value: 0 }]),
+          [
+            `initialized value of ${atom2} to 0`,
+            { value: 0, dependencies: [`${atom1}`, ...atoms.map((a) => `${a}`)] },
+          ],
+
+          [`transaction 2 - 1 event - 1.00 ms : retrieved value of ${atom3}`],
+          [`initialized value of ${atom3} to 0`, { value: 0 }],
         ]);
       });
     });
@@ -3618,11 +3873,10 @@ describe('bindAtomsLoggerToStore', () => {
           showTransactionEventsCount: false,
           showTransactionElapsedTime: false,
           showTransactionLocaleTime: true,
-          expected: (testAtom: AnyAtom) =>
-            `1970-01-01T00:00:00.000Z : retrieved value of ${testAtom}`,
+          expected: (testAtom: AnyAtom) => `00:00:00 : retrieved value of ${testAtom}`,
           expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
-            `%c1970-01-01T00:00:00.000Z %c: %cretrieved value %cof %catom%c${atomNumber}`,
-            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
+            `%c00:00:00 %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // 00:00:00
             'color: #757575; font-weight: normal;', // :
             'color: #0072B2; font-weight: bold;', // retrieved value
             'color: #757575; font-weight: normal;', // of
@@ -3655,11 +3909,10 @@ describe('bindAtomsLoggerToStore', () => {
           showTransactionEventsCount: false,
           showTransactionElapsedTime: true,
           showTransactionLocaleTime: true,
-          expected: (testAtom: AnyAtom) =>
-            `1970-01-01T00:00:00.000Z - 345.00 ms : retrieved value of ${testAtom}`,
+          expected: (testAtom: AnyAtom) => `00:00:00 - 345.00 ms : retrieved value of ${testAtom}`,
           expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
-            `%c1970-01-01T00:00:00.000Z %c- %c345.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
-            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
+            `%c00:00:00 %c- %c345.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // 00:00:00
             'color: #757575; font-weight: normal;', // -
             'color: #757575; font-weight: normal;', // 345.00 ms
             'color: #757575; font-weight: normal;', // :
@@ -3694,13 +3947,12 @@ describe('bindAtomsLoggerToStore', () => {
           showTransactionEventsCount: true,
           showTransactionElapsedTime: false,
           showTransactionLocaleTime: true,
-          expected: (testAtom: AnyAtom) =>
-            `1 event - 1970-01-01T00:00:00.000Z : retrieved value of ${testAtom}`,
+          expected: (testAtom: AnyAtom) => `1 event - 00:00:00 : retrieved value of ${testAtom}`,
           expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
-            `%c1 event %c- %c1970-01-01T00:00:00.000Z %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            `%c1 event %c- %c00:00:00 %c: %cretrieved value %cof %catom%c${atomNumber}`,
             'color: #757575; font-weight: normal;', // 1 event
             'color: #757575; font-weight: normal;', // -
-            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
+            'color: #757575; font-weight: normal;', // 00:00:00
             'color: #757575; font-weight: normal;', // :
             'color: #0072B2; font-weight: bold;', // retrieved value
             'color: #757575; font-weight: normal;', // of
@@ -3736,12 +3988,12 @@ describe('bindAtomsLoggerToStore', () => {
           showTransactionElapsedTime: true,
           showTransactionLocaleTime: true,
           expected: (testAtom: AnyAtom) =>
-            `1 event - 1970-01-01T00:00:00.000Z - 345.00 ms : retrieved value of ${testAtom}`,
+            `1 event - 00:00:00 - 345.00 ms : retrieved value of ${testAtom}`,
           expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
-            `%c1 event %c- %c1970-01-01T00:00:00.000Z %c- %c345.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            `%c1 event %c- %c00:00:00 %c- %c345.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
             'color: #757575; font-weight: normal;', // 1 event
             'color: #757575; font-weight: normal;', // -
-            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
+            'color: #757575; font-weight: normal;', // 00:00:00
             'color: #757575; font-weight: normal;', // -
             'color: #757575; font-weight: normal;', // 345.00 ms
             'color: #757575; font-weight: normal;', // :
@@ -3778,13 +4030,13 @@ describe('bindAtomsLoggerToStore', () => {
           showTransactionElapsedTime: false,
           showTransactionLocaleTime: true,
           expected: (testAtom: AnyAtom) =>
-            `transaction 1 - 1970-01-01T00:00:00.000Z : retrieved value of ${testAtom}`,
+            `transaction 1 - 00:00:00 : retrieved value of ${testAtom}`,
           expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
-            `%ctransaction %c1 %c- %c1970-01-01T00:00:00.000Z %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            `%ctransaction %c1 %c- %c00:00:00 %c: %cretrieved value %cof %catom%c${atomNumber}`,
             'color: #757575; font-weight: normal;', // transaction
             'color: default; font-weight: normal;', // 1
             'color: #757575; font-weight: normal;', // -
-            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
+            'color: #757575; font-weight: normal;', // 00:00:00
             'color: #757575; font-weight: normal;', // :
             'color: #0072B2; font-weight: bold;', // retrieved value
             'color: #757575; font-weight: normal;', // of
@@ -3822,13 +4074,13 @@ describe('bindAtomsLoggerToStore', () => {
           showTransactionElapsedTime: true,
           showTransactionLocaleTime: true,
           expected: (testAtom: AnyAtom) =>
-            `transaction 1 - 1970-01-01T00:00:00.000Z - 345.00 ms : retrieved value of ${testAtom}`,
+            `transaction 1 - 00:00:00 - 345.00 ms : retrieved value of ${testAtom}`,
           expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
-            `%ctransaction %c1 %c- %c1970-01-01T00:00:00.000Z %c- %c345.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            `%ctransaction %c1 %c- %c00:00:00 %c- %c345.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
             'color: #757575; font-weight: normal;', // transaction
             'color: default; font-weight: normal;', // 1
             'color: #757575; font-weight: normal;', // -
-            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
+            'color: #757575; font-weight: normal;', // 00:00:00
             'color: #757575; font-weight: normal;', // -
             'color: #757575; font-weight: normal;', // 345.00 ms
             'color: #757575; font-weight: normal;', // :
@@ -3868,15 +4120,15 @@ describe('bindAtomsLoggerToStore', () => {
           showTransactionElapsedTime: false,
           showTransactionLocaleTime: true,
           expected: (testAtom: AnyAtom) =>
-            `transaction 1 - 1 event - 1970-01-01T00:00:00.000Z : retrieved value of ${testAtom}`,
+            `transaction 1 - 1 event - 00:00:00 : retrieved value of ${testAtom}`,
           expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
-            `%ctransaction %c1 %c- %c1 event %c- %c1970-01-01T00:00:00.000Z %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            `%ctransaction %c1 %c- %c1 event %c- %c00:00:00 %c: %cretrieved value %cof %catom%c${atomNumber}`,
             'color: #757575; font-weight: normal;', // transaction
             'color: default; font-weight: normal;', // 1
             'color: #757575; font-weight: normal;', // -
             'color: #757575; font-weight: normal;', // 1 event
             'color: #757575; font-weight: normal;', // -
-            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
+            'color: #757575; font-weight: normal;', // 00:00:00
             'color: #757575; font-weight: normal;', // :
             'color: #0072B2; font-weight: bold;', // retrieved value
             'color: #757575; font-weight: normal;', // of
@@ -3916,15 +4168,15 @@ describe('bindAtomsLoggerToStore', () => {
           showTransactionElapsedTime: true,
           showTransactionLocaleTime: true,
           expected: (testAtom: AnyAtom) =>
-            `transaction 1 - 1 event - 1970-01-01T00:00:00.000Z - 345.00 ms : retrieved value of ${testAtom}`,
+            `transaction 1 - 1 event - 00:00:00 - 345.00 ms : retrieved value of ${testAtom}`,
           expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
-            `%ctransaction %c1 %c- %c1 event %c- %c1970-01-01T00:00:00.000Z %c- %c345.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            `%ctransaction %c1 %c- %c1 event %c- %c00:00:00 %c- %c345.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
             'color: #757575; font-weight: normal;', // transaction
             'color: default; font-weight: normal;', // 1
             'color: #757575; font-weight: normal;', // -
             'color: #757575; font-weight: normal;', // 1 event
             'color: #757575; font-weight: normal;', // -
-            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
+            'color: #757575; font-weight: normal;', // 00:00:00
             'color: #757575; font-weight: normal;', // -
             'color: #757575; font-weight: normal;', // 345.00 ms
             'color: #757575; font-weight: normal;', // :

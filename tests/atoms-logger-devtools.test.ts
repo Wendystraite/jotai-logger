@@ -92,6 +92,7 @@ describe('bindAtomsLoggerToStore', () => {
       groupEvents: false,
       formattedOutput: false,
       showTransactionElapsedTime: false,
+      autoAlignTransactions: false,
     };
   });
 

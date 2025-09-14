@@ -62,6 +62,11 @@ export type AtomsLoggerState = AtomsLoggerOptionsInState & {
     /** Add a transaction to the queue and process it */
     add: (transaction: AtomsLoggerTransaction) => void;
   };
+  /** Maximum widths tracked for auto-alignment when autoAlignTransactions is enabled */
+  maxWidths: {
+    eventsCount: number;
+    elapsedTime: number;
+  };
   /** Previous overridden store.get method */
   prevStoreGet: StoreWithAtomsLogger['get'];
   /** Previous overridden store.set method */
@@ -137,6 +142,9 @@ export interface AtomsLoggerOptionsInState {
 
   /** @see AtomsLoggerOptions.showTransactionElapsedTime */
   showTransactionElapsedTime: boolean;
+
+  /** @see AtomsLoggerOptions.autoAlignTransactions */
+  autoAlignTransactions: boolean;
 
   /** @see AtomsLoggerOptions.collapseTransactions */
   collapseTransactions: boolean;
@@ -395,6 +403,24 @@ export interface AtomsLoggerOptions {
    * @default true
    */
   showTransactionElapsedTime?: boolean;
+
+  /**
+   * Automatically align transaction logs by padding fields to consistent widths.
+   *
+   * When enabled, the logger will track the maximum width of each transaction component
+   * (number, events count, timestamp, elapsed time) and automatically pad them for
+   * perfect column alignment, similar to a data table.
+   *
+   * Example output:
+   * ```
+   * transaction  9 -  2 events - 14:39:27 -   1.10 ms : ...
+   * transaction 10 - 12 events - 14:39:27 - 301.10 ms : ...
+   * transaction 11 -  1  event - 14:39:27 -   1.10 ms : ...
+   * ```
+   *
+   * @default true
+   */
+  autoAlignTransactions?: boolean;
 
   /**
    * Whether to collapse grouped transaction logs by default using `logger.groupCollapsed` instead of `logger.group`.
