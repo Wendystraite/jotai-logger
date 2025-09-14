@@ -1,5 +1,30 @@
 # jotai-logger
 
+## 3.1.0
+
+### Minor Changes
+
+- bf47126: feat: add showTransactionEventsCount option
+
+  Add the `showTransactionEventsCount` option to show the number of events
+  in a transaction.
+  This option is enabled by default.
+
+- 47ea652: feat: auto align transaction components
+
+  Add a new default option "autoAlignTransactions" that automatically
+  align transaction components (events count, elapsed time) for
+  better readability.
+
+### Patch Changes
+
+- fa631d0: fix: collapse transaction by default
+
+  Collapse grouped transactions by default.
+  Since transactions are grouped by default it makes sense to also
+  collapse them by default to prevent seeing too much spam when
+  investigating events.
+
 ## 3.0.0
 
 ### Major Changes
