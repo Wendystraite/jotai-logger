@@ -133,6 +133,7 @@ describe('useAtomsLogger', () => {
       stringifyValues: true,
       stringify: undefined,
       showTransactionNumber: true,
+      showTransactionEventsCount: true,
       showTransactionLocaleTime: false,
       showTransactionElapsedTime: true,
       collapseTransactions: false,

@@ -129,6 +129,9 @@ export interface AtomsLoggerOptionsInState {
   /** @see AtomsLoggerOptions.showTransactionNumber */
   showTransactionNumber: boolean;
 
+  /** @see AtomsLoggerOptions.showTransactionEventsCount */
+  showTransactionEventsCount: boolean;
+
   /** @see AtomsLoggerOptions.showTransactionLocaleTime */
   showTransactionLocaleTime: boolean;
 
@@ -362,6 +365,16 @@ export interface AtomsLoggerOptions {
    * @default true
    */
   showTransactionNumber?: boolean;
+
+  /**
+   * Whether to show the number of events in a transaction in the console.
+   *
+   * - If set to `true`, the transaction log will look like : `transaction 1 - 3 events : retrieved value of atom1`
+   * - If set to `false`, the transaction log will look like : `transaction 1 : retrieved value of atom1`
+   *
+   * @default true
+   */
+  showTransactionEventsCount?: boolean;
 
   /**
    * Whether to show when a transaction started in the console.

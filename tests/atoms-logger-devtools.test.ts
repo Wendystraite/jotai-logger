@@ -118,7 +118,7 @@ describe('bindAtomsLoggerToStore', () => {
     vi.runAllTimers();
 
     expect(consoleMock.log.mock.calls).toEqual([
-      [`transaction 1 : subscribed to ${testAtom}`],
+      [`transaction 1 - 2 events : subscribed to ${testAtom}`],
       [`initialized value of ${testAtom} to 42`, { value: 42 }],
       [`mounted ${testAtom}`, { value: 42 }],
     ]);
@@ -128,11 +128,11 @@ describe('bindAtomsLoggerToStore', () => {
     vi.runAllTimers();
 
     expect(consoleMock.log.mock.calls).toEqual([
-      [`transaction 1 : subscribed to ${testAtom}`],
+      [`transaction 1 - 2 events : subscribed to ${testAtom}`],
       [`initialized value of ${testAtom} to 42`, { value: 42 }],
       [`mounted ${testAtom}`, { value: 42 }],
 
-      [`transaction 2 : unsubscribed from ${testAtom}`],
+      [`transaction 2 - 1 event : unsubscribed from ${testAtom}`],
       [`unmounted ${testAtom}`],
     ]);
   });
@@ -150,13 +150,13 @@ describe('bindAtomsLoggerToStore', () => {
     vi.runAllTimers();
 
     expect(consoleMock.log.mock.calls).toEqual([
-      [`transaction 1 : subscribed to ${bAtom}`],
+      [`transaction 1 - 4 events : subscribed to ${bAtom}`],
       [`initialized value of ${aAtom} to 1`, { value: 1 }],
       [`initialized value of ${bAtom} to 2`, { value: 2, dependencies: [`${aAtom}`] }],
       [`mounted ${aAtom}`, { value: 1 }],
       [`mounted ${bAtom}`, { value: 2, dependencies: [`${aAtom}`] }],
 
-      [`transaction 2 : set value of ${aAtom} to 2`, { value: 2 }],
+      [`transaction 2 - 2 events : set value of ${aAtom} to 2`, { value: 2 }],
       [
         `changed value of ${aAtom} from 1 to 2`,
         {

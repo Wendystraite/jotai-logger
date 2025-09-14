@@ -62,6 +62,7 @@ describe('bindAtomsLoggerToStore', () => {
       groupEvents: false,
       formattedOutput: false,
       showTransactionElapsedTime: false,
+      showTransactionEventsCount: false,
     };
   });
 
@@ -671,6 +672,125 @@ describe('bindAtomsLoggerToStore', () => {
             'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
             'color: #757575; font-weight: normal;', // -
             'color: #757575; font-weight: normal;', // 456.00 ms
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // 1
+          ],
+          [
+            `%cinitialized value %cof %catom%c${atomNumber} %cto %c0`,
+            'color: #0072B2; font-weight: bold;', // initialized value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // to
+            'color: default; font-weight: normal;', // 0
+            { value: 0 },
+          ],
+        ]);
+      });
+    });
+
+    describe('showTransactionEventsCount', () => {
+      it('should show the number of events when showTransactionEventsCount is enabled', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          showTransactionEventsCount: true,
+        });
+
+        const testAtom = atom(0);
+        store.get(testAtom);
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 - 1 event : retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to 0`, { value: 0 }],
+        ]);
+      });
+
+      it('should not show the number of events when showTransactionEventsCount is disabled', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          showTransactionEventsCount: false,
+        });
+
+        const testAtom = atom(0);
+        store.get(testAtom);
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 : retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to 0`, { value: 0 }],
+        ]);
+      });
+
+      it('should show the correct number of events for multiple events in a transaction', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          showTransactionEventsCount: true,
+        });
+
+        const atom1 = atom(0);
+        const atom2 = atom(0);
+        const derivedAtom = atom((get) => get(atom1) + get(atom2));
+
+        store.get(derivedAtom);
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 - 3 events : retrieved value of ${derivedAtom}`],
+          [`initialized value of ${atom1} to 0`, { value: 0 }],
+          [`initialized value of ${atom2} to 0`, { value: 0 }],
+          [
+            `initialized value of ${derivedAtom} to 0`,
+            { value: 0, dependencies: [`${atom1}`, `${atom2}`] },
+          ],
+        ]);
+      });
+
+      it('should show singular form for one event', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          showTransactionEventsCount: true,
+        });
+
+        const testAtom = atom(42);
+        store.get(testAtom);
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 - 1 event : retrieved value of ${testAtom}`],
+          [`initialized value of ${testAtom} to 42`, { value: 42 }],
+        ]);
+      });
+
+      it('should show events count with colors when formattedOutput is enabled', () => {
+        bindAtomsLoggerToStore(store, {
+          ...defaultOptions,
+          showTransactionEventsCount: true,
+          formattedOutput: true,
+        });
+
+        const testAtom = atom(0);
+        store.get(testAtom);
+
+        const atomNumber = /atom(\d+)(.*)/.exec(testAtom.toString())?.[1];
+        expect(Number.isInteger(parseInt(atomNumber!))).toBeTruthy();
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [
+            `%ctransaction %c1 %c- %c1 event %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // transaction
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 1 event
             'color: #757575; font-weight: normal;', // :
             'color: #0072B2; font-weight: bold;', // retrieved value
             'color: #757575; font-weight: normal;', // of
@@ -3469,6 +3589,427 @@ describe('bindAtomsLoggerToStore', () => {
         [`initialized value of ${testAtom3} to undefined`, { value: undefined }],
         [`mounted ${testAtom3}`, { value: undefined }],
       ]);
+    });
+
+    describe('combinations of transaction options', () => {
+      const testCases = [
+        // 0000 - all false
+        {
+          binary: '0000',
+          showTransactionNumber: false,
+          showTransactionEventsCount: false,
+          showTransactionElapsedTime: false,
+          showTransactionLocaleTime: false,
+          expected: (testAtom: AnyAtom) => `retrieved value of ${testAtom}`,
+          expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
+            `%cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // atomNumber
+          ],
+        },
+        // 0001 - only showTransactionLocaleTime true
+        {
+          binary: '0001',
+          showTransactionNumber: false,
+          showTransactionEventsCount: false,
+          showTransactionElapsedTime: false,
+          showTransactionLocaleTime: true,
+          expected: (testAtom: AnyAtom) =>
+            `1970-01-01T00:00:00.000Z : retrieved value of ${testAtom}`,
+          expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
+            `%c1970-01-01T00:00:00.000Z %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // atomNumber
+          ],
+        },
+        // 0010 - only showTransactionElapsedTime true
+        {
+          binary: '0010',
+          showTransactionNumber: false,
+          showTransactionEventsCount: false,
+          showTransactionElapsedTime: true,
+          showTransactionLocaleTime: false,
+          expected: (testAtom: AnyAtom) => `345.00 ms : retrieved value of ${testAtom}`,
+          expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
+            `%c345.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // 345.00 ms
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // atomNumber
+          ],
+        },
+        // 0011 - showTransactionElapsedTime and showTransactionLocaleTime true
+        {
+          binary: '0011',
+          showTransactionNumber: false,
+          showTransactionEventsCount: false,
+          showTransactionElapsedTime: true,
+          showTransactionLocaleTime: true,
+          expected: (testAtom: AnyAtom) =>
+            `1970-01-01T00:00:00.000Z - 345.00 ms : retrieved value of ${testAtom}`,
+          expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
+            `%c1970-01-01T00:00:00.000Z %c- %c345.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 345.00 ms
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // atomNumber
+          ],
+        },
+        // 0100 - only showTransactionEventsCount true
+        {
+          binary: '0100',
+          showTransactionNumber: false,
+          showTransactionEventsCount: true,
+          showTransactionElapsedTime: false,
+          showTransactionLocaleTime: false,
+          expected: (testAtom: AnyAtom) => `1 event : retrieved value of ${testAtom}`,
+          expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
+            `%c1 event %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // 1 event
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // atomNumber
+          ],
+        },
+        // 0101 - showTransactionEventsCount and showTransactionLocaleTime true
+        {
+          binary: '0101',
+          showTransactionNumber: false,
+          showTransactionEventsCount: true,
+          showTransactionElapsedTime: false,
+          showTransactionLocaleTime: true,
+          expected: (testAtom: AnyAtom) =>
+            `1 event - 1970-01-01T00:00:00.000Z : retrieved value of ${testAtom}`,
+          expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
+            `%c1 event %c- %c1970-01-01T00:00:00.000Z %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // 1 event
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // atomNumber
+          ],
+        },
+        // 0110 - showTransactionEventsCount and showTransactionElapsedTime true
+        {
+          binary: '0110',
+          showTransactionNumber: false,
+          showTransactionEventsCount: true,
+          showTransactionElapsedTime: true,
+          showTransactionLocaleTime: false,
+          expected: (testAtom: AnyAtom) => `1 event - 345.00 ms : retrieved value of ${testAtom}`,
+          expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
+            `%c1 event %c- %c345.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // 1 event
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 345.00 ms
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // atomNumber
+          ],
+        },
+        // 0111 - showTransactionEventsCount, showTransactionElapsedTime and showTransactionLocaleTime true
+        {
+          binary: '0111',
+          showTransactionNumber: false,
+          showTransactionEventsCount: true,
+          showTransactionElapsedTime: true,
+          showTransactionLocaleTime: true,
+          expected: (testAtom: AnyAtom) =>
+            `1 event - 1970-01-01T00:00:00.000Z - 345.00 ms : retrieved value of ${testAtom}`,
+          expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
+            `%c1 event %c- %c1970-01-01T00:00:00.000Z %c- %c345.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // 1 event
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 345.00 ms
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // atomNumber
+          ],
+        },
+        // 1000 - only showTransactionNumber true
+        {
+          binary: '1000',
+          showTransactionNumber: true,
+          showTransactionEventsCount: false,
+          showTransactionElapsedTime: false,
+          showTransactionLocaleTime: false,
+          expected: (testAtom: AnyAtom) => `transaction 1 : retrieved value of ${testAtom}`,
+          expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
+            `%ctransaction %c1 %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // transaction
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // atomNumber
+          ],
+        },
+        // 1001 - showTransactionNumber and showTransactionLocaleTime true
+        {
+          binary: '1001',
+          showTransactionNumber: true,
+          showTransactionEventsCount: false,
+          showTransactionElapsedTime: false,
+          showTransactionLocaleTime: true,
+          expected: (testAtom: AnyAtom) =>
+            `transaction 1 - 1970-01-01T00:00:00.000Z : retrieved value of ${testAtom}`,
+          expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
+            `%ctransaction %c1 %c- %c1970-01-01T00:00:00.000Z %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // transaction
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // atomNumber
+          ],
+        },
+        // 1010 - showTransactionNumber and showTransactionElapsedTime true
+        {
+          binary: '1010',
+          showTransactionNumber: true,
+          showTransactionEventsCount: false,
+          showTransactionElapsedTime: true,
+          showTransactionLocaleTime: false,
+          expected: (testAtom: AnyAtom) =>
+            `transaction 1 - 345.00 ms : retrieved value of ${testAtom}`,
+          expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
+            `%ctransaction %c1 %c- %c345.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // transaction
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 345.00 ms
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // atomNumber
+          ],
+        },
+        // 1011 - showTransactionNumber, showTransactionElapsedTime and showTransactionLocaleTime true
+        {
+          binary: '1011',
+          showTransactionNumber: true,
+          showTransactionEventsCount: false,
+          showTransactionElapsedTime: true,
+          showTransactionLocaleTime: true,
+          expected: (testAtom: AnyAtom) =>
+            `transaction 1 - 1970-01-01T00:00:00.000Z - 345.00 ms : retrieved value of ${testAtom}`,
+          expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
+            `%ctransaction %c1 %c- %c1970-01-01T00:00:00.000Z %c- %c345.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // transaction
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 345.00 ms
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // atomNumber
+          ],
+        },
+        // 1100 - showTransactionNumber and showTransactionEventsCount true
+        {
+          binary: '1100',
+          showTransactionNumber: true,
+          showTransactionEventsCount: true,
+          showTransactionElapsedTime: false,
+          showTransactionLocaleTime: false,
+          expected: (testAtom: AnyAtom) =>
+            `transaction 1 - 1 event : retrieved value of ${testAtom}`,
+          expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
+            `%ctransaction %c1 %c- %c1 event %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // transaction
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 1 event
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // atomNumber
+          ],
+        },
+        // 1101 - showTransactionNumber, showTransactionEventsCount and showTransactionLocaleTime true
+        {
+          binary: '1101',
+          showTransactionNumber: true,
+          showTransactionEventsCount: true,
+          showTransactionElapsedTime: false,
+          showTransactionLocaleTime: true,
+          expected: (testAtom: AnyAtom) =>
+            `transaction 1 - 1 event - 1970-01-01T00:00:00.000Z : retrieved value of ${testAtom}`,
+          expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
+            `%ctransaction %c1 %c- %c1 event %c- %c1970-01-01T00:00:00.000Z %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // transaction
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 1 event
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // atomNumber
+          ],
+        },
+        // 1110 - showTransactionNumber, showTransactionEventsCount and showTransactionElapsedTime true
+        {
+          binary: '1110',
+          showTransactionNumber: true,
+          showTransactionEventsCount: true,
+          showTransactionElapsedTime: true,
+          showTransactionLocaleTime: false,
+          expected: (testAtom: AnyAtom) =>
+            `transaction 1 - 1 event - 345.00 ms : retrieved value of ${testAtom}`,
+          expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
+            `%ctransaction %c1 %c- %c1 event %c- %c345.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // transaction
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 1 event
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 345.00 ms
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // atomNumber
+          ],
+        },
+        // 1111 - all true
+        {
+          binary: '1111',
+          showTransactionNumber: true,
+          showTransactionEventsCount: true,
+          showTransactionElapsedTime: true,
+          showTransactionLocaleTime: true,
+          expected: (testAtom: AnyAtom) =>
+            `transaction 1 - 1 event - 1970-01-01T00:00:00.000Z - 345.00 ms : retrieved value of ${testAtom}`,
+          expectedColors: (testAtom: AnyAtom, atomNumber: string) => [
+            `%ctransaction %c1 %c- %c1 event %c- %c1970-01-01T00:00:00.000Z %c- %c345.00 ms %c: %cretrieved value %cof %catom%c${atomNumber}`,
+            'color: #757575; font-weight: normal;', // transaction
+            'color: default; font-weight: normal;', // 1
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 1 event
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 1970-01-01T00:00:00.000Z
+            'color: #757575; font-weight: normal;', // -
+            'color: #757575; font-weight: normal;', // 345.00 ms
+            'color: #757575; font-weight: normal;', // :
+            'color: #0072B2; font-weight: bold;', // retrieved value
+            'color: #757575; font-weight: normal;', // of
+            'color: #757575; font-weight: normal;', // atom
+            'color: default; font-weight: normal;', // atomNumber
+          ],
+        },
+      ];
+
+      it.each(testCases)(
+        'should show correctly with options $binary (number=$showTransactionNumber, events=$showTransactionEventsCount, time=$showTransactionElapsedTime, locale=$showTransactionLocaleTime)',
+        ({
+          showTransactionNumber,
+          showTransactionEventsCount,
+          showTransactionElapsedTime,
+          showTransactionLocaleTime,
+          expected,
+        }) => {
+          bindAtomsLoggerToStore(store, {
+            ...defaultOptions,
+            showTransactionNumber,
+            showTransactionEventsCount,
+            showTransactionElapsedTime,
+            showTransactionLocaleTime,
+          });
+
+          const testAtom = atom(() => {
+            vi.advanceTimersByTime(345); // Fake the delay of the transaction
+            return 0;
+          });
+          store.get(testAtom);
+
+          vi.runAllTimers();
+
+          expect(consoleMock.log.mock.calls).toEqual([
+            [expected(testAtom)],
+            [`initialized value of ${testAtom} to 0`, { value: 0 }],
+          ]);
+        },
+      );
+
+      it.each(testCases)(
+        'should show correctly with colors with options $binary (number=$showTransactionNumber, events=$showTransactionEventsCount, time=$showTransactionElapsedTime, locale=$showTransactionLocaleTime)',
+        ({
+          showTransactionNumber,
+          showTransactionEventsCount,
+          showTransactionElapsedTime,
+          showTransactionLocaleTime,
+          expectedColors,
+        }) => {
+          bindAtomsLoggerToStore(store, {
+            ...defaultOptions,
+            formattedOutput: true,
+            showTransactionNumber,
+            showTransactionEventsCount,
+            showTransactionElapsedTime,
+            showTransactionLocaleTime,
+          });
+
+          const testAtom = atom(() => {
+            vi.advanceTimersByTime(345); // Fake the delay of the transaction
+            return 0;
+          });
+          store.get(testAtom);
+
+          const atomNumber = /atom(\d+)(.*)/.exec(testAtom.toString())?.[1];
+          expect(Number.isInteger(parseInt(atomNumber!))).toBeTruthy();
+
+          vi.runAllTimers();
+
+          expect(consoleMock.log.mock.calls).toEqual([
+            expectedColors(testAtom, atomNumber!),
+            [
+              `%cinitialized value %cof %catom%c${atomNumber} %cto %c0`,
+              'color: #0072B2; font-weight: bold;', // initialized value
+              'color: #757575; font-weight: normal;', // of
+              'color: #757575; font-weight: normal;', // atom
+              'color: default; font-weight: normal;', // atomNumber
+              'color: #757575; font-weight: normal;', // to
+              'color: default; font-weight: normal;', // 0
+              { value: 0 },
+            ],
+          ]);
+        },
+      );
     });
   });
 

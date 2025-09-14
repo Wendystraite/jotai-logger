@@ -117,9 +117,9 @@ describe('stack traces', () => {
       await vi.advanceTimersByTimeAsync(1000);
 
       expect(consoleMock.log.mock.calls).toEqual([
-        [`transaction 1 : [MyCounter] retrieved value of ${countAtom}`],
+        [`transaction 1 - 1 event : [MyCounter] retrieved value of ${countAtom}`],
         [`initialized value of ${countAtom} to 0`, { value: 0 }],
-        [`transaction 2 : [MyCounter] subscribed to ${countAtom}`],
+        [`transaction 2 - 1 event : [MyCounter] subscribed to ${countAtom}`],
         [`mounted ${countAtom}`, { value: 0 }],
       ]);
     });
@@ -143,10 +143,12 @@ describe('stack traces', () => {
       await vi.advanceTimersByTimeAsync(1000);
 
       expect(consoleMock.log.mock.calls).toEqual([
-        [`transaction 1 : [MyApp.MyCounterParent] MyCounter retrieved value of ${countAtom}`],
+        [
+          `transaction 1 - 1 event : [MyApp.MyCounterParent] MyCounter retrieved value of ${countAtom}`,
+        ],
         [`initialized value of ${countAtom} to 0`, { value: 0 }],
 
-        [`transaction 2 : [MyApp.MyCounterParent] MyCounter subscribed to ${countAtom}`],
+        [`transaction 2 - 1 event : [MyApp.MyCounterParent] MyCounter subscribed to ${countAtom}`],
         [`mounted ${countAtom}`, { value: 0 }],
       ]);
     });
@@ -176,12 +178,12 @@ describe('stack traces', () => {
       expect(consoleMock.log.mock.calls).toEqual([
         [
           // Does not log MyApp and ComponentLevel1
-          `transaction 1 : [ComponentLevel2.ComponentLevel3] ComponentLevel4 retrieved value of ${countAtom}`,
+          `transaction 1 - 1 event : [ComponentLevel2.ComponentLevel3] ComponentLevel4 retrieved value of ${countAtom}`,
         ],
         [`initialized value of ${countAtom} to 0`, { value: 0 }],
 
         [
-          `transaction 2 : [ComponentLevel2.ComponentLevel3] ComponentLevel4 subscribed to ${countAtom}`,
+          `transaction 2 - 1 event : [ComponentLevel2.ComponentLevel3] ComponentLevel4 subscribed to ${countAtom}`,
         ],
         [`mounted ${countAtom}`, { value: 0 }],
       ]);
@@ -202,9 +204,9 @@ describe('stack traces', () => {
       await vi.advanceTimersByTimeAsync(1000);
 
       expect(consoleMock.log.mock.calls).toEqual([
-        [`transaction 1 : [MyCounter] retrieved value of ${countAtom}`],
+        [`transaction 1 - 1 event : [MyCounter] retrieved value of ${countAtom}`],
         [`initialized value of ${countAtom} to 0`, { value: 0 }],
-        [`transaction 2 : [MyCounter] subscribed to ${countAtom}`],
+        [`transaction 2 - 1 event : [MyCounter] subscribed to ${countAtom}`],
         [`mounted ${countAtom}`, { value: 0 }],
       ]);
     });
@@ -241,7 +243,7 @@ describe('stack traces', () => {
 
       expect(consoleMock.log.mock.calls).toEqual([
         // React 19's getOwner doesn't work in callbacks
-        [`transaction 1 : [MyCounter.button] called set of ${incrementAtom}`],
+        [`transaction 1 - 2 events : [MyCounter.button] called set of ${incrementAtom}`],
         [`initialized value of ${countAtom} to 0`, { value: 0 }],
         [`changed value of ${countAtom} from 0 to 1`, { newValue: 1, oldValue: 0 }],
       ]);
@@ -278,13 +280,15 @@ describe('stack traces', () => {
       await vi.advanceTimersByTimeAsync(1000);
 
       expect(consoleMock.log.mock.calls).toEqual([
-        [`transaction 1 : [MyApp.MyCounterParent] MyCounter retrieved value of ${countAtom}`],
+        [
+          `transaction 1 - 1 event : [MyApp.MyCounterParent] MyCounter retrieved value of ${countAtom}`,
+        ],
         [`initialized value of ${countAtom} to 0`, { value: 0 }],
 
-        [`transaction 2 : [MyApp.MyCounterParent] MyCounter subscribed to ${countAtom}`],
+        [`transaction 2 - 1 event : [MyApp.MyCounterParent] MyCounter subscribed to ${countAtom}`],
         [`mounted ${countAtom}`, { value: 0 }],
 
-        [`transaction 3 : [MyCounter.button] MyCounter set value of ${countAtom}`],
+        [`transaction 3 - 1 event : [MyCounter.button] MyCounter set value of ${countAtom}`],
         [`changed value of ${countAtom} from 0 to 1`, { newValue: 1, oldValue: 0 }],
       ]);
     });
@@ -325,15 +329,17 @@ describe('stack traces', () => {
       await vi.advanceTimersByTimeAsync(1000);
 
       expect(consoleMock.log.mock.calls).toEqual([
-        [`transaction 1 : [MyApp.MyCounterParent] MyCounter retrieved value of ${countAtom}`],
+        [
+          `transaction 1 - 1 event : [MyApp.MyCounterParent] MyCounter retrieved value of ${countAtom}`,
+        ],
         [`initialized value of ${countAtom} to 0`, { value: 0 }],
 
         // React 19's getOwner doesn't work in `useEffect`
-        [`transaction 2 : [MyApp.MyCounterParent] subscribed to ${countAtom}`],
+        [`transaction 2 - 1 event : [MyApp.MyCounterParent] subscribed to ${countAtom}`],
         [`mounted ${countAtom}`, { value: 0 }],
 
         // React 19's getOwner doesn't work in callbacks
-        [`transaction 3 : [MyCounter.button] set value of ${countAtom}`],
+        [`transaction 3 - 1 event : [MyCounter.button] set value of ${countAtom}`],
         [`changed value of ${countAtom} from 0 to 1`, { newValue: 1, oldValue: 0 }],
       ]);
     });

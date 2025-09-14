@@ -126,6 +126,8 @@ type AtomsLoggerOptions = {
   stringify?: (value: unknown) => string;
   /** Whether to show transaction numbers (default: true) */
   showTransactionNumber?: boolean;
+  /** Whether to show events count in transactions (default: true) */
+  showTransactionEventsCount?: boolean;
   /** Whether to show transaction timestamps (default: false) */
   showTransactionLocaleTime?: boolean;
   /** Whether to show elapsed time (default: true) */
@@ -416,10 +418,10 @@ store.set(counterAtom, 1);
 ```
 
 ```
-▶ transaction 1 - 2.35ms : retrieved value of atom1:counter
+▶ transaction 1 - 2.35ms - 1 event : retrieved value of atom1:counter
   ▼ initialized value of atom1:counter to 0
     value: 1
-▶ transaction 2 - 4.00ms : set value of atom1:counter to 1
+▶ transaction 2 - 4.00ms - 1 event : set value of atom1:counter to 1
   ▼ changed value of atom1:counter from 0 to 1
     old value: 0
     new value: 1
@@ -433,7 +435,7 @@ resultAtom.debugLabel = 'result';
 ```
 
 ```
-▶ transaction 3 : set value of atom1:counter to 2
+▶ transaction 3 - 2 events : set value of atom1:counter to 2
   ▶ changed value of atom1:counter from 1 to 2
   ▶ changed value of atom2:result from 2 to 4
 ```
@@ -451,7 +453,7 @@ store.set(incrementCounterAtom);
 ```
 
 ```
-▶ transaction 4 : called set of atom3:incrementCounter
+▶ transaction 4 - 1 event : called set of atom3:incrementCounter
   ▶ changed value of atom1:counter from 3 to 4
 ```
 
@@ -465,10 +467,10 @@ userDataAsyncAtom.debugLabel = "userDataAsync";
 ```
 
 ```
-▶ transaction 5 : subscribed to atom4:userDataAsync
+▶ transaction 5 - 2 events : subscribed to atom4:userDataAsync
   ▶ pending initial promise of atom4:userDataAsync
   ▶ mounted atom4:userDataAsync
-▶ transaction 6 : resolved promise of atom4:userDataAsync
+▶ transaction 6 - 1 event : resolved promise of atom4:userDataAsync
   ▶ resolved initial promise of atom4:userDataAsync to {"name":"Daishi"}
 ```
 
@@ -492,10 +494,10 @@ function MyCounter() {
 ```
 
 ```
-▶ transaction 7 : subscribed to atom4
+▶ transaction 7 - 2 events : subscribed to atom4
   ▶ initialized value of atom4 to 42
   ▶ mounted atom4
-▶ transaction 8 : unsubscribed from atom4
+▶ transaction 8 - 1 event : unsubscribed from atom4
   ▶ unmounted atom4
 ```
 
@@ -509,7 +511,7 @@ derivedAtom.debugLabel = 'derived';
 ```
 
 ```
-▶ transaction 9 : subscribed to atom5:derived
+▶ transaction 9 - 2 events : subscribed to atom5:derived
   ▼ initialized value of atom5:derived to "42 is the count"
     value: "42 is the count"
     dependencies: ["atom1:counter"]
@@ -529,7 +531,7 @@ const atomWithVariableDeps = atom((get) => {
 ```
 
 ```
-▶ transaction 10 :
+▶ transaction 10 - 2 events :
   ▶ changed value of atom6:isEnabledAtom from true to false
   ▼ changed dependencies of atom7:atomWithVariableDeps
     old dependencies: ["atom6:isEnabledAtom", "atom8:anAtom"]

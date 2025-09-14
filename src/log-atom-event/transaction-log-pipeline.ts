@@ -123,6 +123,15 @@ export const TransactionLogPipeline = new LogPipeline()
     });
   })
 
+  .withMeta<{ showEventsCount?: true }>(function addEventsCountToTransactionMeta(context) {
+    const {
+      options: { showTransactionEventsCount },
+    } = context;
+    if (showTransactionEventsCount) {
+      context.showEventsCount = true;
+    }
+  })
+
   .withMeta<{ showLocaleTime?: true }>(function addTransactionLocaleTimeToTransactionMeta(context) {
     const {
       options: { showTransactionLocaleTime },
@@ -143,10 +152,43 @@ export const TransactionLogPipeline = new LogPipeline()
   })
 
   // -
+  .withLog(function addEventsCountDashToTransactionLogs(context) {
+    if (
+      // n-1 & n+1 presents
+      context.showTransactionNumber &&
+      context.showEventsCount
+    ) {
+      const { logs, options } = context;
+      addDashToLogs(logs, options);
+    }
+  })
+
+  // {eventsCount} events
+  .withLog(function addEventsCountToTransactionLogs(context) {
+    if (!context.showEventsCount) return;
+    const {
+      logs,
+      options,
+      transaction: { eventsCount },
+    } = context;
+    const eventsText = eventsCount === 1 ? 'event' : 'events';
+    addToLogs(logs, options, {
+      plainText: () => `${eventsCount.toString()} ${eventsText}`,
+      formatted: () => [`%c${eventsCount.toString()} ${eventsText}`, 'grey'],
+    });
+  })
+
+  // -
   .withLog(function addDateTimeDashToTransactionLogs(context) {
-    if (!context.showLocaleTime && !context.showElapsedTime) return;
-    const { logs, options } = context;
-    addDashToLogs(logs, options);
+    if (
+      //          n-1 & n+1 presents
+      (context.showEventsCount && context.showLocaleTime) ||
+      // no n-1 : n-2 & n+1 presents
+      (!context.showEventsCount && context.showTransactionNumber && context.showLocaleTime)
+    ) {
+      const { logs, options } = context;
+      addDashToLogs(logs, options);
+    }
   })
 
   // {localeTime}
@@ -162,9 +204,20 @@ export const TransactionLogPipeline = new LogPipeline()
 
   // -
   .withLog(function addLocaleTimeDashToTransactionLogs(context) {
-    if (!context.showLocaleTime || !context.showElapsedTime) return;
-    const { logs, options } = context;
-    addDashToLogs(logs, options);
+    if (
+      //                n-1 & n+1 presents
+      (context.showLocaleTime && context.showElapsedTime) ||
+      // no n-1       : n-2 & n+1 presents
+      (!context.showLocaleTime && context.showEventsCount && context.showElapsedTime) ||
+      // no n-1 & n-2 : n-3 & n+1 presents
+      (!context.showLocaleTime &&
+        !context.showEventsCount &&
+        context.showTransactionNumber &&
+        context.showElapsedTime)
+    ) {
+      const { logs, options } = context;
+      addDashToLogs(logs, options);
+    }
   })
 
   // {elapsedTime}
@@ -279,6 +332,7 @@ export const TransactionLogPipeline = new LogPipeline()
     options,
     showDomain,
     showTransactionNumber,
+    showEventsCount,
     showLocaleTime,
     showElapsedTime,
     showOwnerStack,
@@ -289,7 +343,11 @@ export const TransactionLogPipeline = new LogPipeline()
     showResult,
   }) {
     if (
-      (showDomain || showTransactionNumber || showLocaleTime || showElapsedTime) &&
+      (showDomain ||
+        showTransactionNumber ||
+        showEventsCount ||
+        showLocaleTime ||
+        showElapsedTime) &&
       (showOwnerStack ||
         showComponentDisplayName ||
         showTransactionName ||
