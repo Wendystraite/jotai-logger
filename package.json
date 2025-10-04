@@ -57,7 +57,7 @@
     "lint": "eslint --max-warnings=0",
     "lint:package": "publint",
     "test": "vitest run",
-    "coverage": "vitest run --coverage --coverage.include=src",
+    "coverage": "vitest run --coverage",
     "dev": "vitest",
     "local-release": "changeset version && changeset publish",
     "prepublishOnly": "npm run ci",
