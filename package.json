@@ -1,98 +1,22 @@
 {
-  "name": "jotai-logger",
-  "version": "4.0.0",
-  "description": "Logging utility for jotai",
-  "keywords": [
-    "jotai",
-    "logger",
-    "typescript"
-  ],
-  "homepage": "https://github.com/Wendystraite/jotai-logger",
-  "bugs": {
-    "url": "https://github.com/Wendystraite/jotai-logger/issues"
-  },
-  "author": "Wendy Fouchter <wendy.fouchter@gmail.com>",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Wendystraite/jotai-logger.git"
-  },
-  "files": [
-    "dist"
-  ],
-  "type": "module",
-  "license": "MIT",
-  "devDependencies": {
-    "@arethetypeswrong/cli": "0.18.2",
-    "@changesets/cli": "2.31.0",
-    "@eslint/js": "10.0.1",
-    "@testing-library/dom": "10.4.1",
-    "@testing-library/react": "16.3.2",
-    "@trivago/prettier-plugin-sort-imports": "6.0.2",
-    "@types/node": "25.6.0",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
-    "@vitest/coverage-v8": "4.1.5",
-    "benny": "3.7.1",
-    "eslint": "10.2.1",
-    "jiti": "2.6.1",
-    "jotai": "2.19.1",
-    "jotai-devtools": "0.13.1",
-    "jotai-family": "1.0.1",
-    "jotai-loadable": "1.0.0",
-    "jsdom": "29.1.1",
-    "prettier": "3.8.3",
-    "publint": "0.3.18",
-    "react": "19.2.5",
-    "react-dom": "19.2.5",
-    "shx": "0.4.0",
-    "tsx": "4.21.0",
-    "typescript": "6.0.3",
-    "typescript-eslint": "8.59.1",
-    "vitest": "4.1.5"
-  },
+  "name": "jotai-logger-monorepo",
+  "private": true,
+  "version": "0.0.0",
   "scripts": {
-    "build": "shx rm -fr dist && tsc --build tsconfig.lib.json",
-    "ci": "pnpm run build && pnpm run check-types && pnpm run check-format && pnpm run lint:package && pnpm run check-exports && pnpm run lint && pnpm run coverage",
+    "build": "pnpm -r run build",
+    "ci": "pnpm -r run ci",
     "format": "prettier --write .",
     "check-format": "prettier --check .",
-    "check-exports": "attw --pack . --ignore-rules=cjs-resolves-to-esm",
-    "check-types": "tsc --build tsconfig.tests.json --noEmit",
-    "lint": "eslint --max-warnings=0",
-    "lint:package": "publint",
-    "test": "vitest run",
-    "coverage": "vitest run --coverage",
-    "dev": "vitest",
-    "local-release": "changeset version && changeset publish",
-    "prepublishOnly": "npm run ci",
-    "benchmark": "pnpm run benchmark:simple-read && pnpm run benchmark:simple-write && pnpm run benchmark:subscribe-write",
-    "benchmark:simple-read": "tsx benchmarks/simple-read.ts",
-    "benchmark:simple-write": "tsx benchmarks/simple-write.ts",
-    "benchmark:subscribe-write": "tsx benchmarks/subscribe-write.ts",
-    "benchmark:inspect": "tsx --inspect-brk ./benchmarks/inspect-me.ts"
+    "lint": "pnpm -r run lint",
+    "test": "pnpm -r run test",
+    "coverage": "pnpm -r run coverage",
+    "dev": "pnpm -r run dev",
+    "local-release": "changeset version && changeset publish"
   },
-  "main": "dist/index.js",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
-  "peerDependencies": {
-    "@types/react": ">=17.0.0",
-    "jotai": ">=2.18.0",
-    "jotai-devtools": ">=0.13.0",
-    "react": ">=17.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@types/react": {
-      "optional": true
-    },
-    "jotai-devtools": {
-      "optional": true
-    },
-    "react": {
-      "optional": true
-    }
+  "devDependencies": {
+    "@changesets/cli": "2.31.0",
+    "@trivago/prettier-plugin-sort-imports": "6.0.2",
+    "prettier": "3.8.3"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

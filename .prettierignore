@@ -1,4 +1,3 @@
 pnpm-lock.yaml
-benchmarks/*.json
-benchmarks/*.html
-CHANGELOG.md
+**/benchmarks/*.json
+**/benchmarks/*.html

@@ -1,0 +1,6 @@
+pnpm-lock.yaml
+dist
+benchmarks/*.json
+benchmarks/*.html
+coverage
+CHANGELOG.md
