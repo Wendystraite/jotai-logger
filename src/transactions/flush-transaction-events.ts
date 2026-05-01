@@ -71,6 +71,23 @@ function cleanupDependencyChangedEvents(
       continue;
     }
   }
+
+  // In jotai 2.17.x, d.clear() was called on every atom read, which updated
+  // prevTransactionDependenciesMap even for atoms with no visible deps.
+  // In jotai 2.18+, d.clear() is gone and d.delete() only fires for removed deps.
+  // Atoms that are initialized but have only private deps produce no dependenciesChanged
+  // events, so prevTransactionDependenciesMap is never initialized for them.
+  // We initialize it here to Set([]) so future dep additions can be correctly detected.
+  for (const event of transaction.events) {
+    if (!event || event.type !== AtomsLoggerEventTypes.initialized) continue;
+    const atom = event.atom;
+    if (!store[ATOMS_LOGGER_SYMBOL].prevTransactionDependenciesMap.has(atom)) {
+      store[ATOMS_LOGGER_SYMBOL].prevTransactionDependenciesMap.set(
+        atom,
+        new Set(store[ATOMS_LOGGER_SYMBOL].dependenciesMap.get(atom)),
+      );
+    }
+  }
 }
 
 /**

@@ -48,17 +48,17 @@ importers:
         specifier: 2.6.1
         version: 2.6.1
       jotai:
-        specifier: 2.17.1
-        version: 2.17.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)
+        specifier: 2.19.1
+        version: 2.19.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)
       jotai-devtools:
-        specifier: 0.13.0
-        version: 0.13.0(@types/react@19.2.0)(jotai@2.17.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(redux@5.0.1)
+        specifier: 0.13.1
+        version: 0.13.1(@types/react@19.2.0)(jotai@2.19.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(redux@5.0.1)
       jotai-family:
         specifier: 1.0.1
-        version: 1.0.1(jotai@2.17.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0))
+        version: 1.0.1(jotai@2.19.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0))
       jotai-loadable:
         specifier: 1.0.0
-        version: 1.0.0(jotai@2.17.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0))
+        version: 1.0.0(jotai@2.19.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0))
       jsdom:
         specifier: 27.0.0
         version: 27.0.0(postcss@8.5.6)
@@ -537,23 +537,23 @@ packages:
   '@loaderkit/resolve@1.0.4':
     resolution: {integrity: sha512-rJzYKVcV4dxJv+vW6jlvagF8zvGxHJ2+HTr1e2qOejfmGhAApgJHl8Aog4mMszxceTRiKTTbnpgmTO1bEZHV/A==}
 
-  '@mantine/code-highlight@7.17.8':
-    resolution: {integrity: sha512-KfdLi8MhpoeHiXkLMfuPQz1IDTUjvP2w3hbdx8Oz/hL0o+mbPYfgrU/w/D3ONjVQMoEbPpEL5vSA2eTYCmwVKg==}
+  '@mantine/code-highlight@7.17.4':
+    resolution: {integrity: sha512-Ewi4X/4a5Lbty7MmOg5OTOv7QexxuVA5dwUZ79zWEvqB3e/AHzGK//5Nb92x78FvmuEZ9M0rK5eRtWTT/+4zeA==}
     peerDependencies:
-      '@mantine/core': 7.17.8
-      '@mantine/hooks': 7.17.8
+      '@mantine/core': 7.17.4
+      '@mantine/hooks': 7.17.4
       react: ^18.x || ^19.x
       react-dom: ^18.x || ^19.x
 
-  '@mantine/core@7.17.8':
-    resolution: {integrity: sha512-42sfdLZSCpsCYmLCjSuntuPcDg3PLbakSmmYfz5Auea8gZYLr+8SS5k647doVu0BRAecqYOytkX2QC5/u/8VHw==}
+  '@mantine/core@7.17.4':
+    resolution: {integrity: sha512-Ea4M/98jxgIWCuxCdM0YIotVYjfLTGQsfIA6zDg0LsClgjo/ZLnnh4zbi+bLNgM+GGjP4ju7gv4MZvaTKuLO8g==}
     peerDependencies:
-      '@mantine/hooks': 7.17.8
+      '@mantine/hooks': 7.17.4
       react: ^18.x || ^19.x
       react-dom: ^18.x || ^19.x
 
-  '@mantine/hooks@7.17.8':
-    resolution: {integrity: sha512-96qygbkTjRhdkzd5HDU8fMziemN/h758/EwrFu7TlWrEP10Vw076u+Ap/sG6OT4RGPZYYoHrTlT+mkCZblWHuw==}
+  '@mantine/hooks@7.17.4':
+    resolution: {integrity: sha512-PBcJxDAfGm8k1/JJmaDcxzRVQ3JSE1iXGktbgGz+qEOJmCxwbbAYe+CtGFFgi1xX2bPZ+7dtRr/+XFhnKtt/aw==}
     peerDependencies:
       react: ^18.x || ^19.x
 
@@ -1505,8 +1505,8 @@ packages:
     resolution: {integrity: sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==}
     hasBin: true
 
-  jotai-devtools@0.13.0:
-    resolution: {integrity: sha512-YI5cXCZA806H+7IEqU3Mw8LG2MeEdoI5eKKLmGFJLCFBI0J/M5u9v714xwWuCw7SM5CjAjRtd801zFOU3kyUTg==}
+  jotai-devtools@0.13.1:
+    resolution: {integrity: sha512-nd7W5+Pcf/W6d9wNVX+ao4qkjdLUBTbgSXIeQ9+SEvQ79dU2qrqZ/3TkKWC9Ie7gss+En6mxkU70iuuLJS2cMg==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       jotai: '>=2.14.0'
@@ -1523,8 +1523,8 @@ packages:
     peerDependencies:
       jotai: ^2.3.0
 
-  jotai@2.17.1:
-    resolution: {integrity: sha512-TFNZZDa/0ewCLQyRC/Sq9crtixNj/Xdf/wmj9631xxMuKToVJZDbqcHIYN0OboH+7kh6P6tpIK7uKWClj86PKw==}
+  jotai@2.19.1:
+    resolution: {integrity: sha512-sqm9lVZiqBHZH8aSRk32DSiZDHY3yUIlulXYn9GQj7/LvoUdYXSMti7ZPJGo+6zjzKFt5a25k/I6iBCi43PJcw==}
     engines: {node: '>=12.20.0'}
     peerDependencies:
       '@babel/core': '>=7.0.0'
@@ -1588,7 +1588,6 @@ packages:
     resolution: {integrity: sha512-Quz3MvAwHxVYNXsOByL7xI5EB2WYOeFswqaHIA3qOK3isRWTxiplBEocmmru6XmxDB2L7jDNYtYA4FyimoAFEw==}
     engines: {node: '>=8.17.0'}
     hasBin: true
-    bundledDependencies: []
 
   jsonfile@4.0.0:
     resolution: {integrity: sha512-m6F1R3z8jjlf2imQHS2Qez5sjKWQzbuuhuJ/FKYFRZvPE3PuHcSMVZzfsLhGVOkfd20obL5SWEBew5ShlquNxg==}
@@ -2979,19 +2978,19 @@ snapshots:
     dependencies:
       '@braidai/lang': 1.1.2
 
-  '@mantine/code-highlight@7.17.8(@mantine/core@7.17.8(@mantine/hooks@7.17.8(react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(@mantine/hooks@7.17.8(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
+  '@mantine/code-highlight@7.17.4(@mantine/core@7.17.4(@mantine/hooks@7.17.4(react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(@mantine/hooks@7.17.4(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
     dependencies:
-      '@mantine/core': 7.17.8(@mantine/hooks@7.17.8(react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      '@mantine/hooks': 7.17.8(react@19.2.0)
+      '@mantine/core': 7.17.4(@mantine/hooks@7.17.4(react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      '@mantine/hooks': 7.17.4(react@19.2.0)
       clsx: 2.1.1
       highlight.js: 11.11.1
       react: 19.2.0
       react-dom: 19.2.0(react@19.2.0)
 
-  '@mantine/core@7.17.8(@mantine/hooks@7.17.8(react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
+  '@mantine/core@7.17.4(@mantine/hooks@7.17.4(react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
     dependencies:
       '@floating-ui/react': 0.26.28(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      '@mantine/hooks': 7.17.8(react@19.2.0)
+      '@mantine/hooks': 7.17.4(react@19.2.0)
       clsx: 2.1.1
       react: 19.2.0
       react-dom: 19.2.0(react@19.2.0)
@@ -3002,7 +3001,7 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
-  '@mantine/hooks@7.17.8(react@19.2.0)':
+  '@mantine/hooks@7.17.4(react@19.2.0)':
     dependencies:
       react: 19.2.0
 
@@ -3966,15 +3965,15 @@ snapshots:
 
   jiti@2.6.1: {}
 
-  jotai-devtools@0.13.0(@types/react@19.2.0)(jotai@2.17.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(redux@5.0.1):
+  jotai-devtools@0.13.1(@types/react@19.2.0)(jotai@2.19.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(redux@5.0.1):
     dependencies:
-      '@mantine/code-highlight': 7.17.8(@mantine/core@7.17.8(@mantine/hooks@7.17.8(react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(@mantine/hooks@7.17.8(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      '@mantine/core': 7.17.8(@mantine/hooks@7.17.8(react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      '@mantine/hooks': 7.17.8(react@19.2.0)
+      '@mantine/code-highlight': 7.17.4(@mantine/core@7.17.4(@mantine/hooks@7.17.4(react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(@mantine/hooks@7.17.4(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      '@mantine/core': 7.17.4(@mantine/hooks@7.17.4(react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      '@mantine/hooks': 7.17.4(react@19.2.0)
       '@redux-devtools/extension': 3.3.0(redux@5.0.1)
       clsx: 2.1.1
       javascript-stringify: 2.1.0
-      jotai: 2.17.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)
+      jotai: 2.19.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)
       jsondiffpatch: 0.5.0
       react: 19.2.0
       react-base16-styling: 0.9.1
@@ -3986,15 +3985,15 @@ snapshots:
       - react-dom
       - redux
 
-  jotai-family@1.0.1(jotai@2.17.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)):
+  jotai-family@1.0.1(jotai@2.19.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)):
     dependencies:
-      jotai: 2.17.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)
+      jotai: 2.19.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)
 
-  jotai-loadable@1.0.0(jotai@2.17.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)):
+  jotai-loadable@1.0.0(jotai@2.19.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)):
     dependencies:
-      jotai: 2.17.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)
+      jotai: 2.19.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)
 
-  jotai@2.17.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0):
+  jotai@2.19.1(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0):
     optionalDependencies:
       '@babel/template': 7.27.2
       '@types/react': 19.2.0

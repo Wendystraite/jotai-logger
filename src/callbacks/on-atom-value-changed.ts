@@ -1,4 +1,4 @@
-import { INTERNAL_isPromiseLike, INTERNAL_registerAbortHandler } from 'jotai/vanilla/internals';
+import { INTERNAL_isPromiseLike } from 'jotai/vanilla/internals';
 
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import { addEventToTransaction } from '../transactions/add-event-to-transaction.js';
@@ -79,7 +79,7 @@ export function onAtomValueChanged(
     });
   }
 
-  INTERNAL_registerAbortHandler(newPromise, () => {
+  store[ATOMS_LOGGER_SYMBOL].registerAbortHandler(store, newPromise, () => {
     isAborted = true;
     if (isInitialValue) {
       addEventToTransaction(store, {

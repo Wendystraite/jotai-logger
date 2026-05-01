@@ -65,15 +65,52 @@ function updateDependencies(
       return { shouldNotAddEvent: true };
     }
 
+    // Don't update dependencies if the removed dependency is ignored
+    if (event.removedDependency && !shouldShowAtom(store, event.removedDependency)) {
+      return { shouldNotAddEvent: true };
+    }
+
     let newDependencies: Set<AtomId>;
+    /* v8 ignore next 3 - clearedDependencies path relies on d.clear(), which jotai 2.18+ no longer calls; kept for jotai 2.17.x compatibility */
     if (event.clearedDependencies) {
       newDependencies = new Set();
+    } else if (event.removedDependency) {
+      const currentDependencies = store[ATOMS_LOGGER_SYMBOL].dependenciesMap.get(atom);
+      newDependencies = new Set(currentDependencies);
+      newDependencies.delete(event.removedDependency.toString());
     } else {
       const currentDependencies = store[ATOMS_LOGGER_SYMBOL].dependenciesMap.get(atom);
       newDependencies = new Set(currentDependencies).add(event.addedDependency.toString());
     }
 
     store[ATOMS_LOGGER_SYMBOL].dependenciesMap.set(atom, newDependencies);
+
+    // In jotai 2.18+, d.delete() fires AFTER the value is set (pruneDependencies runs
+    // after setAtomStateValueOrPromise). To preserve the correct event ordering
+    // (dependenciesChanged before changed value) and avoid double-events, we retroactively
+    // update existing dependenciesChanged events for this atom rather than appending a new one.
+    if (event.removedDependency) {
+      const currentTransaction = store[ATOMS_LOGGER_SYMBOL].currentTransaction;
+      let hasExistingDepsChangedEvent = false;
+      if (currentTransaction) {
+        for (const existingEvent of currentTransaction.events) {
+          if (!existingEvent || existingEvent.atom !== atom) continue;
+          if (existingEvent.type === AtomsLoggerEventTypes.dependenciesChanged) {
+            hasExistingDepsChangedEvent = true;
+            existingEvent.dependencies = newDependencies;
+          } else if (existingEvent.dependencies !== undefined) {
+            // Also update value change events so they reflect the final dep set
+            existingEvent.dependencies = newDependencies;
+          }
+        }
+      }
+      if (hasExistingDepsChangedEvent) {
+        // Existing dependenciesChanged events already updated — no need to add a new event
+        return { shouldNotAddEvent: true };
+      }
+      // No prior dependenciesChanged events exist (pure-deletion case): fall through and add
+      // this event so cleanupDependencyChangedEvents can detect the change at flush time
+    }
   }
   return { shouldNotAddEvent: false };
 }
