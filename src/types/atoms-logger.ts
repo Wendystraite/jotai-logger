@@ -2,6 +2,7 @@ import type { Atom, useStore } from 'jotai';
 import type {
   INTERNAL_AtomState,
   INTERNAL_AtomStateMap,
+  INTERNAL_getBuildingBlocksRev2,
   INTERNAL_Mounted,
 } from 'jotai/vanilla/internals';
 
@@ -35,6 +36,8 @@ export type AnyAtom = Atom<unknown>;
  * Contains configuration options, transaction tracking, and references to original store methods.
  */
 export type AtomsLoggerState = AtomsLoggerOptionsInState & {
+  /** Internal method to register abort handlers for promises */
+  registerAbortHandler: ReturnType<typeof INTERNAL_getBuildingBlocksRev2>[26];
   /** Incremental counter for transactions */
   transactionNumber: number;
   /** The currently active transaction being tracked, if any */
@@ -769,8 +772,9 @@ export interface AtomsLoggerEventMap {
       atom: AnyAtom;
       oldDependencies?: Set<AtomId>;
     } & (
-      | { addedDependency: AnyAtom; clearedDependencies?: undefined }
-      | { addedDependency?: undefined; clearedDependencies: true }
+      | { addedDependency: AnyAtom; clearedDependencies?: undefined; removedDependency?: undefined }
+      | { addedDependency?: undefined; clearedDependencies: true; removedDependency?: undefined }
+      | { addedDependency?: undefined; clearedDependencies?: undefined; removedDependency: AnyAtom }
     )
   >;
   [AtomsLoggerEventTypes.mounted]: AtomsLoggerEventBase<{

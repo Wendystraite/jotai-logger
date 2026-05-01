@@ -16,6 +16,12 @@ export function getOnAtomStateMapSet(store: StoreWithAtomsLogger) {
 
     if (shouldShowAtom(store, atom)) {
       store[ATOMS_LOGGER_SYMBOL].atomsFinalizationRegistry.register(atom, atom.toString());
+      // In jotai 2.17.x, d.clear() was called at the start of each atom read, which initialized
+      // dependenciesMap for every visible atom (even those with no deps). In jotai 2.18+,
+      // d.clear() is gone, so we initialize it here when the atom state is first created.
+      if (!store[ATOMS_LOGGER_SYMBOL].dependenciesMap.has(atom)) {
+        store[ATOMS_LOGGER_SYMBOL].dependenciesMap.set(atom, new Set());
+      }
     }
 
     // Track the dependencies changes in the dependency map.
@@ -29,6 +35,7 @@ export function getOnAtomStateMapSet(store: StoreWithAtomsLogger) {
       });
       return result;
     };
+    /* v8 ignore start -- clear is not used anymore in jotai 2.18+ */
     const originalMapClear = atomState.d.clear.bind(atomState.d);
     atomState.d.clear = function mapClearProxy() {
       originalMapClear();
@@ -37,6 +44,19 @@ export function getOnAtomStateMapSet(store: StoreWithAtomsLogger) {
         atom,
         clearedDependencies: true,
       });
+    };
+    /* v8 ignore end */
+    const originalMapDelete = atomState.d.delete.bind(atomState.d);
+    atomState.d.delete = function mapDeleteProxy(removedDependency: AnyAtom) {
+      const result = originalMapDelete(removedDependency);
+      if (result) {
+        addEventToTransaction(store, {
+          type: AtomsLoggerEventTypes.dependenciesChanged,
+          atom,
+          removedDependency,
+        });
+      }
+      return result;
     };
 
     // Track the values changes in the atom state.

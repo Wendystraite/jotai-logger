@@ -3378,6 +3378,41 @@ describe('bindAtomsLoggerToStore', () => {
       ]);
     });
 
+    it('should not log when a private atom dependency is removed', () => {
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const aAtom = atom(1);
+      const privateAtom = atom(2);
+      privateAtom.debugPrivate = true;
+      const toggleAtom = atom(false);
+      toggleAtom.debugPrivate = true;
+      const testAtom = atom((get) => {
+        if (!get(toggleAtom)) {
+          get(aAtom);
+          get(privateAtom); // private dep that will be removed
+        } else {
+          get(aAtom); // only aAtom remains
+        }
+      });
+
+      store.sub(testAtom, vi.fn());
+      store.set(toggleAtom, (prev) => !prev);
+
+      vi.runAllTimers();
+
+      // Visible deps stay the same ([aAtom]) – only the private dep was removed → no dep change logged
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : subscribed to ${testAtom}`],
+        [`initialized value of ${aAtom} to 1`, { value: 1 }],
+        [
+          `initialized value of ${testAtom} to undefined`,
+          { dependencies: [`${aAtom}`], value: undefined },
+        ],
+        [`mounted ${aAtom}`, { value: 1 }],
+        [`mounted ${testAtom}`, { dependencies: [`${aAtom}`], value: undefined }],
+      ]);
+    });
+
     it('should log atom dependencies without duplicated atoms', () => {
       bindAtomsLoggerToStore(store, defaultOptions);
 
@@ -3793,6 +3828,11 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should merge nested direct store calls', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      onTestFinished(() => {
+        consoleWarnSpy.mockRestore();
+      });
+
       bindAtomsLoggerToStore(store, defaultOptions);
 
       const otherAtom1 = atom(0);
@@ -3845,6 +3885,12 @@ describe('bindAtomsLoggerToStore', () => {
         [`mounted ${otherAtom3}`, { value: 2 }],
         [`initialized value of ${testAtom3} to undefined`, { value: undefined }],
         [`mounted ${testAtom3}`, { value: undefined }],
+      ]);
+
+      // Jotai should warns about direct store mutations inside atoms
+      expect(consoleWarnSpy.mock.calls).toEqual([
+        ['Detected store mutation during atom read. This is not supported.'],
+        ['Detected store mutation during atom read. This is not supported.'],
       ]);
     });
 

@@ -66,6 +66,7 @@ export function bindAtomsLoggerToStore(
 
   storeWithAtomsLogger[ATOMS_LOGGER_SYMBOL] = {
     ...newStateOptions,
+    registerAbortHandler: buildingBlocks[26],
     prevStoreGet,
     prevStoreSet,
     prevStoreSub,
