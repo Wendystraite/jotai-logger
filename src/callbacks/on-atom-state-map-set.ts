@@ -35,7 +35,7 @@ export function getOnAtomStateMapSet(store: StoreWithAtomsLogger) {
       });
       return result;
     };
-    /* v8 ignore start -- clear is not used anymore in jotai 2.18+ */
+    /* v8 ignore start -- clear is not used anymore in jotai 2.18+ -- @preserve */
     const originalMapClear = atomState.d.clear.bind(atomState.d);
     atomState.d.clear = function mapClearProxy() {
       originalMapClear();
@@ -45,7 +45,7 @@ export function getOnAtomStateMapSet(store: StoreWithAtomsLogger) {
         clearedDependencies: true,
       });
     };
-    /* v8 ignore end */
+    /* v8 ignore end -- @preserve */
     const originalMapDelete = atomState.d.delete.bind(atomState.d);
     atomState.d.delete = function mapDeleteProxy(removedDependency: AnyAtom) {
       const result = originalMapDelete(removedDependency);

@@ -112,7 +112,7 @@ export function addToLogs(
   const { formattedOutput, colorScheme } = options;
 
   if (!formattedOutput) {
-    /* v8 ignore next 3 -- should never happen with typescript override */
+    /* v8 ignore next 3 -- should never happen with typescript override -- @preserve */
     if (!log.plainText) {
       return;
     }
@@ -132,7 +132,7 @@ export function addToLogs(
       }
     }
   } else {
-    /* v8 ignore next 3 -- should never happen with typescript override */
+    /* v8 ignore next 3 -- should never happen with typescript override -- @preserve */
     if (!log.formatted) {
       return;
     }

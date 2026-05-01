@@ -134,7 +134,7 @@ describe('bindAtomsLoggerToStore', () => {
     it('should call original store methods', () => {
       store.get = vi.fn(store.get) as Store['get'];
       store.set = vi.fn(store.set) as Store['set'];
-      store.sub = vi.fn(store.sub) as Store['sub'];
+      store.sub = vi.fn(store.sub);
 
       const originalGet = store.get;
       const originalSet = store.set;
@@ -1762,7 +1762,7 @@ describe('bindAtomsLoggerToStore', () => {
       beforeEach(() => {
         requestIdleCallbackMockFn = vi.fn((cb: IdleRequestCallback) => {
           transactionCallbacks.push(() => {
-            cb({ didTimeout: false, timeRemaining: () => 50 } as IdleDeadline);
+            cb({ didTimeout: false, timeRemaining: () => 50 });
           });
           return 1;
         });
@@ -1917,7 +1917,7 @@ describe('bindAtomsLoggerToStore', () => {
         const requestIdleCallbacks: (() => void)[] = []; // Store scheduled callbacks
         const requestIdleCallbackMockFn = vi.fn().mockImplementation((cb: IdleRequestCallback) => {
           requestIdleCallbacks.push(() => {
-            cb({ didTimeout: false, timeRemaining: () => 50 } as IdleDeadline);
+            cb({ didTimeout: false, timeRemaining: () => 50 });
           });
           return 1;
         });
@@ -3788,7 +3788,7 @@ describe('bindAtomsLoggerToStore', () => {
         const requestIdleCallbacks: (() => void)[] = [];
         const requestIdleCallbackMockFn = vi.fn((cb: IdleRequestCallback) => {
           requestIdleCallbacks.push(() => {
-            cb({ didTimeout: false, timeRemaining: () => 50 } as IdleDeadline);
+            cb({ didTimeout: false, timeRemaining: () => 50 });
           });
           return 1;
         });
@@ -5343,8 +5343,8 @@ describe('bindAtomsLoggerToStore', () => {
       finalizationRegistryRegisterMock = vi.fn();
       finalizationRegistryUnregisterMock = vi.fn();
       registeredCallback = null;
-      vi.spyOn(global, 'FinalizationRegistry').mockImplementation(
-        (callback): FinalizationRegistry<AtomId> => {
+      vi.spyOn(globalThis, 'FinalizationRegistry').mockImplementation(
+        function (callback): FinalizationRegistry<AtomId> {
           registeredCallback = callback;
           return {
             register: finalizationRegistryRegisterMock,

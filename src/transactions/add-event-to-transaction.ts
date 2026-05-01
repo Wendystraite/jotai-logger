@@ -71,7 +71,7 @@ function updateDependencies(
     }
 
     let newDependencies: Set<AtomId>;
-    /* v8 ignore next 3 - clearedDependencies path relies on d.clear(), which jotai 2.18+ no longer calls; kept for jotai 2.17.x compatibility */
+    /* v8 ignore next 3 -- clearedDependencies path relies on d.clear(), which jotai 2.18+ no longer calls; kept for jotai 2.17.x compatibility -- @preserve */
     if (event.clearedDependencies) {
       newDependencies = new Set();
     } else if (event.removedDependency) {
@@ -94,7 +94,8 @@ function updateDependencies(
       let hasExistingDepsChangedEvent = false;
       if (currentTransaction) {
         for (const existingEvent of currentTransaction.events) {
-          if (!existingEvent || existingEvent.atom !== atom) continue;
+          if (!existingEvent) continue;
+          if (existingEvent.atom !== atom) continue;
           if (existingEvent.type === AtomsLoggerEventTypes.dependenciesChanged) {
             hasExistingDepsChangedEvent = true;
             existingEvent.dependencies = newDependencies;
