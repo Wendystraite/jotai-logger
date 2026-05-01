@@ -1,6 +1,6 @@
 import { atom } from 'jotai';
 import type { PrimitiveAtom } from 'jotai';
-import { atomFamily } from 'jotai/utils';
+import { atomFamily } from 'jotai-family';
 import { createStore } from 'jotai/vanilla';
 import { loadable } from 'jotai/vanilla/utils';
 import {
