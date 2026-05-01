@@ -48,14 +48,17 @@ importers:
         specifier: 2.6.1
         version: 2.6.1
       jotai:
-        specifier: 2.16.0
-        version: 2.16.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)
+        specifier: 2.17.0
+        version: 2.17.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)
       jotai-devtools:
         specifier: 0.13.0
-        version: 0.13.0(@types/react@19.2.0)(jotai@2.16.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(redux@5.0.1)
+        version: 0.13.0(@types/react@19.2.0)(jotai@2.17.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(redux@5.0.1)
       jotai-family:
         specifier: 1.0.1
-        version: 1.0.1(jotai@2.16.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0))
+        version: 1.0.1(jotai@2.17.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0))
+      jotai-loadable:
+        specifier: 1.0.0
+        version: 1.0.0(jotai@2.17.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0))
       jsdom:
         specifier: 27.0.0
         version: 27.0.0(postcss@8.5.6)
@@ -1515,8 +1518,13 @@ packages:
     peerDependencies:
       jotai: '>=2.9.0'
 
-  jotai@2.16.0:
-    resolution: {integrity: sha512-NmkwPBet0SHQ28GBfEb10sqnbVOYyn6DL4iazZgGRDUKxSWL0iqcm+IK4TqTSFC2ixGk+XX2e46Wbv364a3cKg==}
+  jotai-loadable@1.0.0:
+    resolution: {integrity: sha512-5VFXQyjjVZTXXqoV2OYoqOYKRa/HbWOkXqgwW8qHSxyoPGW9ULr3+FcrvDdWBVhZgf3NfsFPSN213hjnJqMf4g==}
+    peerDependencies:
+      jotai: ^2.3.0
+
+  jotai@2.17.0:
+    resolution: {integrity: sha512-DBPT7Vx7E7R/ZJL7Uq7yUA9+LLR0IRiRM+Bw5ugVwv8L8++RjlXVXZ2//ccucypc5lcyuHOW09rYcW77RurduQ==}
     engines: {node: '>=12.20.0'}
     peerDependencies:
       '@babel/core': '>=7.0.0'
@@ -3958,7 +3966,7 @@ snapshots:
 
   jiti@2.6.1: {}
 
-  jotai-devtools@0.13.0(@types/react@19.2.0)(jotai@2.16.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(redux@5.0.1):
+  jotai-devtools@0.13.0(@types/react@19.2.0)(jotai@2.17.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(redux@5.0.1):
     dependencies:
       '@mantine/code-highlight': 7.17.8(@mantine/core@7.17.8(@mantine/hooks@7.17.8(react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(@mantine/hooks@7.17.8(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@mantine/core': 7.17.8(@mantine/hooks@7.17.8(react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -3966,7 +3974,7 @@ snapshots:
       '@redux-devtools/extension': 3.3.0(redux@5.0.1)
       clsx: 2.1.1
       javascript-stringify: 2.1.0
-      jotai: 2.16.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)
+      jotai: 2.17.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)
       jsondiffpatch: 0.5.0
       react: 19.2.0
       react-base16-styling: 0.9.1
@@ -3978,11 +3986,15 @@ snapshots:
       - react-dom
       - redux
 
-  jotai-family@1.0.1(jotai@2.16.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)):
+  jotai-family@1.0.1(jotai@2.17.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)):
     dependencies:
-      jotai: 2.16.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)
+      jotai: 2.17.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)
 
-  jotai@2.16.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0):
+  jotai-loadable@1.0.0(jotai@2.17.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)):
+    dependencies:
+      jotai: 2.17.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0)
+
+  jotai@2.17.0(@babel/template@7.27.2)(@types/react@19.2.0)(react@19.2.0):
     optionalDependencies:
       '@babel/template': 7.27.2
       '@types/react': 19.2.0

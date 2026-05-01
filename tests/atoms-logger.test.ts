@@ -1,8 +1,8 @@
 import { atom } from 'jotai';
 import type { PrimitiveAtom } from 'jotai';
 import { atomFamily } from 'jotai-family';
+import { loadable } from 'jotai-loadable';
 import { createStore } from 'jotai/vanilla';
-import { loadable } from 'jotai/vanilla/utils';
 import {
   type Mock,
   type MockInstance,
@@ -4567,6 +4567,9 @@ describe('bindAtomsLoggerToStore', () => {
         });
       });
 
+      // loadable uses unwrap internally and since loadable doesn't expose it, we use a regex to match it
+      const unwrappedThirdAsyncAtomDebugLabelRegex = new RegExp(`atom\\d+`);
+
       const resultAtom = atom((get) => {
         const second = get(secondAtom);
         const third = get(loadable(thirdAsyncAtom));
@@ -4588,8 +4591,19 @@ describe('bindAtomsLoggerToStore', () => {
         [`pending initial promise of ${thirdAsyncAtom}`, { dependencies: [`${firstAtom}`] }],
         // result <-- loadable(thirdAsync)
         [
-          `initialized value of ${loadable(thirdAsyncAtom)} to {"state":"loading"}`,
+          expect.stringMatching(
+            new RegExp(
+              `initialized value of ${unwrappedThirdAsyncAtomDebugLabelRegex.source} to {"state":"loading"}`,
+            ),
+          ),
           { value: { state: 'loading' } },
+        ],
+        [
+          `initialized value of ${loadable(thirdAsyncAtom)} to {"state":"loading"}`,
+          {
+            dependencies: [expect.stringMatching(unwrappedThirdAsyncAtomDebugLabelRegex)],
+            value: { state: 'loading' },
+          },
         ],
         // result
         [
@@ -4602,7 +4616,19 @@ describe('bindAtomsLoggerToStore', () => {
         [`mounted ${secondAtom}`, { value: 'second' }],
         [`mounted ${firstAtom}`, { pendingPromises: [`${thirdAsyncAtom}`], value: 'first' }],
         [`mounted ${thirdAsyncAtom}`, { dependencies: [`${firstAtom}`] }],
-        [`mounted ${loadable(thirdAsyncAtom)}`, { value: { state: 'loading' } }],
+        [
+          expect.stringMatching(
+            new RegExp(`mounted ${unwrappedThirdAsyncAtomDebugLabelRegex.source}`),
+          ),
+          { value: { state: 'loading' } },
+        ],
+        [
+          `mounted ${loadable(thirdAsyncAtom)}`,
+          {
+            dependencies: [expect.stringMatching(unwrappedThirdAsyncAtomDebugLabelRegex)],
+            value: { state: 'loading' },
+          },
+        ],
         [
           `mounted ${resultAtom}`,
           {
@@ -4618,10 +4644,23 @@ describe('bindAtomsLoggerToStore', () => {
           { dependencies: [`${firstAtom}`], value: 'first third' },
         ],
         ['transaction 3'],
+        [
+          expect.stringMatching(
+            new RegExp(
+              `changed value of ${unwrappedThirdAsyncAtomDebugLabelRegex.source} from {"state":"loading"} to "first third"`,
+            ),
+          ),
+          {
+            dependents: [`${loadable(thirdAsyncAtom)}`],
+            oldValue: { state: 'loading' },
+            newValue: 'first third',
+          },
+        ],
         // result <-- loadable(thirdAsync)
         [
           `changed value of ${loadable(thirdAsyncAtom)} from {"state":"loading"} to {"state":"hasData","data":"first third"}`,
           {
+            dependencies: [expect.stringMatching(unwrappedThirdAsyncAtomDebugLabelRegex)],
             dependents: [`${resultAtom}`],
             newValue: { data: 'first third', state: 'hasData' },
             oldValue: { state: 'loading' },
