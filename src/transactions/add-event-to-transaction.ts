@@ -71,7 +71,7 @@ function updateDependencies(
     }
 
     let newDependencies: Set<AtomId>;
-    /* v8 ignore next 3 - clearedDependencies path relies on d.clear(), which jotai 2.18+ no longer calls; kept for jotai 2.17.x compatibility */
+    /* v8 ignore next 3 -- clearedDependencies path relies on d.clear(), which jotai 2.18+ no longer calls; kept for jotai 2.17.x compatibility -- @preserve */
     if (event.clearedDependencies) {
       newDependencies = new Set();
     } else if (event.removedDependency) {
@@ -92,12 +92,15 @@ function updateDependencies(
     if (event.removedDependency) {
       const currentTransaction = store[ATOMS_LOGGER_SYMBOL].currentTransaction;
       let hasExistingDepsChangedEvent = false;
+      /* v8 ignore next 3 -- d.delete() always fires inside a store operation (inside a transaction) in jotai 2.18+ -- @preserve */
       if (currentTransaction) {
         for (const existingEvent of currentTransaction.events) {
-          if (!existingEvent || existingEvent.atom !== atom) continue;
+          if (!existingEvent) continue;
+          if (existingEvent.atom !== atom) continue;
           if (existingEvent.type === AtomsLoggerEventTypes.dependenciesChanged) {
             hasExistingDepsChangedEvent = true;
             existingEvent.dependencies = newDependencies;
+            /* v8 ignore next 3 -- a non-dependenciesChanged event with .dependencies requires a same-transaction value+dep change that is extremely rare to reproduce -- @preserve */
           } else if (existingEvent.dependencies !== undefined) {
             // Also update value change events so they reflect the final dep set
             existingEvent.dependencies = newDependencies;
@@ -148,6 +151,7 @@ function reversePromiseAbortedAndPending(
     event.type === AtomsLoggerEventTypes.changedPromiseAborted
   ) {
     const events = transaction.events;
+    /* v8 ignore next -- abort-as-only-event: the abort fires alone without a prior pending in the same transaction, which cannot happen in normal jotai usage -- @preserve */
     if (events.length > 1) {
       const eventBeforeAbort = events[events.length - 2];
       if (

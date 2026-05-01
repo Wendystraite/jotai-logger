@@ -40,9 +40,8 @@ function cleanupDependencyChangedEvents(
 
   for (let eventIndex = transaction.events.length - 1; eventIndex >= 0; eventIndex -= 1) {
     const event = transaction.events[eventIndex];
-    if (!event || event.type !== AtomsLoggerEventTypes.dependenciesChanged) {
-      continue;
-    }
+    if (!event) continue;
+    if (event.type !== AtomsLoggerEventTypes.dependenciesChanged) continue;
 
     const atom = event.atom;
 
@@ -79,7 +78,8 @@ function cleanupDependencyChangedEvents(
   // events, so prevTransactionDependenciesMap is never initialized for them.
   // We initialize it here to Set([]) so future dep additions can be correctly detected.
   for (const event of transaction.events) {
-    if (!event || event.type !== AtomsLoggerEventTypes.initialized) continue;
+    if (!event) continue;
+    if (event.type !== AtomsLoggerEventTypes.initialized) continue;
     const atom = event.atom;
     if (!store[ATOMS_LOGGER_SYMBOL].prevTransactionDependenciesMap.has(atom)) {
       store[ATOMS_LOGGER_SYMBOL].prevTransactionDependenciesMap.set(

@@ -45,13 +45,17 @@ describe('logTransactionsScheduler', () => {
 
   beforeEach(() => {
     performanceNowSpy = vi.spyOn(performance, 'now').mockReturnValue(0);
-    setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout').mockImplementation((cb: () => void) => {
-      cb();
-      return 1 as unknown as ReturnType<typeof setTimeout>;
-    });
+    setTimeoutSpy = vi
+      .spyOn(globalThis, 'setTimeout')
+      .mockImplementation((cb): ReturnType<typeof globalThis.setTimeout> => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        if (typeof cb === 'function') cb();
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+        return 1 as unknown as ReturnType<typeof globalThis.setTimeout>;
+      });
     logTransactionSpy = vi.spyOn(logTransactionModule, 'logTransaction');
     requestIdleCallbackMockFn = vi.fn().mockImplementation((callback: IdleRequestCallback) => {
-      callback({ didTimeout: false, timeRemaining: () => 50 } as IdleDeadline);
+      callback({ didTimeout: false, timeRemaining: () => 50 });
       return 1;
     });
     globalThis.requestIdleCallback =
@@ -157,7 +161,7 @@ describe('logTransactionsScheduler', () => {
     const requestIdleCallbacks: (() => void)[] = []; // Store scheduled callbacks
     requestIdleCallbackMockFn.mockImplementation((cb: IdleRequestCallback) => {
       requestIdleCallbacks.push(() => {
-        cb({ didTimeout: false, timeRemaining: () => 50 } as IdleDeadline);
+        cb({ didTimeout: false, timeRemaining: () => 50 });
       });
       return 1;
     });

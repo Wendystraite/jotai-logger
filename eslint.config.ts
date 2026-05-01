@@ -13,7 +13,6 @@ export default defineConfig(
     languageOptions: {
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['eslint.config.ts'],
           defaultProject: 'tsconfig.base.json',
         },
         tsconfigRootDir: import.meta.dirname,

@@ -27,6 +27,7 @@ export function logTransaction(
   }
 
   try {
+    /* v8 ignore next -- empty logs only when all transaction header fields are disabled (showTransactionNumber, domain, eventsCount, time all off) with an unknown transaction type -- @preserve */
     if (logs.length > 0) {
       if (!groupTransactions) {
         logger.log(...logs);

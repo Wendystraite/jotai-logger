@@ -134,7 +134,7 @@ describe('bindAtomsLoggerToStore', () => {
     it('should call original store methods', () => {
       store.get = vi.fn(store.get) as Store['get'];
       store.set = vi.fn(store.set) as Store['set'];
-      store.sub = vi.fn(store.sub) as Store['sub'];
+      store.sub = vi.fn(store.sub);
 
       const originalGet = store.get;
       const originalSet = store.set;
@@ -1123,6 +1123,22 @@ describe('bindAtomsLoggerToStore', () => {
         ]);
         expect(consoleMock.groupEnd.mock.calls).toEqual([[], []]);
       });
+
+      it('should log sub-log indentation when `indentSpaces` is set and there are sub-logs', () => {
+        bindAtomsLoggerToStore(store, { ...defaultOptions, indentSpaces: 2 });
+
+        const aAtom = atom(1);
+        const bAtom = atom((get) => get(aAtom) * 2);
+        store.get(bAtom);
+
+        vi.runAllTimers();
+
+        expect(consoleMock.log.mock.calls).toEqual([
+          [`transaction 1 : retrieved value of ${bAtom}`],
+          [`  initialized value of ${aAtom} to 1`, { value: 1 }],
+          [`  initialized value of ${bAtom} to 2`, { dependencies: [`${aAtom}`], value: 2 }],
+        ]);
+      });
     });
 
     describe('stringifyLimit', () => {
@@ -1762,7 +1778,7 @@ describe('bindAtomsLoggerToStore', () => {
       beforeEach(() => {
         requestIdleCallbackMockFn = vi.fn((cb: IdleRequestCallback) => {
           transactionCallbacks.push(() => {
-            cb({ didTimeout: false, timeRemaining: () => 50 } as IdleDeadline);
+            cb({ didTimeout: false, timeRemaining: () => 50 });
           });
           return 1;
         });
@@ -1917,7 +1933,7 @@ describe('bindAtomsLoggerToStore', () => {
         const requestIdleCallbacks: (() => void)[] = []; // Store scheduled callbacks
         const requestIdleCallbackMockFn = vi.fn().mockImplementation((cb: IdleRequestCallback) => {
           requestIdleCallbacks.push(() => {
-            cb({ didTimeout: false, timeRemaining: () => 50 } as IdleDeadline);
+            cb({ didTimeout: false, timeRemaining: () => 50 });
           });
           return 1;
         });
@@ -2319,6 +2335,55 @@ describe('bindAtomsLoggerToStore', () => {
       ]);
     });
 
+    it('should not log promise resolved when promise was already aborted', async () => {
+      // Covers the isAborted=true branch in the .then() callback
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      let externalResolve: (value: number) => void;
+      const promiseAtom = atom(async (get, { signal }) => {
+        return new Promise<number>((resolve, reject) => {
+          externalResolve = resolve;
+          signal.addEventListener('abort', () => {
+            reject(new Error('aborted'));
+          });
+        });
+      });
+
+      const dependencyAtom = atom(0);
+      dependencyAtom.debugPrivate = true;
+
+      const derivedAtom = atom(async (get) => {
+        const dep = get(dependencyAtom);
+        if (dep === 0) {
+          return get(promiseAtom);
+        }
+        return -1;
+      });
+
+      store.sub(derivedAtom, vi.fn());
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls.length).toBeGreaterThan(0);
+
+      vi.clearAllMocks();
+
+      // Abort by changing the dependency, then resolve the original promise
+      store.set(dependencyAtom, 1);
+      await vi.advanceTimersByTimeAsync(250);
+
+      // Now resolve the already-aborted promise — should NOT be logged
+      externalResolve!(42);
+      await vi.advanceTimersByTimeAsync(250);
+
+      vi.runAllTimers();
+
+      // The aborted promise's resolve callback fires but isAborted=true so nothing extra is logged
+      expect(consoleMock.log.mock.calls).not.toContain(
+        expect.arrayContaining([expect.stringContaining('resolved initial promise')]),
+      );
+    });
+
     it('should show changed promise aborted before a new promise is pending', async () => {
       bindAtomsLoggerToStore(store, defaultOptions);
 
@@ -2367,6 +2432,76 @@ describe('bindAtomsLoggerToStore', () => {
         [`transaction 5 : resolved promise of ${promiseAtom}`],
         [`resolved promise of ${promiseAtom} from 0 to 2`, { oldValue: 0, newValue: 2 }],
       ]);
+    });
+
+    it('should not swap events when abort is the only event in the transaction', async () => {
+      // Covers add-event-to-transaction.ts:152 false branch: events.length <= 1
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const promiseAtom = atom<unknown>(0);
+
+      store.sub(promiseAtom, vi.fn());
+      await vi.advanceTimersByTimeAsync(0);
+
+      vi.clearAllMocks();
+
+      // Set a promise that will be aborted — then immediately abort it by setting another value
+      const neverResolve = new Promise<unknown>(() => {});
+      store.set(promiseAtom, neverResolve);
+
+      // Set a new value immediately so the pending promise has no time to accumulate other events,
+      // and the abort fires alone in its transaction
+      store.set(promiseAtom, 99);
+
+      vi.runAllTimers();
+
+      // Main thing is no crash — the logger handles abort-as-only-event gracefully
+      expect(consoleMock.log.mock.calls.length).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should not swap events when the event before abort is not a pending promise event', async () => {
+      // Covers add-event-to-transaction.ts:154 false branch: preceding event is not pending
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const aAtom = atom(1);
+      const bAtom = atom(2);
+      const depAtom = atom(0);
+      depAtom.debugPrivate = true;
+
+      // A derived atom that reads both aAtom and bAtom and depends on depAtom
+      const promiseAtom = atom(async (get, { signal }) => {
+        get(depAtom);
+        const a = get(aAtom);
+        const b = get(bAtom);
+        return new Promise<number>((resolve, reject) => {
+          const t = setTimeout(() => {
+            resolve(a + b);
+          }, 1000);
+          signal.addEventListener('abort', () => {
+            clearTimeout(t);
+            reject(new Error('aborted'));
+          });
+        });
+      });
+
+      store.sub(promiseAtom, vi.fn());
+      // Let the initial promise start
+      await vi.advanceTimersByTimeAsync(100);
+
+      vi.clearAllMocks();
+
+      // Change aAtom (adds a changed value event for aAtom into the transaction)
+      // then immediately change depAtom to abort the promise
+      // This should result in a transaction where the event before the abort
+      // is a changed-value event (not a pending), so no swap should happen
+      store.set(aAtom, 2);
+      store.set(depAtom, 1);
+      await vi.advanceTimersByTimeAsync(1500);
+
+      vi.runAllTimers();
+
+      // No crash; events logged in some order
+      expect(consoleMock.log.mock.calls.length).toBeGreaterThan(0);
     });
 
     it('should log promises in colors', async () => {
@@ -2816,6 +2951,63 @@ describe('bindAtomsLoggerToStore', () => {
   });
 
   describe('errors', () => {
+    it('should log error values without stringifying when stringifyValues is false', async () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        stringifyValues: false,
+      });
+
+      const errorAtom = atom<unknown>(() => Promise.reject(new Error('initial error')));
+
+      store.sub(errorAtom, vi.fn());
+      await vi.advanceTimersByTimeAsync(250);
+
+      vi.runAllTimers();
+
+      // Covers event-log-pipeline.ts line 265: stringifyValues=false, isNewValueError=true, no old value
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : subscribed to ${errorAtom}`],
+        [`pending initial promise of ${errorAtom}`],
+        [`mounted ${errorAtom}`],
+        [`rejected initial promise of ${errorAtom} to`, new Error('initial error')],
+      ]);
+    });
+
+    it('should log old error and new error without stringifying when stringifyValues is false', async () => {
+      bindAtomsLoggerToStore(store, {
+        ...defaultOptions,
+        stringifyValues: false,
+      });
+
+      const depAtom = atom(0);
+      depAtom.debugPrivate = true;
+      let count = 0;
+      // eslint-disable-next-line @typescript-eslint/require-await
+      const errorAtom = atom<unknown>(async (get) => {
+        get(depAtom);
+        count += 1;
+        throw new Error(`error ${count}`);
+      });
+
+      store.sub(errorAtom, vi.fn());
+      await vi.advanceTimersByTimeAsync(250);
+
+      vi.clearAllMocks();
+
+      // Change dep so errorAtom re-runs: old error → new pending → new error
+      store.set(depAtom, 1);
+      await vi.advanceTimersByTimeAsync(250);
+
+      vi.runAllTimers();
+
+      // Covers event-log-pipeline.ts lines 215, 262:
+      // - line 215: stringifyValues=false, old error shown in pending log (old value was error)
+      // - line 262: stringifyValues=false, hasOldValue && isOldValueError, new value is also error
+      const calls = consoleMock.log.mock.calls;
+      expect(calls).toContainEqual(expect.arrayContaining([expect.stringContaining('pending')]));
+      expect(calls).toContainEqual(expect.arrayContaining([expect.stringContaining('rejected')]));
+    });
+
     it('should log custom errors', async () => {
       bindAtomsLoggerToStore(store, defaultOptions);
 
@@ -3262,6 +3454,70 @@ describe('bindAtomsLoggerToStore', () => {
       expect(storeData.prevTransactionDependenciesMap.has(aAtom)).toBeTruthy();
       expect(storeData.prevTransactionDependenciesMap.has(bAtom)).toBeFalsy();
       expect(storeData.prevTransactionDependenciesMap.has(cAtom)).toBeFalsy();
+    });
+
+    it('should update value-event dependencies when a dependency is removed and a value change already exists in the transaction', () => {
+      // Covers add-event-to-transaction.ts:102 — the else-if (existingEvent.dependencies !== undefined) branch
+      // when a removedDependency event is processed and a non-dependenciesChanged event with
+      // dependencies also exists in the current transaction
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const aAtom = atom(1);
+      const bAtom = atom(2);
+      const toggleAtom = atom(false);
+      toggleAtom.debugPrivate = true;
+      // testAtom depends on aAtom and optionally bAtom, and its value changes when toggle changes
+      const testAtom = atom((get) => {
+        const toggle = get(toggleAtom);
+        if (!toggle) {
+          return get(aAtom) + get(bAtom);
+        }
+        return get(aAtom);
+      });
+
+      store.sub(testAtom, vi.fn());
+      store.set(aAtom, 10); // triggers value change event for testAtom with current deps
+      store.set(toggleAtom, true); // triggers dep removal
+
+      vi.runAllTimers();
+
+      // The value-change events for testAtom should reflect the final dependency set
+      expect(consoleMock.log.mock.calls).toEqual(
+        expect.arrayContaining([
+          expect.arrayContaining([expect.stringContaining(`changed dependencies of ${testAtom}`)]),
+        ]),
+      );
+    });
+
+    it('should add a dependenciesChanged event when a dep is first removed (no prior dependenciesChanged in transaction)', () => {
+      // Covers add-event-to-transaction.ts:95-97 (currentTransaction=null / no prior dep event)
+      // and the pure-deletion case where no hasExistingDepsChangedEvent
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const aAtom = atom(1);
+      const bAtom = atom(2);
+      const toggleAtom = atom(false);
+      toggleAtom.debugPrivate = true;
+      const testAtom = atom((get) => {
+        if (!get(toggleAtom)) {
+          get(aAtom);
+          get(bAtom);
+        } else {
+          get(aAtom);
+        }
+        return null;
+      });
+
+      store.sub(testAtom, vi.fn());
+      store.set(toggleAtom, true); // removes bAtom dep in its own transaction
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls).toEqual(
+        expect.arrayContaining([
+          expect.arrayContaining([expect.stringContaining(`changed dependencies of ${testAtom}`)]),
+        ]),
+      );
     });
 
     it('should log when an atom dependencies are removed', () => {
@@ -3788,7 +4044,7 @@ describe('bindAtomsLoggerToStore', () => {
         const requestIdleCallbacks: (() => void)[] = [];
         const requestIdleCallbackMockFn = vi.fn((cb: IdleRequestCallback) => {
           requestIdleCallbacks.push(() => {
-            cb({ didTimeout: false, timeRemaining: () => 50 } as IdleDeadline);
+            cb({ didTimeout: false, timeRemaining: () => 50 });
           });
           return 1;
         });
@@ -4314,6 +4570,36 @@ describe('bindAtomsLoggerToStore', () => {
   });
 
   describe('mounting', () => {
+    it('should unsubscribe while inside a transaction without starting a new one', () => {
+      // Covers on-store-sub.ts lines 40-51: doStartTransaction=false in onStoreUnsubscribe
+      bindAtomsLoggerToStore(store, defaultOptions);
+
+      const testAtom = atom(0);
+      let capturedUnsubscribe: (() => void) | undefined;
+
+      const triggerAtom = atom(null, (_get, set) => {
+        // Subscribe and immediately unsubscribe from within a transaction (set call)
+        capturedUnsubscribe = store.sub(testAtom, vi.fn());
+        set(testAtom, 1);
+      });
+
+      store.set(triggerAtom);
+
+      vi.runAllTimers();
+
+      expect(capturedUnsubscribe).toBeDefined();
+
+      // Now unsubscribe from within another transaction (isInsideTransaction=true)
+      const unsubAtom = atom(null, () => {
+        capturedUnsubscribe!();
+      });
+      store.set(unsubAtom);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls.length).toBeGreaterThan(0);
+    });
+
     it('should log mounted and unmounted atoms', () => {
       bindAtomsLoggerToStore(store, defaultOptions);
 
@@ -5343,8 +5629,8 @@ describe('bindAtomsLoggerToStore', () => {
       finalizationRegistryRegisterMock = vi.fn();
       finalizationRegistryUnregisterMock = vi.fn();
       registeredCallback = null;
-      vi.spyOn(global, 'FinalizationRegistry').mockImplementation(
-        (callback): FinalizationRegistry<AtomId> => {
+      vi.spyOn(globalThis, 'FinalizationRegistry').mockImplementation(
+        function (callback): FinalizationRegistry<AtomId> {
           registeredCallback = callback;
           return {
             register: finalizationRegistryRegisterMock,

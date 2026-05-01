@@ -328,9 +328,7 @@ export const EventLogPipeline = new LogPipeline()
       logs[0] = `${indentSpacesDepth1}${logs[0]}`;
 
       for (const subLogs of subLogsArray) {
-        if (indentSpaces > 0) {
-          subLogs[0] = `${indentSpacesDepth2}${subLogs[0]}`;
-        }
+        subLogs[0] = `${indentSpacesDepth2}${subLogs[0]}`;
       }
     }
   });
