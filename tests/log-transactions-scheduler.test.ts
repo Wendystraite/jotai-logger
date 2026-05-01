@@ -1,15 +1,15 @@
 import { createStore } from 'jotai';
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 
-import { bindAtomsLoggerToStore } from '../src/bind-atoms-logger-to-store.js';
-import { ATOMS_LOGGER_SYMBOL } from '../src/consts/atom-logger-symbol.js';
-import * as logTransactionModule from '../src/log-atom-event/log-transaction.js';
-import { createLogTransactionsScheduler } from '../src/log-transactions-scheduler.js';
+import { bindAtomsLoggerToStore } from '../src/vanilla/bind-atoms-logger-to-store.js';
+import { ATOMS_LOGGER_SYMBOL } from '../src/vanilla/consts/atom-logger-symbol.js';
+import * as logTransactionModule from '../src/vanilla/log-atom-event/log-transaction.js';
+import { createLogTransactionsScheduler } from '../src/vanilla/log-transactions-scheduler.js';
 import {
   AtomsLoggerTransactionTypes,
   type AtomsLoggerTransaction,
   type StoreWithAtomsLogger,
-} from '../src/types/atoms-logger.js';
+} from '../src/vanilla/types/atoms-logger.js';
 
 function getFakeTransaction(transactionNumber: number): AtomsLoggerTransaction {
   const transaction: AtomsLoggerTransaction = {

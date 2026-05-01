@@ -14,9 +14,9 @@ import {
   vi,
 } from 'vitest';
 
-import { isAtomsLoggerBoundToStore } from '../src/bind-atoms-logger-to-store.js';
 import { bindAtomsLoggerToStore, useAtomsLogger } from '../src/index.js';
-import type { AtomsLoggerOptions } from '../src/types/atoms-logger.js';
+import { isAtomsLoggerBoundToStore } from '../src/vanilla/bind-atoms-logger-to-store.js';
+import type { AtomsLoggerOptions } from '../src/vanilla/types/atoms-logger.js';
 
 function isDevtoolsStore(store: Store): boolean {
   return 'get_internal_weak_map' in store;

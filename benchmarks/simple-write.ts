@@ -1,7 +1,7 @@
 import { add, complete, cycle, save, suite } from 'benny';
 import { type PrimitiveAtom, atom, createStore } from 'jotai';
 
-import { bindAtomsLoggerToStore } from '../src/bind-atoms-logger-to-store.js';
+import { bindAtomsLoggerToStore } from '../dist/vanilla/bind-atoms-logger-to-store.js';
 
 /**
  * Taken from Jotai benchmarks : [simple-write.ts](https://github.com/pmndrs/jotai/blob/main/benchmarks/simple-write.ts).

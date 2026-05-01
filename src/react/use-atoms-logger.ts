@@ -1,10 +1,16 @@
 import { useStore } from 'jotai';
 import { useRef } from 'react';
 
-import { bindAtomsLoggerToStore, isAtomsLoggerBoundToStore } from './bind-atoms-logger-to-store.js';
-import { ATOMS_LOGGER_SYMBOL } from './consts/atom-logger-symbol.js';
-import type { AtomsLoggerOptions, AtomsLoggerOptionsInState } from './types/atoms-logger.js';
-import { atomsLoggerOptionsToState } from './utils/logger-options-to-state.js';
+import {
+  bindAtomsLoggerToStore,
+  isAtomsLoggerBoundToStore,
+} from '../vanilla/bind-atoms-logger-to-store.js';
+import { ATOMS_LOGGER_SYMBOL } from '../vanilla/consts/atom-logger-symbol.js';
+import type {
+  AtomsLoggerOptions,
+  AtomsLoggerOptionsInState,
+} from '../vanilla/types/atoms-logger.js';
+import { atomsLoggerOptionsToState } from '../vanilla/utils/logger-options-to-state.js';
 
 /**
  * Hook that logs atom state changes in the console.

@@ -1,6 +1,6 @@
 import { atom, createStore } from 'jotai';
 
-import { bindAtomsLoggerToStore } from '../dist/bind-atoms-logger-to-store.js';
+import { bindAtomsLoggerToStore } from '../dist/vanilla/bind-atoms-logger-to-store.js';
 
 const ITERATIONS = 10_000;
 

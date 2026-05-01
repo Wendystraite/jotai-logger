@@ -75,6 +75,24 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./vanilla": {
+      "types": "./dist/vanilla.d.ts",
+      "import": "./dist/vanilla.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "vanilla": [
+        "./dist/vanilla.d.ts"
+      ],
+      "react": [
+        "./dist/react.d.ts"
+      ]
     }
   },
   "peerDependencies": {

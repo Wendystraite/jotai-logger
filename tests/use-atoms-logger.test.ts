@@ -4,16 +4,16 @@ import { createStore, getDefaultStore } from 'jotai';
 import { useEffect, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { isAtomsLoggerBoundToStore } from '../src/bind-atoms-logger-to-store.js';
-import * as bindAtomsLoggerToStoreModule from '../src/bind-atoms-logger-to-store.js';
-import { ATOMS_LOGGER_SYMBOL } from '../src/consts/atom-logger-symbol.js';
 import { bindAtomsLoggerToStore, useAtomsLogger } from '../src/index.js';
+import { isAtomsLoggerBoundToStore } from '../src/vanilla/bind-atoms-logger-to-store.js';
+import * as bindAtomsLoggerToStoreModule from '../src/vanilla/bind-atoms-logger-to-store.js';
+import { ATOMS_LOGGER_SYMBOL } from '../src/vanilla/consts/atom-logger-symbol.js';
 import {
   type AtomsLoggerOptions,
   type AtomsLoggerOptionsInState,
   type Store,
   type StoreWithAtomsLogger,
-} from '../src/types/atoms-logger.js';
+} from '../src/vanilla/types/atoms-logger.js';
 
 describe('useAtomsLogger', () => {
   it('should bind logger to store', () => {

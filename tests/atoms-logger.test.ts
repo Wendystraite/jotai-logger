@@ -15,10 +15,15 @@ import {
   vi,
 } from 'vitest';
 
-import { isAtomsLoggerBoundToStore } from '../src/bind-atoms-logger-to-store.js';
-import { ATOMS_LOGGER_SYMBOL } from '../src/consts/atom-logger-symbol.js';
 import { type AtomsLoggerOptions, bindAtomsLoggerToStore } from '../src/index.js';
-import type { AnyAtom, AtomId, Store, StoreWithAtomsLogger } from '../src/types/atoms-logger.js';
+import { isAtomsLoggerBoundToStore } from '../src/vanilla/bind-atoms-logger-to-store.js';
+import { ATOMS_LOGGER_SYMBOL } from '../src/vanilla/consts/atom-logger-symbol.js';
+import type {
+  AnyAtom,
+  AtomId,
+  Store,
+  StoreWithAtomsLogger,
+} from '../src/vanilla/types/atoms-logger.js';
 
 let mockDate: MockInstance;
 

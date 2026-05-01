@@ -13,8 +13,8 @@ import {
   vi,
 } from 'vitest';
 
-import type { AtomsLoggerOptions } from '../src/types/atoms-logger.js';
-import { useAtomsLogger } from '../src/use-atoms-logger.js';
+import { useAtomsLogger } from '../src/react/use-atoms-logger.js';
+import type { AtomsLoggerOptions } from '../src/vanilla/types/atoms-logger.js';
 
 let mockDate: MockInstance;
 
