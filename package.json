@@ -42,13 +42,14 @@
     "publint": "^0.3.13",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "shx": "^0.4.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.45.0",
     "vitest": "^3.2.4"
   },
   "scripts": {
-    "build": "rm -fr dist && tsc --build tsconfig.lib.json",
+    "build": "shx rm -fr dist && tsc --build tsconfig.lib.json",
     "ci": "pnpm run build && pnpm run check-types && pnpm run check-format && pnpm run lint:package && pnpm run check-exports && pnpm run lint && pnpm run coverage",
     "format": "prettier --write .",
     "check-format": "prettier --check .",
