@@ -4617,6 +4617,7 @@ describe('bindAtomsLoggerToStore', () => {
           `resolved initial promise of ${thirdAsyncAtom} to "first third"`,
           { dependencies: [`${firstAtom}`], value: 'first third' },
         ],
+        ['transaction 3'],
         // result <-- loadable(thirdAsync)
         [
           `changed value of ${loadable(thirdAsyncAtom)} from {"state":"loading"} to {"state":"hasData","data":"first third"}`,
