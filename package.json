@@ -83,6 +83,10 @@
     "./react": {
       "types": "./dist/react.d.ts",
       "import": "./dist/react.js"
+    },
+    "./formatters/console": {
+      "types": "./dist/formatters/console.d.ts",
+      "import": "./dist/formatters/console.js"
     }
   },
   "typesVersions": {
@@ -92,6 +96,9 @@
       ],
       "react": [
         "./dist/react.d.ts"
+      ],
+      "formatters/console": [
+        "./dist/formatters/console.d.ts"
       ]
     }
   },

@@ -2,11 +2,8 @@ import { type INTERNAL_AtomState } from 'jotai/vanilla/internals';
 
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import { addEventToTransaction } from '../transactions/add-event-to-transaction.js';
-import {
-  AtomsLoggerEventTypes,
-  type AnyAtom,
-  type StoreWithAtomsLogger,
-} from '../types/atoms-logger.js';
+import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import { AtomsLoggerEventTypes, type AnyAtom } from '../types/event.js';
 import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { onAtomValueChanged } from './on-atom-value-changed.js';
 

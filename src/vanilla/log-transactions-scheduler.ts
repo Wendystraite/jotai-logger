@@ -1,5 +1,4 @@
 import { ATOMS_LOGGER_SYMBOL } from './consts/atom-logger-symbol.js';
-import { logTransaction } from './log-atom-event/log-transaction.js';
 import type { AtomsLoggerState, StoreWithAtomsLogger } from './types/atoms-logger.js';
 
 // Check the time every N processed transactions to avoid doing it too often.
@@ -23,7 +22,7 @@ export function createLogTransactionsScheduler(
           while (this.queue.length > 0) {
             const transaction = this.queue.shift();
             if (transaction) {
-              logTransaction(transaction, store[ATOMS_LOGGER_SYMBOL]);
+              store[ATOMS_LOGGER_SYMBOL].formatter(transaction);
               processedCount += 1;
 
               // Stop processing if we reached the max processing time

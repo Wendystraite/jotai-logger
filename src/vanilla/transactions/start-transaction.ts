@@ -1,9 +1,6 @@
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import type {
-  AtomsLoggerTransaction,
-  AtomsLoggerTransactionMap,
-  StoreWithAtomsLogger,
-} from '../types/atoms-logger.js';
+import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import type { AtomsLoggerTransaction, AtomsLoggerTransactionMap } from '../types/transaction.js';
 import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { endTransaction } from './end-transaction.js';
 
@@ -35,12 +32,7 @@ export function startTransaction(
   transaction.events = [];
   transaction.eventsCount = 0;
 
-  if (
-    store[ATOMS_LOGGER_SYMBOL].showTransactionElapsedTime ||
-    store[ATOMS_LOGGER_SYMBOL].showTransactionLocaleTime
-  ) {
-    transaction.startTimestamp = performance.now();
-  }
+  transaction.startTimestamp = performance.now();
 
   if (!transaction.componentDisplayName && store[ATOMS_LOGGER_SYMBOL].getComponentDisplayName) {
     try {

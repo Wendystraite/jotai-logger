@@ -1,11 +1,7 @@
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import {
-  AtomsLoggerEventTypes,
-  type AnyAtom,
-  type AtomId,
-  type AtomsLoggerTransaction,
-  type StoreWithAtomsLogger,
-} from '../types/atoms-logger.js';
+import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import { AtomsLoggerEventTypes, type AnyAtom, type AtomId } from '../types/event.js';
+import type { AtomsLoggerTransaction } from '../types/transaction.js';
 
 export function flushTransactionEvents(store: StoreWithAtomsLogger): void {
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- should never happen since it is called in endTransaction

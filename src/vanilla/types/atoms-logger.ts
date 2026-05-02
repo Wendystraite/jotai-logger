@@ -7,6 +7,9 @@ import type {
 } from 'jotai/vanilla/internals';
 
 import type { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
+import type { AnyAtom, AtomId } from './event.js';
+import type { AtomsLoggerFormatter } from './formatter.js';
+import type { AtomsLoggerTransaction } from './transaction.js';
 
 /**
  * Jotai's store.
@@ -19,16 +22,6 @@ export type Store = ReturnType<typeof useStore>;
 export type StoreWithAtomsLogger = Store & {
   [ATOMS_LOGGER_SYMBOL]: AtomsLoggerState;
 };
-
-/**
- * String representation of an atom.
- */
-export type AtomId = ReturnType<AnyAtom['toString']>;
-
-/**
- * Generic atom type.
- */
-export type AnyAtom = Atom<unknown>;
 
 /**
  * Internal state of the logger.
@@ -65,11 +58,6 @@ export type AtomsLoggerState = AtomsLoggerOptionsInState & {
     /** Add a transaction to the queue and process it */
     add: (transaction: AtomsLoggerTransaction) => void;
   };
-  /** Maximum widths tracked for auto-alignment when autoAlignTransactions is enabled */
-  maxWidths: {
-    eventsCount: number;
-    elapsedTime: number;
-  };
   /** Previous overridden store.get method */
   prevStoreGet: StoreWithAtomsLogger['get'];
   /** Previous overridden store.set method */
@@ -85,78 +73,18 @@ export type AtomsLoggerState = AtomsLoggerOptionsInState & {
 };
 
 /**
- * Logger options stored in the logger's state
+ * Core logger options stored in the logger's state.
  * @see {@link AtomsLoggerOptions} for the public API.
  */
 export interface AtomsLoggerOptionsInState {
   /** @see AtomsLoggerOptions.enabled */
   enabled: boolean;
 
-  /** @see AtomsLoggerOptions.domain */
-  domain: string | undefined;
-
   /** @see AtomsLoggerOptions.shouldShowPrivateAtoms */
   shouldShowPrivateAtoms: boolean;
 
   /** @see AtomsLoggerOptions.shouldShowAtom */
   shouldShowAtom: ((atom: Atom<unknown>) => boolean) | undefined;
-
-  /** @see AtomsLoggerOptions.logger */
-  logger: Pick<Console, 'log'> & Partial<Pick<Console, 'group' | 'groupCollapsed' | 'groupEnd'>>;
-
-  /** @see AtomsLoggerOptions.groupTransactions */
-  groupTransactions: boolean;
-
-  /** @see AtomsLoggerOptions.groupEvents */
-  groupEvents: boolean;
-
-  /** @see AtomsLoggerOptions.indentSpaces */
-  indentSpaces: number;
-
-  /** @see AtomsLoggerOptions.indentSpaces */
-  indentSpacesDepth1: string;
-
-  /** @see AtomsLoggerOptions.indentSpaces */
-  indentSpacesDepth2: string;
-
-  /** @see AtomsLoggerOptions.formattedOutput */
-  formattedOutput: boolean;
-
-  /** @see AtomsLoggerOptions.colorScheme */
-  colorScheme: 'default' | 'light' | 'dark';
-
-  /** @see AtomsLoggerOptions.stringifyLimit */
-  stringifyLimit: number;
-
-  /** @see AtomsLoggerOptions.stringifyValues */
-  stringifyValues: boolean;
-
-  /** @see AtomsLoggerOptions.stringify */
-  stringify: ((this: void, value: unknown) => string) | undefined;
-
-  /** @see AtomsLoggerOptions.showTransactionNumber */
-  showTransactionNumber: boolean;
-
-  /** @see AtomsLoggerOptions.showTransactionEventsCount */
-  showTransactionEventsCount: boolean;
-
-  /** @see AtomsLoggerOptions.showTransactionLocaleTime */
-  showTransactionLocaleTime: boolean;
-
-  /** @see AtomsLoggerOptions.showTransactionElapsedTime */
-  showTransactionElapsedTime: boolean;
-
-  /** @see AtomsLoggerOptions.autoAlignTransactions */
-  autoAlignTransactions: boolean;
-
-  /** @see AtomsLoggerOptions.collapseTransactions */
-  collapseTransactions: boolean;
-
-  /** @see AtomsLoggerOptions.collapseEvents */
-  collapseEvents: boolean;
-
-  /** @see AtomsLoggerOptions.ownerStackLimit */
-  ownerStackLimit: number;
 
   /** @see AtomsLoggerOptions.getOwnerStack */
   getOwnerStack?(this: void): string | null | undefined;
@@ -172,29 +100,41 @@ export interface AtomsLoggerOptionsInState {
 
   /** @see AtomsLoggerOptions.maxProcessingTimeMs */
   maxProcessingTimeMs: number;
+
+  /** The formatter to call when a transaction is ready to be output. */
+  formatter: AtomsLoggerFormatter;
 }
 
 /**
  * Options for the atoms logger.
+ *
+ * These control event collection and transaction scheduling only.
+ * To customise the console output, pass a {@link AtomsLoggerFormatter} via the `formatter` option,
+ * or use {@link consoleFormatter} from `jotai-logger/formatters/console`.
  */
 export interface AtomsLoggerOptions {
+  /**
+   * Custom formatter called for each completed transaction.
+   *
+   * When not provided, a default `consoleFormatter()` (from `jotai-logger/formatters/console`)
+   * is used with its default options.
+   *
+   * @example
+   * ```ts
+   * import { consoleFormatter } from 'jotai-logger/formatters/console';
+   * bindAtomsLoggerToStore(store, {
+   *   formatter: consoleFormatter({ colorScheme: 'dark', domain: 'MyApp' }),
+   * });
+   * ```
+   */
+  formatter?: AtomsLoggerFormatter;
+
   /**
    * Enable or disable the logger.
    *
    * @default true
    */
   enabled?: boolean;
-
-  /**
-   * Domain to use for the logger.
-   *
-   * The domain is used to identify the logger in the console.
-   * It is prefixed to the transaction number.
-   *
-   * - If not provided, the transaction log will look like : `transaction 1 - 12:00:00 - 2.00ms`
-   * - If provided, the transaction log will look like : `domain - transaction 1 - 12:00:00 - 2.00ms`
-   */
-  domain?: string;
 
   /**
    * Whether to show private atoms in the console.
@@ -234,235 +174,6 @@ export interface AtomsLoggerOptions {
    * ```
    */
   shouldShowAtom?(this: void, atom: Atom<unknown>): boolean;
-
-  /**
-   * Custom logger to use.
-   *
-   * By default, it uses the `console` global object.
-   *
-   * If either `groupTransactions` and `groupEvents` are `false`
-   * or `logger.group` and `logger.groupEnd` are not provided, logs will not be grouped.
-   *
-   * @default console
-   */
-  logger?: Pick<Console, 'log'> & Partial<Pick<Console, 'group' | 'groupCollapsed' | 'groupEnd'>>;
-
-  /**
-   * Whether to group transaction logs with `logger.group` and `logger.groupEnd`.
-   *
-   * - If set to `true`, transaction will be grouped using `logger.group`, `logger.groupCollapsed` and `logger.groupEnd`.
-   * - If set to `false`, only `logger.log` will be used.
-   *   This can be useful if using a custom `logger` that doesn't support grouping or for testing purposes.
-   *
-   * @default true
-   */
-  groupTransactions?: boolean;
-
-  /**
-   * Whether to group event logs with `logger.group` and `logger.groupEnd`.
-   *
-   * - If set to `true`, event logs will be grouped using `logger.group`, `logger.groupCollapsed` and `logger.groupEnd`.
-   * - If set to `false`, only `logger.log` will be used.
-   *   This can be useful if using a custom `logger` that doesn't support grouping or for testing purposes.
-   *
-   * @default false
-   */
-  groupEvents?: boolean;
-
-  /**
-   * Number of spaces to use for each level of indentation in the logs.
-   *
-   * Set to 0 to disable indentation completely.
-   *
-   * @default 0
-   */
-  indentSpaces?: number;
-
-  /**
-   * Whether to use colors/formatting in the console.
-   *
-   * - If set to `true`, the logger will use formatted and colorized output using [the browser console's string substitutions](https://developer.mozilla.org/en-US/docs/Web/API/console#using_string_substitutions) (%c / %o).
-   *   This works with the `colorScheme` option to determine the colors to use.
-   * - If set to `false`, the logger will use plain texts without formatting.
-   *
-   * This is useful for testing purposes or if you want to use the logger in a non-browser environment.
-   *
-   * @default true
-   */
-  formattedOutput?: boolean;
-
-  /**
-   * Color scheme to use for the logger.
-   *
-   * This is used to determine the colors of the logs in the console.
-   * The default color scheme uses colors that are easy to read in both light and dark mode.
-   *
-   * - If `default`, the logger will use the colors that are easy to read in both light and dark mode. If will **NOT** use the system preference.
-   * - If `light`, the logger will use the colors that are easy to read in light mode.
-   * - If `dark`, the logger will use the colors that are easy to read in dark mode.
-   *
-   * See example bellow if you want the colors to be automatically determined based on the user's system preference using `window.matchMedia`.
-   *
-   * This option has no effect if `formattedOutput` is set to `false`.
-   *
-   * @default "default"
-   *
-   * @example
-   * ```ts
-   * // If you want the colors to be automatically determined based on the user's system preference
-   * useAtomsLogger({ colorScheme: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light" });
-   *
-   * // If you want the color to be specified in an environment variable (in vite)
-   * useAtomsLogger({ colorScheme: import.meta.env.VITE_ATOMS_LOGGER_COLOR_SCHEME });
-   * ```
-   */
-  colorScheme?: 'default' | 'light' | 'dark';
-
-  /**
-   * Maximum length of any logged stringified data.
-   *
-   * This includes the state of atoms, the arguments and results of atoms setter methods, etc.
-   *
-   * If the string is longer, it will be truncated and appended with '…'.
-   * Use 0 for no limit.
-   *
-   * @default 50
-   */
-  stringifyLimit?: number;
-
-  /**
-   * Whether to stringify data in the logs.
-   *
-   * This includes the state of atoms, the arguments and results of atoms
-   * setter methods, etc.
-   *
-   * - If set to `true`, the logged data will be stringified using `stringify` with a maximum length of `stringifyLimit`.
-   * - If set to `false`, the logged data will be logged as is.
-   *
-   * @default true
-   */
-  stringifyValues?: boolean;
-
-  /**
-   * Custom function to stringify data in the logs.
-   *
-   * This includes the state of atoms, the arguments and results of atoms
-   * setter methods, etc.
-   *
-   * If not provided, a basic stringification using `toString()` and `JSON.stringify` will be used.
-   * This makes the logger library agnostic to the stringification library used.
-   *
-   * `stringifyLimit` is still applied to the output of this function.
-   *
-   * @example
-   * ```ts
-   * // Example using Jest's / Vitest's pretty-format:
-   * import { format as prettyFormat } from '@vitest/pretty-format';
-   * useAtomsLogger({
-   *   stringify(value) {
-   *     return prettyFormat(value, { min: true, maxDepth: 3, maxWidth: 5 });
-   *   }
-   * });
-   * ```
-   */
-  stringify?(this: void, value: unknown): string;
-
-  /**
-   * Whether to show the transaction number in the console.
-   *
-   * - If set to `true`, the transaction log will look like : `transaction 1 - 12:00:00 - 2.00 ms`
-   * - If set to `false`, the transaction log will look like : `12:00:00 - 2.00 ms`
-   *
-   * @default true
-   */
-  showTransactionNumber?: boolean;
-
-  /**
-   * Whether to show the number of events in a transaction in the console.
-   *
-   * - If set to `true`, the transaction log will look like : `transaction 1 - 3 events : retrieved value of atom1`
-   * - If set to `false`, the transaction log will look like : `transaction 1 : retrieved value of atom1`
-   *
-   * @default true
-   */
-  showTransactionEventsCount?: boolean;
-
-  /**
-   * Whether to show when a transaction started in the console.
-   *
-   * - If set to `true`, the transaction log will look like : `transaction 1 - 12:00:00 - 2.00 ms`
-   * - If set to `false`, the transaction log will look like : `transaction 1 - 2.00 ms`
-   *
-   * @default false
-   */
-  showTransactionLocaleTime?: boolean;
-
-  /**
-   * Whether to show the elapsed time of a transaction in the console.
-   *
-   * - If set to `true`, the transaction log will look like : `transaction 1 - 12:00:00 - 2.00 ms`
-   * - If set to `false`, the transaction log will look like : `transaction 1 - 12:00:00`
-   *
-   * @default true
-   */
-  showTransactionElapsedTime?: boolean;
-
-  /**
-   * Automatically align transaction logs by padding fields to consistent widths.
-   *
-   * When enabled, the logger will track the maximum width of each transaction component
-   * (number, events count, timestamp, elapsed time) and automatically pad them for
-   * perfect column alignment, similar to a data table.
-   *
-   * Example output:
-   * ```
-   * transaction  9 -  2 events - 14:39:27 -   1.10 ms : ...
-   * transaction 10 - 12 events - 14:39:27 - 301.10 ms : ...
-   * transaction 11 -  1  event - 14:39:27 -   1.10 ms : ...
-   * ```
-   *
-   * @default true
-   */
-  autoAlignTransactions?: boolean;
-
-  /**
-   * Whether to collapse grouped transaction logs by default using `logger.groupCollapsed` instead of `logger.group`.
-   *
-   * Only applies if `groupTransactions` is `true`.
-   *
-   * This is useful for reducing clutter in the console.
-   *
-   * @default false
-   */
-  collapseTransactions?: boolean;
-
-  /**
-   * Whether to collapse grouped events logs by default using `logger.groupCollapsed` instead of `logger.group`.
-   *
-   * Only applies if `groupEvents` is `true`.
-   *
-   * This is useful for reducing clutter in the console.
-   *
-   * @default false
-   */
-  collapseEvents?: boolean;
-
-  /**
-   * **Experimental feature** - Limit the number of components shown in the owner stack.
-   *
-   * This option limits how many parent components are shown in the owner stack
-   * retrieved by `getOwnerStack`. This can be useful to reduce clutter in the
-   * logs.
-   *
-   * - If set to a positive number, it will show up to that many parent components
-   *   in the logs.
-   * - If set to `0`, it will not show any parent components in the logs.
-   * - If set to a negative number or `Infinity`, it will show all parent components
-   *   in the logs.
-   *
-   * @default 2
-   */
-  ownerStackLimit?: number;
 
   /**
    * **Experimental feature** - Get the React component owner stack.
@@ -618,178 +329,3 @@ export interface AtomsLoggerOptions {
    */
   maxProcessingTimeMs?: number;
 }
-
-export const AtomsLoggerTransactionTypes = {
-  unknown: 1,
-  storeGet: 2,
-  storeSet: 3,
-  storeSubscribe: 4,
-  storeUnsubscribe: 5,
-  promiseResolved: 6,
-  promiseRejected: 7,
-} as const;
-
-export type AtomsLoggerTransactionTypes = typeof AtomsLoggerTransactionTypes;
-
-export type AtomsLoggerTransactionType =
-  AtomsLoggerTransactionTypes[keyof AtomsLoggerTransactionTypes];
-
-export type AtomsLoggerTransactionBase<
-  TData extends {
-    type: AtomsLoggerTransactionType;
-  },
-> = TData & {
-  atom: AnyAtom | AtomId | undefined;
-  transactionNumber: number;
-  ownerStack?: string | null | undefined;
-  componentDisplayName?: string | undefined;
-  events: (AtomsLoggerEvent | undefined)[];
-  eventsCount: number;
-  startTimestamp: ReturnType<typeof performance.now>;
-  endTimestamp: ReturnType<typeof performance.now>;
-};
-
-export interface AtomsLoggerTransactionMap {
-  [AtomsLoggerTransactionTypes.unknown]: AtomsLoggerTransactionBase<{
-    type: AtomsLoggerTransactionTypes['unknown'];
-  }>;
-  [AtomsLoggerTransactionTypes.storeGet]: AtomsLoggerTransactionBase<{
-    type: AtomsLoggerTransactionTypes['storeGet'];
-  }>;
-  [AtomsLoggerTransactionTypes.storeSet]: AtomsLoggerTransactionBase<{
-    type: AtomsLoggerTransactionTypes['storeSet'];
-    args: unknown[];
-    result: unknown;
-  }>;
-  [AtomsLoggerTransactionTypes.storeSubscribe]: AtomsLoggerTransactionBase<{
-    type: AtomsLoggerTransactionTypes['storeSubscribe'];
-    listener: () => void;
-  }>;
-  [AtomsLoggerTransactionTypes.storeUnsubscribe]: AtomsLoggerTransactionBase<{
-    type: AtomsLoggerTransactionTypes['storeUnsubscribe'];
-    listener: () => void;
-  }>;
-  [AtomsLoggerTransactionTypes.promiseResolved]: AtomsLoggerTransactionBase<{
-    type: AtomsLoggerTransactionTypes['promiseResolved'];
-  }>;
-  [AtomsLoggerTransactionTypes.promiseRejected]: AtomsLoggerTransactionBase<{
-    type: AtomsLoggerTransactionTypes['promiseRejected'];
-  }>;
-}
-
-export type AtomsLoggerTransaction = AtomsLoggerTransactionMap[keyof AtomsLoggerTransactionMap];
-
-export const AtomsLoggerEventTypes = {
-  initialized: 1,
-  initialPromisePending: 2,
-  initialPromiseResolved: 3,
-  initialPromiseRejected: 4,
-  initialPromiseAborted: 5,
-  changed: 6,
-  changedPromisePending: 7,
-  changedPromiseResolved: 8,
-  changedPromiseRejected: 9,
-  changedPromiseAborted: 10,
-  dependenciesChanged: 11,
-  mounted: 12,
-  unmounted: 13,
-  destroyed: 14,
-} as const;
-
-export type AtomsLoggerEventTypes = typeof AtomsLoggerEventTypes;
-export type AtomsLoggerEventType = AtomsLoggerEventTypes[keyof AtomsLoggerEventTypes];
-
-export type AtomsLoggerEventBase<
-  TData extends { type: AtomsLoggerEventType; atom: AnyAtom | AtomId } = {
-    type: AtomsLoggerEventType;
-    atom: AnyAtom | AtomId;
-  },
-> = TData & {
-  /** @see {@link INTERNAL_AtomState.p} */
-  pendingPromises?: AtomId[];
-  /** @see {@link INTERNAL_AtomState.d} @see {@link INTERNAL_Mounted.d} */
-  dependencies?: Set<AtomId>;
-  /** @see {@link INTERNAL_Mounted.t} */
-  dependents?: AtomId[];
-};
-
-export interface AtomsLoggerEventMap {
-  [AtomsLoggerEventTypes.initialized]: AtomsLoggerEventBase<{
-    type: AtomsLoggerEventTypes['initialized'];
-    atom: AnyAtom;
-    value: unknown;
-  }>;
-  [AtomsLoggerEventTypes.initialPromisePending]: AtomsLoggerEventBase<{
-    type: AtomsLoggerEventTypes['initialPromisePending'];
-    atom: AnyAtom;
-  }>;
-  [AtomsLoggerEventTypes.initialPromiseResolved]: AtomsLoggerEventBase<{
-    type: AtomsLoggerEventTypes['initialPromiseResolved'];
-    atom: AnyAtom;
-    value: unknown;
-  }>;
-  [AtomsLoggerEventTypes.initialPromiseRejected]: AtomsLoggerEventBase<{
-    type: AtomsLoggerEventTypes['initialPromiseRejected'];
-    atom: AnyAtom;
-    error: unknown;
-  }>;
-  [AtomsLoggerEventTypes.initialPromiseAborted]: AtomsLoggerEventBase<{
-    type: AtomsLoggerEventTypes['initialPromiseAborted'];
-    atom: AnyAtom;
-  }>;
-  [AtomsLoggerEventTypes.changed]: AtomsLoggerEventBase<{
-    type: AtomsLoggerEventTypes['changed'];
-    atom: AnyAtom;
-    oldValue?: unknown;
-    oldValues?: unknown[];
-    newValue: unknown;
-  }>;
-  [AtomsLoggerEventTypes.changedPromisePending]: AtomsLoggerEventBase<{
-    type: AtomsLoggerEventTypes['changedPromisePending'];
-    atom: AnyAtom;
-    oldValue: unknown;
-  }>;
-  [AtomsLoggerEventTypes.changedPromiseResolved]: AtomsLoggerEventBase<{
-    type: AtomsLoggerEventTypes['changedPromiseResolved'];
-    atom: AnyAtom;
-    oldValue: unknown;
-    newValue: unknown;
-  }>;
-  [AtomsLoggerEventTypes.changedPromiseRejected]: AtomsLoggerEventBase<{
-    type: AtomsLoggerEventTypes['changedPromiseRejected'];
-    atom: AnyAtom;
-    oldValue: unknown;
-    error: unknown;
-  }>;
-  [AtomsLoggerEventTypes.changedPromiseAborted]: AtomsLoggerEventBase<{
-    type: AtomsLoggerEventTypes['changedPromiseAborted'];
-    atom: AnyAtom;
-    oldValue: unknown;
-  }>;
-  [AtomsLoggerEventTypes.dependenciesChanged]: AtomsLoggerEventBase<
-    {
-      type: AtomsLoggerEventTypes['dependenciesChanged'];
-      atom: AnyAtom;
-      oldDependencies?: Set<AtomId>;
-    } & (
-      | { addedDependency: AnyAtom; clearedDependencies?: undefined; removedDependency?: undefined }
-      | { addedDependency?: undefined; clearedDependencies: true; removedDependency?: undefined }
-      | { addedDependency?: undefined; clearedDependencies?: undefined; removedDependency: AnyAtom }
-    )
-  >;
-  [AtomsLoggerEventTypes.mounted]: AtomsLoggerEventBase<{
-    type: AtomsLoggerEventTypes['mounted'];
-    atom: AnyAtom;
-    value?: unknown;
-  }>;
-  [AtomsLoggerEventTypes.unmounted]: AtomsLoggerEventBase<{
-    type: AtomsLoggerEventTypes['unmounted'];
-    atom: AnyAtom;
-  }>;
-  [AtomsLoggerEventTypes.destroyed]: AtomsLoggerEventBase<{
-    type: AtomsLoggerEventTypes['destroyed'];
-    atom: AtomId;
-  }>;
-}
-
-export type AtomsLoggerEvent = AtomsLoggerEventMap[keyof AtomsLoggerEventMap];

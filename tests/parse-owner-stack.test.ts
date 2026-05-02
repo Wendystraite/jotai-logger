@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { parseOwnerStack } from '../src/vanilla/utils/parse-owner-stack.js';
+import { parseOwnerStack } from '../src/formatters/console/utils/parse-owner-stack.js';
 
 describe('parseOwnerStack', () => {
   it('should return undefined for null input', () => {

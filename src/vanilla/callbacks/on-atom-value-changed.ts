@@ -4,12 +4,9 @@ import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import { addEventToTransaction } from '../transactions/add-event-to-transaction.js';
 import { endTransaction } from '../transactions/end-transaction.js';
 import { startTransaction } from '../transactions/start-transaction.js';
-import {
-  AtomsLoggerEventTypes,
-  AtomsLoggerTransactionTypes,
-  type AnyAtom,
-  type StoreWithAtomsLogger,
-} from '../types/atoms-logger.js';
+import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import { AtomsLoggerEventTypes, type AnyAtom } from '../types/event.js';
+import { AtomsLoggerTransactionTypes } from '../types/transaction.js';
 
 export function onAtomValueChanged(
   store: StoreWithAtomsLogger,

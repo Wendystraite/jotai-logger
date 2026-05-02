@@ -3,7 +3,8 @@ import type { WritableAtom } from 'jotai';
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import { endTransaction } from '../transactions/end-transaction.js';
 import { startTransaction } from '../transactions/start-transaction.js';
-import { AtomsLoggerTransactionTypes, type StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import { AtomsLoggerTransactionTypes } from '../types/transaction.js';
 
 export function getOnStoreSet(store: StoreWithAtomsLogger): StoreWithAtomsLogger['set'] {
   return function onStoreSet<TValue, TArgs extends unknown[], TResult>(

@@ -2,7 +2,7 @@ import {
   DEFAULT_ATOMS_LOGGER_COLORS,
   DEFAULT_ATOMS_LOGGER_DARK_COLORS,
   DEFAULT_ATOMS_LOGGER_LIGHT_COLORS,
-} from '../consts/colors.js';
+} from './consts/colors.js';
 
 const COLORS_BY_SCHEME = {
   default: DEFAULT_ATOMS_LOGGER_COLORS,

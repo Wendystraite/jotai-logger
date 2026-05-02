@@ -1,6 +1,6 @@
-import type { DEFAULT_ATOMS_LOGGER_COLORS } from '../consts/colors.js';
-import type { AnyAtom, AtomId } from '../types/atoms-logger.js';
+import type { AnyAtom, AtomId } from '../../vanilla/types/event.js';
 import { addToLogs } from './add-to-logs.js';
+import type { DEFAULT_ATOMS_LOGGER_COLORS } from './consts/colors.js';
 
 export function addAtomToLogs(
   logs: unknown[],

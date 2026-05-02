@@ -4,6 +4,7 @@ import {
   type INTERNAL_BuildingBlocks,
 } from 'jotai/vanilla/internals';
 
+import { consoleFormatter } from '../formatters/console/index.js';
 import { getOnAtomGarbageCollected } from './callbacks/on-atom-garbage-collected.js';
 import { getOnAtomMounted } from './callbacks/on-atom-mounted.js';
 import { getOnAtomStateMapSet as onAtomStateMapSet } from './callbacks/on-atom-state-map-set.js';
@@ -24,6 +25,7 @@ export function bindAtomsLoggerToStore(
 
   if (isAtomsLoggerBoundToStore(store)) {
     Object.assign(store[ATOMS_LOGGER_SYMBOL], newStateOptions);
+    if (options?.formatter !== undefined) store[ATOMS_LOGGER_SYMBOL].formatter = options.formatter;
     return true;
   }
 
@@ -31,7 +33,8 @@ export function bindAtomsLoggerToStore(
   try {
     buildingBlocks = INTERNAL_getBuildingBlocksRev2(store);
   } catch (error) {
-    newStateOptions.logger.log('Fail to bind atoms logger to', store, ':', error);
+    // eslint-disable-next-line no-console
+    console.error('Fail to bind atoms logger to', store, ':', error);
     return false;
   }
 
@@ -66,6 +69,7 @@ export function bindAtomsLoggerToStore(
 
   storeWithAtomsLogger[ATOMS_LOGGER_SYMBOL] = {
     ...newStateOptions,
+    formatter: options?.formatter ?? consoleFormatter(),
     registerAbortHandler: buildingBlocks[26],
     prevStoreGet,
     prevStoreSet,
@@ -82,10 +86,6 @@ export function bindAtomsLoggerToStore(
     dependenciesMap: new WeakMap(),
     prevTransactionDependenciesMap: new WeakMap(),
     transactionsDebounceTimeoutId: undefined,
-    maxWidths: {
-      eventsCount: 0,
-      elapsedTime: 0,
-    },
   };
 
   return true;

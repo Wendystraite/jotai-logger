@@ -1,7 +1,8 @@
 import { INTERNAL_isPromiseLike } from 'jotai/vanilla/internals';
 
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import type { AnyAtom, StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import type { AnyAtom } from '../types/event.js';
 
 export function getAtomValue(
   store: StoreWithAtomsLogger,

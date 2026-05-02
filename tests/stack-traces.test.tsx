@@ -13,6 +13,7 @@ import {
   vi,
 } from 'vitest';
 
+import { consoleFormatter } from '../src/formatters/console/index.js';
 import { useAtomsLogger } from '../src/react/use-atoms-logger.js';
 import type { AtomsLoggerOptions } from '../src/vanilla/types/atoms-logger.js';
 
@@ -63,13 +64,15 @@ describe('stack traces', () => {
       groupCollapsed: vi.fn(),
     };
     defaultOptions = {
-      logger: consoleMock,
-      groupTransactions: false,
-      groupEvents: false,
-      formattedOutput: false,
-      showTransactionElapsedTime: false,
+      formatter: consoleFormatter({
+        logger: consoleMock,
+        groupTransactions: false,
+        groupEvents: false,
+        formattedOutput: false,
+        showTransactionElapsedTime: false,
+        autoAlignTransactions: false,
+      }),
       shouldShowPrivateAtoms: false,
-      autoAlignTransactions: false,
       getOwnerStack: captureOwnerStack,
       getComponentDisplayName: getReact19ComponentDisplayName,
     };

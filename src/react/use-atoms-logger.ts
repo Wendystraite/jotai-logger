@@ -6,11 +6,11 @@ import {
   isAtomsLoggerBoundToStore,
 } from '../vanilla/bind-atoms-logger-to-store.js';
 import { ATOMS_LOGGER_SYMBOL } from '../vanilla/consts/atom-logger-symbol.js';
-import type {
-  AtomsLoggerOptions,
-  AtomsLoggerOptionsInState,
-} from '../vanilla/types/atoms-logger.js';
-import { atomsLoggerOptionsToState } from '../vanilla/utils/logger-options-to-state.js';
+import type { AtomsLoggerOptions } from '../vanilla/types/atoms-logger.js';
+import {
+  atomsLoggerOptionsToState,
+  type AtomsLoggerCoreState,
+} from '../vanilla/utils/logger-options-to-state.js';
 
 /**
  * Hook that logs atom state changes in the console.
@@ -46,9 +46,12 @@ export function useAtomsLogger(
     bindAtomsLoggerToStore(store, options);
   }
 
-  // Update the logger options if they changes
+  // Update the core logger options if they change (formatter is preserved, only changed if explicitly passed)
   if (isAtomsLoggerBoundToStore(store)) {
-    const stateOptions: AtomsLoggerOptionsInState = atomsLoggerOptionsToState(options);
+    const stateOptions: AtomsLoggerCoreState = atomsLoggerOptionsToState(options);
     Object.assign(store[ATOMS_LOGGER_SYMBOL], stateOptions);
+    if (options?.formatter !== undefined) {
+      store[ATOMS_LOGGER_SYMBOL].formatter = options.formatter;
+    }
   }
 }

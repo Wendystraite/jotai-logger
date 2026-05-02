@@ -10,7 +10,6 @@ import * as bindAtomsLoggerToStoreModule from '../src/vanilla/bind-atoms-logger-
 import { ATOMS_LOGGER_SYMBOL } from '../src/vanilla/consts/atom-logger-symbol.js';
 import {
   type AtomsLoggerOptions,
-  type AtomsLoggerOptionsInState,
   type Store,
   type StoreWithAtomsLogger,
 } from '../src/vanilla/types/atoms-logger.js';
@@ -64,28 +63,22 @@ describe('useAtomsLogger', () => {
     const store = createStore();
     renderHook(() => {
       const [options, setOptions] = useState<AtomsLoggerOptions>({
-        groupTransactions: false,
-        groupEvents: false,
         shouldShowPrivateAtoms: false,
-        stringifyLimit: 50,
+        synchronous: false,
       });
       useAtomsLogger({ store, ...options });
       useEffect(() => {
         setOptions({
-          groupTransactions: true,
-          groupEvents: true,
           shouldShowPrivateAtoms: true,
-          stringifyLimit: 100,
+          synchronous: true,
         });
       }, []);
     });
     expect(isAtomsLoggerBoundToStore(store)).toBeTruthy();
+    // Only core options are in the ATOMS_LOGGER_SYMBOL state
     expect((store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL]).toEqual(
       expect.objectContaining({
-        groupTransactions: true,
-        groupEvents: true,
         shouldShowPrivateAtoms: true,
-        stringifyLimit: 100,
       }),
     );
   });
@@ -116,37 +109,18 @@ describe('useAtomsLogger', () => {
     renderHook(() => {
       useAtomsLogger({ store });
     });
-    const expectedDefaultOptions: AtomsLoggerOptionsInState = {
-      enabled: true,
-      domain: undefined,
-      shouldShowPrivateAtoms: false,
-      shouldShowAtom: undefined,
-      logger: console,
-      groupTransactions: true,
-      groupEvents: false,
-      indentSpaces: 0,
-      indentSpacesDepth1: '',
-      indentSpacesDepth2: '',
-      formattedOutput: true,
-      colorScheme: 'default',
-      stringifyLimit: 50,
-      stringifyValues: true,
-      stringify: undefined,
-      showTransactionNumber: true,
-      showTransactionEventsCount: true,
-      showTransactionLocaleTime: false,
-      showTransactionElapsedTime: true,
-      autoAlignTransactions: true,
-      collapseTransactions: true,
-      collapseEvents: false,
-      ownerStackLimit: 2,
-      transactionDebounceMs: 250,
-      requestIdleCallbackTimeoutMs: 250,
-      maxProcessingTimeMs: 16,
-    };
+    // Only core options are stored in ATOMS_LOGGER_SYMBOL state
+    // Formatter-specific options (logger, domain, colorScheme, etc.) live inside the formatter closure
     expect(isAtomsLoggerBoundToStore(store)).toBeTruthy();
     expect((store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL]).toEqual(
-      expect.objectContaining(expectedDefaultOptions),
+      expect.objectContaining({
+        enabled: true,
+        shouldShowPrivateAtoms: false,
+        shouldShowAtom: undefined,
+        transactionDebounceMs: 250,
+        requestIdleCallbackTimeoutMs: 250,
+        maxProcessingTimeMs: 16,
+      }),
     );
   });
 });

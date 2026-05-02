@@ -1,7 +1,7 @@
 import { type WritableAtom, atom } from 'jotai';
 import { INTERNAL_isActuallyWritableAtom } from 'jotai/vanilla/internals';
 
-import type { AnyAtom } from '../types/atoms-logger.js';
+import type { AnyAtom } from '../../../vanilla/types/event.js';
 
 const noopAtom = atom();
 noopAtom.debugPrivate = true;

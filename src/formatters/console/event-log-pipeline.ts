@@ -2,12 +2,13 @@ import {
   AtomsLoggerEventTypes,
   type AtomsLoggerEvent,
   type AtomsLoggerEventType,
-  type AtomsLoggerState,
-} from '../types/atoms-logger.js';
-import { stringifyValue } from '../utils/stringify-value.js';
+} from '../../vanilla/types/event.js';
+import { shouldSetStateInEvent } from '../../vanilla/utils/should-set-state-in-event.js';
 import { addAtomToLogs } from './add-atom-to-logs.js';
 import { addToLogs } from './add-to-logs.js';
 import { LogPipeline } from './log-pipeline.js';
+import type { ConsoleFormatterState } from './types.js';
+import { stringifyValue } from './utils/stringify-value.js';
 
 const addEventTypeToLogsMapping: Record<AtomsLoggerEventType, Parameters<typeof addToLogs>[2]> = {
   [AtomsLoggerEventTypes.initialized]: {
@@ -86,7 +87,7 @@ const addEventTypeToLogsMapping: Record<AtomsLoggerEventType, Parameters<typeof 
 export const EventLogPipeline = new LogPipeline()
   .withArgs<{
     event: AtomsLoggerEvent;
-    options: AtomsLoggerState;
+    options: ConsoleFormatterState;
   }>()
 
   // Initialize base logging context
@@ -332,13 +333,3 @@ export const EventLogPipeline = new LogPipeline()
       }
     }
   });
-
-/**
- * Check if the event states should be added to the event.
- */
-export function shouldSetStateInEvent(event: AtomsLoggerEvent): boolean {
-  // If the atom is unmounted or destroyed, we don't need to log anything else.
-  return (
-    event.type !== AtomsLoggerEventTypes.unmounted && event.type !== AtomsLoggerEventTypes.destroyed
-  );
-}

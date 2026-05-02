@@ -1,11 +1,9 @@
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import { endTransaction } from '../transactions/end-transaction.js';
 import { startTransaction } from '../transactions/start-transaction.js';
-import {
-  AtomsLoggerTransactionTypes,
-  type AnyAtom,
-  type StoreWithAtomsLogger,
-} from '../types/atoms-logger.js';
+import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import type { AnyAtom } from '../types/event.js';
+import { AtomsLoggerTransactionTypes } from '../types/transaction.js';
 
 export function getOnStoreSub(store: StoreWithAtomsLogger): StoreWithAtomsLogger['sub'] {
   return function onStoreSub(atom: AnyAtom, listener: () => void): () => void {

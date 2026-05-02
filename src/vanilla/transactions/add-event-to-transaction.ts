@@ -1,15 +1,14 @@
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import { shouldSetStateInEvent } from '../log-atom-event/event-log-pipeline.js';
+import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
 import {
   AtomsLoggerEventTypes,
-  AtomsLoggerTransactionTypes,
   type AtomId,
   type AtomsLoggerEvent,
   type AtomsLoggerEventMap,
-  type AtomsLoggerTransaction,
-  type StoreWithAtomsLogger,
-} from '../types/atoms-logger.js';
+} from '../types/event.js';
+import { AtomsLoggerTransactionTypes, type AtomsLoggerTransaction } from '../types/transaction.js';
 import { convertAtomsToStrings } from '../utils/convert-atoms-to-strings.js';
+import { shouldSetStateInEvent } from '../utils/should-set-state-in-event.js';
 import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { debounceEndTransaction } from './debounce-end-transaction.js';
 import { endTransaction } from './end-transaction.js';

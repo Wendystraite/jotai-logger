@@ -14,6 +14,7 @@ import {
   vi,
 } from 'vitest';
 
+import { consoleFormatter } from '../src/formatters/console/index.js';
 import { bindAtomsLoggerToStore, useAtomsLogger } from '../src/index.js';
 import { isAtomsLoggerBoundToStore } from '../src/vanilla/bind-atoms-logger-to-store.js';
 import type { AtomsLoggerOptions } from '../src/vanilla/types/atoms-logger.js';
@@ -87,12 +88,14 @@ describe('bindAtomsLoggerToStore', () => {
       groupCollapsed: vi.fn(),
     };
     defaultOptions = {
-      logger: consoleMock,
-      groupTransactions: false,
-      groupEvents: false,
-      formattedOutput: false,
-      showTransactionElapsedTime: false,
-      autoAlignTransactions: false,
+      formatter: consoleFormatter({
+        logger: consoleMock,
+        groupTransactions: false,
+        groupEvents: false,
+        formattedOutput: false,
+        showTransactionElapsedTime: false,
+        autoAlignTransactions: false,
+      }),
     };
   });
 

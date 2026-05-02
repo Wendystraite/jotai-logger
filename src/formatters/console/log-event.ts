@@ -1,7 +1,8 @@
-import { type AtomsLoggerEvent, type AtomsLoggerState } from '../types/atoms-logger.js';
+import { type AtomsLoggerEvent } from '../../vanilla/types/event.js';
 import { EventLogPipeline } from './event-log-pipeline.js';
+import type { ConsoleFormatterState } from './types.js';
 
-export function logEvent(event: AtomsLoggerEvent, options: AtomsLoggerState): void {
+export function logEvent(event: AtomsLoggerEvent, options: ConsoleFormatterState): void {
   const { collapseEvents, logger } = options;
 
   let { groupEvents } = options;

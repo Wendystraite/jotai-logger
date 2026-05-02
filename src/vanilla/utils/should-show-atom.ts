@@ -1,5 +1,6 @@
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import type { AnyAtom, AtomId, StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import type { AnyAtom, AtomId } from '../types/event.js';
 
 export function shouldShowAtom(store: StoreWithAtomsLogger, atom: AnyAtom | AtomId): boolean {
   if (!store[ATOMS_LOGGER_SYMBOL].enabled) {

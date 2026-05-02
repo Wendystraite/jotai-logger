@@ -1,9 +1,6 @@
 import { addEventToTransaction } from '../transactions/add-event-to-transaction.js';
-import {
-  AtomsLoggerEventTypes,
-  type AnyAtom,
-  type StoreWithAtomsLogger,
-} from '../types/atoms-logger.js';
+import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import { AtomsLoggerEventTypes, type AnyAtom } from '../types/event.js';
 import { getAtomValue } from '../utils/get-atom-value.js';
 
 export function getOnAtomMounted(store: StoreWithAtomsLogger) {

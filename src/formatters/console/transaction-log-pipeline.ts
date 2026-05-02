@@ -1,20 +1,19 @@
 import { INTERNAL_isActuallyWritableAtom } from 'jotai/vanilla/internals';
 
+import type { AnyAtom, AtomId } from '../../vanilla/types/event.js';
 import {
   AtomsLoggerTransactionTypes,
-  type AnyAtom,
-  type AtomId,
-  type AtomsLoggerState,
   type AtomsLoggerTransaction,
   type AtomsLoggerTransactionType,
-} from '../types/atoms-logger.js';
-import { hasAtomCustomWriteMethod } from '../utils/has-atom-custom-write-method.js';
-import { parseOwnerStack } from '../utils/parse-owner-stack.js';
-import { stringifyValue } from '../utils/stringify-value.js';
+} from '../../vanilla/types/transaction.js';
 import { addAtomToLogs } from './add-atom-to-logs.js';
 import { addDashToLogs } from './add-dash-to-logs.js';
 import { addToLogs } from './add-to-logs.js';
 import { LogPipeline } from './log-pipeline.js';
+import type { ConsoleFormatterState } from './types.js';
+import { hasAtomCustomWriteMethod } from './utils/has-atom-custom-write-method.js';
+import { parseOwnerStack } from './utils/parse-owner-stack.js';
+import { stringifyValue } from './utils/stringify-value.js';
 
 const addTransactionTypeToLogsMapping: Record<
   Exclude<AtomsLoggerTransactionType, AtomsLoggerTransactionTypes['unknown']>,
@@ -62,7 +61,7 @@ const addTransactionTypeToLogsMapping: Record<
 export const TransactionLogPipeline = new LogPipeline()
   .withArgs<{
     transaction: AtomsLoggerTransaction;
-    options: AtomsLoggerState;
+    options: ConsoleFormatterState;
   }>()
 
   .withMeta<{

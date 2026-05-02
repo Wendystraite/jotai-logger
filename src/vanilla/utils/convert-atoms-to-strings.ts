@@ -1,4 +1,4 @@
-import type { AnyAtom, AtomId } from '../types/atoms-logger.js';
+import type { AnyAtom, AtomId } from '../types/event.js';
 
 export function convertAtomsToStrings(
   atoms: IteratorObject<AnyAtom> | undefined,
