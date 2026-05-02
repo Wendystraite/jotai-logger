@@ -3674,11 +3674,11 @@ describe('bindAtomsLoggerToStore', () => {
 
         [`transaction 2`],
         [`initialized value of ${aAtom} to 1`, { value: 1 }],
-        [`initialized value of ${bAtom} to 2`, { value: 2 }],
         [
           `changed dependencies of ${testAtom}`,
           { oldDependencies: [], newDependencies: [`${aAtom}`, `${bAtom}`] },
         ],
+        [`initialized value of ${bAtom} to 2`, { value: 2 }],
         [`mounted ${aAtom}`, { value: 1 }],
         [`mounted ${bAtom}`, { value: 2 }],
       ]);

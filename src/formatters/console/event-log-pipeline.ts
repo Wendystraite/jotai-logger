@@ -286,27 +286,18 @@ export const EventLogPipeline = new LogPipeline()
     const showPendingPromises = pendingPromises && pendingPromises.length > 0;
     const showDependents = dependents && dependents.length > 0;
 
-    const showOldDependencies = event.type === AtomsLoggerEventTypes.dependenciesChanged;
-    const showNewDependencies = showOldDependencies;
-
-    let oldDependencies = showOldDependencies ? event.oldDependencies : undefined;
-    let newDependencies = dependencies;
-
-    const showDependencies = !showNewDependencies && dependencies && dependencies.size > 0;
+    const isDepsChangedEvent = event.type === AtomsLoggerEventTypes.dependenciesChanged;
+    const showDependencies = !isDepsChangedEvent && dependencies && dependencies.size > 0;
 
     if (showPendingPromises) {
       subLogsArray.push(['pending promises', pendingPromises]);
       subLogsObject.pendingPromises = pendingPromises;
     }
-    if (showOldDependencies) {
-      oldDependencies ??= new Set();
-      const oldDependenciesArray = Array.from(oldDependencies);
+    if (isDepsChangedEvent) {
+      const oldDependenciesArray = Array.from(event.oldDependencies);
+      const newDependenciesArray = Array.from(event.dependencies);
       subLogsArray.push(['old dependencies', oldDependenciesArray]);
       subLogsObject.oldDependencies = oldDependenciesArray;
-    }
-    if (showNewDependencies) {
-      newDependencies ??= new Set();
-      const newDependenciesArray = Array.from(newDependencies);
       subLogsArray.push(['new dependencies', newDependenciesArray]);
       subLogsObject.newDependencies = newDependenciesArray;
     }

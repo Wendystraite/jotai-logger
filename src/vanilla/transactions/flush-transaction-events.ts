@@ -1,6 +1,6 @@
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
-import { AtomsLoggerEventTypes, type AnyAtom, type AtomId } from '../types/event.js';
+import { AtomsLoggerEventTypes } from '../types/event.js';
 import type { AtomsLoggerTransaction } from '../types/transaction.js';
 
 export function flushTransactionEvents(store: StoreWithAtomsLogger): void {
@@ -9,8 +9,8 @@ export function flushTransactionEvents(store: StoreWithAtomsLogger): void {
 
   store[ATOMS_LOGGER_SYMBOL].currentTransaction = undefined;
 
-  // Cleanup the dependencies events that have not changed since the last transaction.
-  cleanupDependencyChangedEvents(store, transaction);
+  // Update the previous dependency changed events for the current transaction.
+  updatePreviousDependencyChangedEvents(store, transaction);
 
   // If the transaction has no events, we don't need to log it.
   if (transaction.eventsCount <= 0) {
@@ -24,84 +24,24 @@ export function flushTransactionEvents(store: StoreWithAtomsLogger): void {
   store[ATOMS_LOGGER_SYMBOL].logTransactionsScheduler.add(transaction);
 }
 
-/**
- * Cleanup the dependencies events that have not changed since the last
- * transaction or that are duplicated.
- */
-function cleanupDependencyChangedEvents(
+function updatePreviousDependencyChangedEvents(
   store: StoreWithAtomsLogger,
   transaction: AtomsLoggerTransaction,
 ): void {
-  const existingDependencyChangedEventsMap = new WeakSet<AnyAtom>();
-
-  for (let eventIndex = transaction.events.length - 1; eventIndex >= 0; eventIndex -= 1) {
-    const event = transaction.events[eventIndex];
-    if (!event) continue;
-    if (event.type !== AtomsLoggerEventTypes.dependenciesChanged) continue;
-
-    const atom = event.atom;
-
-    // Remove the event if it is a duplicate
-    if (existingDependencyChangedEventsMap.has(atom)) {
-      transaction.events[eventIndex] = undefined;
-      transaction.eventsCount -= 1;
-      continue;
-    }
-    existingDependencyChangedEventsMap.add(atom);
-
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- should always be set in this event
-    const newDependencies = event.dependencies!;
-
-    event.oldDependencies = store[ATOMS_LOGGER_SYMBOL].prevTransactionDependenciesMap.get(atom);
-
-    store[ATOMS_LOGGER_SYMBOL].prevTransactionDependenciesMap.set(atom, newDependencies);
-
-    // Don't log initial dependencies or dependencies that are not changed
-    if (
-      event.oldDependencies === undefined ||
-      !hasDependenciesChanged(event.oldDependencies, newDependencies)
-    ) {
-      transaction.events[eventIndex] = undefined;
-      transaction.eventsCount -= 1;
-      continue;
-    }
-  }
-
-  // In jotai 2.17.x, d.clear() was called on every atom read, which updated
-  // prevTransactionDependenciesMap even for atoms with no visible deps.
-  // In jotai 2.18+, d.clear() is gone and d.delete() only fires for removed deps.
-  // Atoms that are initialized but have only private deps produce no dependenciesChanged
-  // events, so prevTransactionDependenciesMap is never initialized for them.
-  // We initialize it here to Set([]) so future dep additions can be correctly detected.
   for (const event of transaction.events) {
     if (!event) continue;
-    if (event.type !== AtomsLoggerEventTypes.initialized) continue;
-    const atom = event.atom;
-    if (!store[ATOMS_LOGGER_SYMBOL].prevTransactionDependenciesMap.has(atom)) {
-      store[ATOMS_LOGGER_SYMBOL].prevTransactionDependenciesMap.set(
-        atom,
-        new Set(store[ATOMS_LOGGER_SYMBOL].dependenciesMap.get(atom)),
-      );
+    if (event.type === AtomsLoggerEventTypes.dependenciesChanged) {
+      // Update the previous dependencies with the new dependencies for the next transaction.
+      store[ATOMS_LOGGER_SYMBOL].prevTransactionDependenciesMap.set(event.atom, event.dependencies);
+    } else if (event.type === AtomsLoggerEventTypes.initialized) {
+      // Atoms initialized with only private deps produce no dependenciesChanged events, so
+      // prevTransactionDependenciesMap is never set for them. Initialize it here so that
+      // future dep additions can be correctly detected.
+      const dependencies = store[ATOMS_LOGGER_SYMBOL].dependenciesMap.get(event.atom);
+      /* v8 ignore next 3 -- dependenciesMap is always initialized for visible atoms in getOnAtomStateMapSet -- @preserve */
+      if (dependencies !== undefined) {
+        store[ATOMS_LOGGER_SYMBOL].prevTransactionDependenciesMap.set(event.atom, dependencies);
+      }
     }
   }
-}
-
-/**
- * Checks if the dependencies have changed.
- */
-function hasDependenciesChanged(
-  oldDependencies: Set<AtomId>,
-  newDependencies: Set<AtomId>,
-): boolean {
-  if (oldDependencies.size !== newDependencies.size) {
-    return true;
-  }
-
-  for (const dep of oldDependencies) {
-    if (!newDependencies.has(dep)) {
-      return true;
-    }
-  }
-
-  return false;
 }

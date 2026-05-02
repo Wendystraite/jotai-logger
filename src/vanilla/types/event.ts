@@ -128,31 +128,18 @@ export interface AtomsLoggerEventChangedPromiseAborted extends AtomsLoggerEventB
 }
 
 /** Event emitted when an atom's dependencies change. */
-export type AtomsLoggerEventDependenciesChanged = AtomsLoggerEventBase & {
+export interface AtomsLoggerEventDependenciesChanged extends AtomsLoggerEventBase {
   type: AtomsLoggerEventTypes['dependenciesChanged'];
   atom: AnyAtom;
-  /** The set of dependencies before this change. */
-  oldDependencies?: Set<AtomId>;
-} & (
-    | {
-        /** The dependency that was added. */
-        addedDependency: AnyAtom;
-        clearedDependencies?: undefined;
-        removedDependency?: undefined;
-      }
-    | {
-        addedDependency?: undefined;
-        /** True when all dependencies were cleared at once. */
-        clearedDependencies: true;
-        removedDependency?: undefined;
-      }
-    | {
-        addedDependency?: undefined;
-        clearedDependencies?: undefined;
-        /** The dependency that was removed. */
-        removedDependency: AnyAtom;
-      }
-  );
+  /** The set of dependencies after this transaction. Overrides base optional field. */
+  dependencies: Set<AtomId>;
+  /** The set of dependencies before this transaction. */
+  oldDependencies: Set<AtomId>;
+  /** Dependencies added during this transaction. */
+  addedDependencies: Set<AtomId>;
+  /** Dependencies removed during this transaction. */
+  removedDependencies: Set<AtomId>;
+}
 
 /** Event emitted when an atom is mounted (subscribed to). */
 export interface AtomsLoggerEventMounted extends AtomsLoggerEventBase {
