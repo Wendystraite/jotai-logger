@@ -1,11 +1,7 @@
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
-import {
-  AtomsLoggerEventTypes,
-  type AtomsLoggerEvent,
-  type AtomsLoggerEventMap,
-} from '../types/event.js';
-import { AtomsLoggerTransactionTypes, type AtomsLoggerTransaction } from '../types/transaction.js';
+import { AtomEventTypes, type AtomEvent, type AtomEventMap } from '../types/event.js';
+import { AtomTransactionTypes, type AtomTransaction } from '../types/transaction.js';
 import { convertAtomsToStrings } from '../utils/convert-atoms-to-strings.js';
 import { shouldSetStateInEvent } from '../utils/should-set-state-in-event.js';
 import { shouldShowAtom } from '../utils/should-show-atom.js';
@@ -13,7 +9,7 @@ import { debounceEndTransaction } from './debounce-end-transaction.js';
 import { endTransaction } from './end-transaction.js';
 import { startTransaction } from './start-transaction.js';
 
-export function addEventToTransaction(store: StoreWithAtomsLogger, event: AtomsLoggerEvent): void {
+export function addEventToTransaction(store: StoreWithAtomsLogger, event: AtomEvent): void {
   if (!shouldShowAtom(store, event.atom)) {
     return;
   }
@@ -24,7 +20,7 @@ export function addEventToTransaction(store: StoreWithAtomsLogger, event: AtomsL
 
   if (!transaction) {
     // Execute the event in an independent "unknown" transaction if there is no current transaction.
-    startTransaction(store, { type: AtomsLoggerTransactionTypes.unknown, atom: event.atom });
+    startTransaction(store, { type: AtomTransactionTypes.unknown, atom: event.atom });
     addEventToTransaction(store, event);
     endTransaction(store);
     return;
@@ -47,7 +43,7 @@ export function addEventToTransaction(store: StoreWithAtomsLogger, event: AtomsL
 /**
  * Set the state of the atom in the event.
  */
-function setStateInEvent(store: StoreWithAtomsLogger, event: AtomsLoggerEvent): void {
+function setStateInEvent(store: StoreWithAtomsLogger, event: AtomEvent): void {
   if (typeof event.atom === 'string' || !shouldSetStateInEvent(event)) return;
 
   event.dependencies = store[ATOMS_LOGGER_SYMBOL].dependenciesMap.get(event.atom);
@@ -68,21 +64,18 @@ function setStateInEvent(store: StoreWithAtomsLogger, event: AtomsLoggerEvent): 
  * This means that the abort event is added in the transaction after the new pending promise event.
  * This hack just swap their order to make the log more readable.
  */
-function reversePromiseAbortedAndPending(
-  transaction: AtomsLoggerTransaction,
-  event: AtomsLoggerEvent,
-): void {
+function reversePromiseAbortedAndPending(transaction: AtomTransaction, event: AtomEvent): void {
   if (
-    event.type === AtomsLoggerEventTypes.initialPromiseAborted ||
-    event.type === AtomsLoggerEventTypes.changedPromiseAborted
+    event.type === AtomEventTypes.initialPromiseAborted ||
+    event.type === AtomEventTypes.changedPromiseAborted
   ) {
     const events = transaction.events;
     /* v8 ignore next -- abort-as-only-event: the abort fires alone without a prior pending in the same transaction, which cannot happen in normal jotai usage -- @preserve */
     if (events.length > 1) {
       const eventBeforeAbort = events[events.length - 2];
       if (
-        eventBeforeAbort?.type === AtomsLoggerEventTypes.initialPromisePending ||
-        eventBeforeAbort?.type === AtomsLoggerEventTypes.changedPromisePending
+        eventBeforeAbort?.type === AtomEventTypes.initialPromisePending ||
+        eventBeforeAbort?.type === AtomEventTypes.changedPromisePending
       ) {
         events[events.length - 2] = event;
         events[events.length - 1] = eventBeforeAbort;
@@ -94,20 +87,20 @@ function reversePromiseAbortedAndPending(
 /**
  * Merge multiple "changed" events that occurs in the same transaction to prevent spam.
  */
-function mergeChangedEvents(transaction: AtomsLoggerTransaction, event: AtomsLoggerEvent): void {
-  if (event.type === AtomsLoggerEventTypes.changed) {
+function mergeChangedEvents(transaction: AtomTransaction, event: AtomEvent): void {
+  if (event.type === AtomEventTypes.changed) {
     const previousChangedEventIndex = transaction.events.findIndex((previousEvent) => {
       return (
         previousEvent !== undefined &&
         previousEvent !== event &&
-        previousEvent.type === AtomsLoggerEventTypes.changed &&
+        previousEvent.type === AtomEventTypes.changed &&
         previousEvent.atom === event.atom
       );
     });
     if (previousChangedEventIndex > -1) {
       const previousChangedEvent = transaction.events[
         previousChangedEventIndex
-      ] as AtomsLoggerEventMap[AtomsLoggerEventTypes['changed']];
+      ] as AtomEventMap[AtomEventTypes['changed']];
       let oldValues: unknown[];
       if (previousChangedEvent.oldValues !== undefined) {
         oldValues = previousChangedEvent.oldValues;

@@ -14,14 +14,14 @@ import { getOnStoreSet } from './callbacks/on-store-set.js';
 import { getOnStoreSub } from './callbacks/on-store-sub.js';
 import { ATOMS_LOGGER_SYMBOL } from './consts/atom-logger-symbol.js';
 import { createLogTransactionsScheduler } from './log-transactions-scheduler.js';
-import type { AtomsLoggerOptions, Store, StoreWithAtomsLogger } from './types/atoms-logger.js';
-import { atomsLoggerOptionsToState } from './utils/logger-options-to-state.js';
+import type { AtomLoggerOptions, Store, StoreWithAtomsLogger } from './types/atoms-logger.js';
+import { atomLoggerOptionsToState } from './utils/logger-options-to-state.js';
 
 export function bindAtomsLoggerToStore(
   store: Store,
-  options?: AtomsLoggerOptions,
+  options?: AtomLoggerOptions,
 ): store is StoreWithAtomsLogger {
-  const newStateOptions = atomsLoggerOptionsToState(options);
+  const newStateOptions = atomLoggerOptionsToState(options);
 
   if (isAtomsLoggerBoundToStore(store)) {
     Object.assign(store[ATOMS_LOGGER_SYMBOL], newStateOptions);

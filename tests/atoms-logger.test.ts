@@ -17,7 +17,7 @@ import {
 
 import { consoleFormatter } from '../src/formatters/console/index.js';
 import type { ConsoleFormatterOptions } from '../src/formatters/console/types.js';
-import { type AtomsLoggerOptions, bindAtomsLoggerToStore } from '../src/index.js';
+import { type AtomLoggerOptions, bindAtomsLoggerToStore } from '../src/index.js';
 import { isAtomsLoggerBoundToStore } from '../src/vanilla/bind-atoms-logger-to-store.js';
 import { ATOMS_LOGGER_SYMBOL } from '../src/vanilla/consts/atom-logger-symbol.js';
 import type { Store, StoreWithAtomsLogger } from '../src/vanilla/types/atoms-logger.js';
@@ -50,7 +50,7 @@ describe('bindAtomsLoggerToStore', () => {
     groupCollapsed: Mock;
   };
   let defaultFormatterOptions: ConsoleFormatterOptions;
-  let defaultOptions: AtomsLoggerOptions;
+  let defaultOptions: AtomLoggerOptions;
 
   beforeEach(() => {
     store = createStore();

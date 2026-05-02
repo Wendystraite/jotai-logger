@@ -1,8 +1,4 @@
-import {
-  AtomsLoggerEventTypes,
-  type AtomsLoggerEvent,
-  type AtomsLoggerEventType,
-} from '../../vanilla/types/event.js';
+import { AtomEventTypes, type AtomEvent, type AtomEventType } from '../../vanilla/types/event.js';
 import { shouldSetStateInEvent } from '../../vanilla/utils/should-set-state-in-event.js';
 import { addAtomToLogs } from './add-atom-to-logs.js';
 import { addToLogs } from './add-to-logs.js';
@@ -10,24 +6,24 @@ import { LogPipeline } from './log-pipeline.js';
 import type { ConsoleFormatterState } from './types.js';
 import { stringifyValue } from './utils/stringify-value.js';
 
-const addEventTypeToLogsMapping: Record<AtomsLoggerEventType, Parameters<typeof addToLogs>[2]> = {
-  [AtomsLoggerEventTypes.initialized]: {
+const addEventTypeToLogsMapping: Record<AtomEventType, Parameters<typeof addToLogs>[2]> = {
+  [AtomEventTypes.initialized]: {
     plainText: () => 'initialized value of',
     formatted: () => ['%cinitialized value %cof', ['blue', 'bold'], 'grey'],
   },
-  [AtomsLoggerEventTypes.changed]: {
+  [AtomEventTypes.changed]: {
     plainText: () => 'changed value of',
     formatted: () => ['%cchanged value %cof', ['lightBlue', 'bold'], 'grey'],
   },
-  [AtomsLoggerEventTypes.initialPromisePending]: {
+  [AtomEventTypes.initialPromisePending]: {
     plainText: () => 'pending initial promise of',
     formatted: () => ['%cpending initial promise %cof', ['pink', 'bold'], 'grey'],
   },
-  [AtomsLoggerEventTypes.changedPromisePending]: {
+  [AtomEventTypes.changedPromisePending]: {
     plainText: () => 'pending promise of',
     formatted: () => ['%cpending promise %cof', ['pink', 'bold'], 'grey'],
   },
-  [AtomsLoggerEventTypes.initialPromiseResolved]: {
+  [AtomEventTypes.initialPromiseResolved]: {
     plainText: () => 'resolved initial promise of',
     formatted: () => [
       '%cresolved %cinitial promise %cof',
@@ -36,11 +32,11 @@ const addEventTypeToLogsMapping: Record<AtomsLoggerEventType, Parameters<typeof 
       'grey',
     ],
   },
-  [AtomsLoggerEventTypes.changedPromiseResolved]: {
+  [AtomEventTypes.changedPromiseResolved]: {
     plainText: () => 'resolved promise of',
     formatted: () => ['%cresolved %cpromise %cof', ['green', 'bold'], ['pink', 'bold'], 'grey'],
   },
-  [AtomsLoggerEventTypes.initialPromiseRejected]: {
+  [AtomEventTypes.initialPromiseRejected]: {
     plainText: () => 'rejected initial promise of',
     formatted: () => [
       '%crejected %cinitial promise %cof',
@@ -49,11 +45,11 @@ const addEventTypeToLogsMapping: Record<AtomsLoggerEventType, Parameters<typeof 
       'grey',
     ],
   },
-  [AtomsLoggerEventTypes.changedPromiseRejected]: {
+  [AtomEventTypes.changedPromiseRejected]: {
     plainText: () => 'rejected promise of',
     formatted: () => ['%crejected %cpromise %cof', ['red', 'bold'], ['pink', 'bold'], 'grey'],
   },
-  [AtomsLoggerEventTypes.initialPromiseAborted]: {
+  [AtomEventTypes.initialPromiseAborted]: {
     plainText: () => 'aborted initial promise of',
     formatted: () => [
       '%caborted %cinitial promise %cof',
@@ -62,23 +58,23 @@ const addEventTypeToLogsMapping: Record<AtomsLoggerEventType, Parameters<typeof 
       'grey',
     ],
   },
-  [AtomsLoggerEventTypes.changedPromiseAborted]: {
+  [AtomEventTypes.changedPromiseAborted]: {
     plainText: () => 'aborted promise of',
     formatted: () => ['%caborted %cpromise %cof', ['red', 'bold'], ['pink', 'bold'], 'grey'],
   },
-  [AtomsLoggerEventTypes.destroyed]: {
+  [AtomEventTypes.destroyed]: {
     plainText: () => 'destroyed',
     formatted: () => ['%cdestroyed', ['red', 'bold']],
   },
-  [AtomsLoggerEventTypes.dependenciesChanged]: {
+  [AtomEventTypes.dependenciesChanged]: {
     plainText: () => 'changed dependencies of',
     formatted: () => ['%cchanged dependencies %cof', ['yellow', 'bold'], 'grey'],
   },
-  [AtomsLoggerEventTypes.mounted]: {
+  [AtomEventTypes.mounted]: {
     plainText: () => 'mounted',
     formatted: () => ['%cmounted', ['green', 'bold']],
   },
-  [AtomsLoggerEventTypes.unmounted]: {
+  [AtomEventTypes.unmounted]: {
     plainText: () => 'unmounted',
     formatted: () => ['%cunmounted', ['red', 'bold']],
   },
@@ -86,7 +82,7 @@ const addEventTypeToLogsMapping: Record<AtomsLoggerEventType, Parameters<typeof 
 
 export const EventLogPipeline = new LogPipeline()
   .withArgs<{
-    event: AtomsLoggerEvent;
+    event: AtomEvent;
     options: ConsoleFormatterState;
   }>()
 
@@ -147,7 +143,7 @@ export const EventLogPipeline = new LogPipeline()
       context.newValue = event.error;
       context.isNewValueError = true;
     }
-    context.showNewValueInLog = event.type !== AtomsLoggerEventTypes.mounted;
+    context.showNewValueInLog = event.type !== AtomEventTypes.mounted;
   })
 
   // {event}
@@ -286,7 +282,7 @@ export const EventLogPipeline = new LogPipeline()
     const showPendingPromises = pendingPromises && pendingPromises.length > 0;
     const showDependents = dependents && dependents.length > 0;
 
-    const isDepsChangedEvent = event.type === AtomsLoggerEventTypes.dependenciesChanged;
+    const isDepsChangedEvent = event.type === AtomEventTypes.dependenciesChanged;
     const showDependencies = !isDepsChangedEvent && dependencies && dependencies.size > 0;
 
     if (showPendingPromises) {

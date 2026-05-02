@@ -13,15 +13,12 @@ import {
 import { bindAtomsLoggerToStore } from '../src/vanilla/bind-atoms-logger-to-store.js';
 import { createLogTransactionsScheduler } from '../src/vanilla/log-transactions-scheduler.js';
 import type { StoreWithAtomsLogger } from '../src/vanilla/types/atoms-logger.js';
-import type { AtomsLoggerFormatter } from '../src/vanilla/types/formatter.js';
-import {
-  AtomsLoggerTransactionTypes,
-  type AtomsLoggerTransaction,
-} from '../src/vanilla/types/transaction.js';
+import type { AtomLoggerFormatter } from '../src/vanilla/types/formatter.js';
+import { AtomTransactionTypes, type AtomTransaction } from '../src/vanilla/types/transaction.js';
 
-function getFakeTransaction(transactionNumber: number): AtomsLoggerTransaction {
-  const transaction: AtomsLoggerTransaction = {
-    type: AtomsLoggerTransactionTypes.unknown,
+function getFakeTransaction(transactionNumber: number): AtomTransaction {
+  const transaction: AtomTransaction = {
+    type: AtomTransactionTypes.unknown,
     atom: `test-${transactionNumber}`,
     endTimestamp: -1,
     events: [],
@@ -34,14 +31,14 @@ function getFakeTransaction(transactionNumber: number): AtomsLoggerTransaction {
   return transaction;
 }
 
-function getFakeTransactions(count: number): AtomsLoggerTransaction[] {
+function getFakeTransactions(count: number): AtomTransaction[] {
   return Array.from({ length: count }, (_, i) => getFakeTransaction(i));
 }
 
 describe('logTransactionsScheduler', () => {
   let performanceNowSpy: MockInstance<typeof performance.now>;
   let setTimeoutSpy: MockInstance<typeof setTimeout>;
-  let formatterSpy: Mock<AtomsLoggerFormatter>;
+  let formatterSpy: Mock<AtomLoggerFormatter>;
   let requestIdleCallbackMockFn: MockInstance<typeof globalThis.requestIdleCallback>;
 
   const mockClearAllSpy = () => {
@@ -52,7 +49,7 @@ describe('logTransactionsScheduler', () => {
   };
 
   beforeEach(() => {
-    formatterSpy = vi.fn<AtomsLoggerFormatter>();
+    formatterSpy = vi.fn<AtomLoggerFormatter>();
     performanceNowSpy = vi.spyOn(performance, 'now').mockReturnValue(0);
     setTimeoutSpy = vi
       .spyOn(globalThis, 'setTimeout')

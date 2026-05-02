@@ -8,8 +8,8 @@ import type {
 
 import type { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import type { AnyAtom, AtomId } from './event.js';
-import type { AtomsLoggerFormatter } from './formatter.js';
-import type { AtomsLoggerTransaction } from './transaction.js';
+import type { AtomLoggerFormatter } from './formatter.js';
+import type { AtomTransaction } from './transaction.js';
 
 /**
  * Jotai's store.
@@ -28,13 +28,13 @@ export type StoreWithAtomsLogger = Store & {
  *
  * Contains configuration options, transaction tracking, and references to original store methods.
  */
-export type AtomsLoggerState = AtomsLoggerOptionsInState & {
+export type AtomsLoggerState = AtomLoggerOptionsInState & {
   /** Internal method to register abort handlers for promises */
   registerAbortHandler: ReturnType<typeof INTERNAL_getBuildingBlocksRev2>[26];
   /** Incremental counter for transactions */
   transactionNumber: number;
   /** The currently active transaction being tracked, if any */
-  currentTransaction: AtomsLoggerTransaction | undefined;
+  currentTransaction: AtomTransaction | undefined;
   /** Flag to indicate if the logger is currently processing a transaction (not debouncing) */
   isInsideTransaction: boolean;
   /** FinalizationRegistry that register atoms garbage collection */
@@ -50,13 +50,13 @@ export type AtomsLoggerState = AtomsLoggerOptionsInState & {
   /** Scheduler for logging queued transactions */
   logTransactionsScheduler: {
     /** Queue of transactions to be logged */
-    queue: AtomsLoggerTransaction[];
+    queue: AtomTransaction[];
     /** Flag to indicate if the scheduler is currently processing */
     isProcessing: boolean;
     /** Process the next transaction in the queue */
     process: () => void;
     /** Add a transaction to the queue and process it */
-    add: (transaction: AtomsLoggerTransaction) => void;
+    add: (transaction: AtomTransaction) => void;
   };
   /** Previous overridden store.get method */
   prevStoreGet: StoreWithAtomsLogger['get'];
@@ -74,45 +74,45 @@ export type AtomsLoggerState = AtomsLoggerOptionsInState & {
 
 /**
  * Core logger options stored in the logger's state.
- * @see {@link AtomsLoggerOptions} for the public API.
+ * @see {@link AtomLoggerOptions} for the public API.
  */
-export interface AtomsLoggerOptionsInState {
-  /** @see AtomsLoggerOptions.enabled */
+export interface AtomLoggerOptionsInState {
+  /** @see AtomLoggerOptions.enabled */
   enabled: boolean;
 
-  /** @see AtomsLoggerOptions.shouldShowPrivateAtoms */
+  /** @see AtomLoggerOptions.shouldShowPrivateAtoms */
   shouldShowPrivateAtoms: boolean;
 
-  /** @see AtomsLoggerOptions.shouldShowAtom */
+  /** @see AtomLoggerOptions.shouldShowAtom */
   shouldShowAtom: ((atom: Atom<unknown>) => boolean) | undefined;
 
-  /** @see AtomsLoggerOptions.getOwnerStack */
+  /** @see AtomLoggerOptions.getOwnerStack */
   getOwnerStack?(this: void): string | null | undefined;
 
-  /** @see AtomsLoggerOptions.getComponentDisplayName */
+  /** @see AtomLoggerOptions.getComponentDisplayName */
   getComponentDisplayName?(this: void): string | undefined;
 
-  /** @see AtomsLoggerOptions.transactionDebounceMs */
+  /** @see AtomLoggerOptions.transactionDebounceMs */
   transactionDebounceMs: number;
 
-  /** @see AtomsLoggerOptions.requestIdleCallbackTimeoutMs */
+  /** @see AtomLoggerOptions.requestIdleCallbackTimeoutMs */
   requestIdleCallbackTimeoutMs: number;
 
-  /** @see AtomsLoggerOptions.maxProcessingTimeMs */
+  /** @see AtomLoggerOptions.maxProcessingTimeMs */
   maxProcessingTimeMs: number;
 
   /** The formatter to call when a transaction is ready to be output. */
-  formatter: AtomsLoggerFormatter;
+  formatter: AtomLoggerFormatter;
 }
 
 /**
  * Options for the atoms logger.
  *
  * These control event collection and transaction scheduling only.
- * To customise the console output, pass a {@link AtomsLoggerFormatter} via the `formatter` option,
+ * To customise the console output, pass a {@link AtomLoggerFormatter} via the `formatter` option,
  * or use {@link consoleFormatter} from `jotai-logger/formatters/console`.
  */
-export interface AtomsLoggerOptions {
+export interface AtomLoggerOptions {
   /**
    * Custom formatter called for each completed transaction.
    *
@@ -127,7 +127,7 @@ export interface AtomsLoggerOptions {
    * });
    * ```
    */
-  formatter?: AtomsLoggerFormatter;
+  formatter?: AtomLoggerFormatter;
 
   /**
    * Enable or disable the logger.

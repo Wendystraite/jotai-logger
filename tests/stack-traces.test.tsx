@@ -15,7 +15,7 @@ import {
 
 import { consoleFormatter } from '../src/formatters/console/index.js';
 import { useAtomsLogger } from '../src/react/use-atoms-logger.js';
-import type { AtomsLoggerOptions } from '../src/vanilla/types/atoms-logger.js';
+import type { AtomLoggerOptions } from '../src/vanilla/types/atoms-logger.js';
 
 let mockDate: MockInstance;
 
@@ -54,7 +54,7 @@ describe('stack traces', () => {
     groupEnd: Mock;
     groupCollapsed: Mock;
   };
-  let defaultOptions: AtomsLoggerOptions;
+  let defaultOptions: AtomLoggerOptions;
 
   beforeEach(() => {
     consoleMock = {
@@ -94,12 +94,12 @@ describe('stack traces', () => {
   );
   incrementAtom.debugLabel = 'incrementAtom';
 
-  function AtomsLogger(options?: AtomsLoggerOptions) {
+  function AtomsLogger(options?: AtomLoggerOptions) {
     useAtomsLogger({ ...defaultOptions, ...options });
     return null;
   }
 
-  function renderWithLogger(children: React.ReactNode, options?: AtomsLoggerOptions) {
+  function renderWithLogger(children: React.ReactNode, options?: AtomLoggerOptions) {
     const store = createStore();
     render(
       <Provider store={store}>

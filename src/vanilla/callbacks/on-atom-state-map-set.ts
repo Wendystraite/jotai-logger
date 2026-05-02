@@ -3,7 +3,7 @@ import { type INTERNAL_AtomState } from 'jotai/vanilla/internals';
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import { addEventToTransaction } from '../transactions/add-event-to-transaction.js';
 import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
-import { AtomsLoggerEventTypes, type AnyAtom, type AtomId } from '../types/event.js';
+import { AtomEventTypes, type AnyAtom, type AtomId } from '../types/event.js';
 import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { onAtomValueChanged } from './on-atom-value-changed.js';
 
@@ -41,7 +41,7 @@ export function getOnAtomStateMapSet(store: StoreWithAtomsLogger) {
       /* v8 ignore next -- atomState.d.set should be called inside a transaction -- @preserve */
       const currentTransactionEvents = store[ATOMS_LOGGER_SYMBOL].currentTransaction?.events ?? [];
       for (const event of currentTransactionEvents) {
-        if (event?.type === AtomsLoggerEventTypes.dependenciesChanged && event.atom === atom) {
+        if (event?.type === AtomEventTypes.dependenciesChanged && event.atom === atom) {
           event.dependencies = newDependencies;
           event.removedDependencies.delete(addedDepId);
           event.addedDependencies.add(addedDepId);
@@ -54,7 +54,7 @@ export function getOnAtomStateMapSet(store: StoreWithAtomsLogger) {
       const oldDependencies = store[ATOMS_LOGGER_SYMBOL].prevTransactionDependenciesMap.get(atom);
       if (oldDependencies !== undefined && !oldDependencies.has(addedDepId)) {
         addEventToTransaction(store, {
-          type: AtomsLoggerEventTypes.dependenciesChanged,
+          type: AtomEventTypes.dependenciesChanged,
           atom,
           dependencies: newDependencies,
           oldDependencies,
@@ -90,7 +90,7 @@ export function getOnAtomStateMapSet(store: StoreWithAtomsLogger) {
           // In jotai 2.18+, d.delete() fires AFTER the value is set (in `pruneDependencies`)
           // so retroactively update existing events for this atom with the new dependencies.
           event.dependencies = newDependencies;
-          if (event.type === AtomsLoggerEventTypes.dependenciesChanged) {
+          if (event.type === AtomEventTypes.dependenciesChanged) {
             event.removedDependencies.add(removedDepId);
             event.addedDependencies.delete(removedDepId);
             hasUpdatedExistingDepsChangedEvent = true;
@@ -104,7 +104,7 @@ export function getOnAtomStateMapSet(store: StoreWithAtomsLogger) {
       const oldDependencies = store[ATOMS_LOGGER_SYMBOL].prevTransactionDependenciesMap.get(atom);
       if (oldDependencies?.has(removedDepId)) {
         addEventToTransaction(store, {
-          type: AtomsLoggerEventTypes.dependenciesChanged,
+          type: AtomEventTypes.dependenciesChanged,
           atom,
           dependencies: newDependencies,
           oldDependencies,

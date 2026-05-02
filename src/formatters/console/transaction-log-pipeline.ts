@@ -2,9 +2,9 @@ import { INTERNAL_isActuallyWritableAtom } from 'jotai/vanilla/internals';
 
 import type { AnyAtom, AtomId } from '../../vanilla/types/event.js';
 import {
-  AtomsLoggerTransactionTypes,
-  type AtomsLoggerTransaction,
-  type AtomsLoggerTransactionType,
+  AtomTransactionTypes,
+  type AtomTransaction,
+  type AtomTransactionType,
 } from '../../vanilla/types/transaction.js';
 import { addAtomToLogs } from './add-atom-to-logs.js';
 import { addDashToLogs } from './add-dash-to-logs.js';
@@ -16,14 +16,14 @@ import { parseOwnerStack } from './utils/parse-owner-stack.js';
 import { stringifyValue } from './utils/stringify-value.js';
 
 const addTransactionTypeToLogsMapping: Record<
-  Exclude<AtomsLoggerTransactionType, AtomsLoggerTransactionTypes['unknown']>,
+  Exclude<AtomTransactionType, AtomTransactionTypes['unknown']>,
   ({
     hasCustomWriteMethod,
   }: {
     hasCustomWriteMethod: boolean | undefined;
   }) => Parameters<typeof addToLogs>[2]
 > = {
-  [AtomsLoggerTransactionTypes.storeSet]: ({ hasCustomWriteMethod }) => {
+  [AtomTransactionTypes.storeSet]: ({ hasCustomWriteMethod }) => {
     if (hasCustomWriteMethod) {
       return {
         plainText: () => 'called set of',
@@ -36,23 +36,23 @@ const addTransactionTypeToLogsMapping: Record<
       };
     }
   },
-  [AtomsLoggerTransactionTypes.storeSubscribe]: () => ({
+  [AtomTransactionTypes.storeSubscribe]: () => ({
     plainText: () => 'subscribed to',
     formatted: () => ['%csubscribed %cto', ['green', 'bold'], 'grey'],
   }),
-  [AtomsLoggerTransactionTypes.storeUnsubscribe]: () => ({
+  [AtomTransactionTypes.storeUnsubscribe]: () => ({
     plainText: () => 'unsubscribed from',
     formatted: () => ['%cunsubscribed %cfrom', ['red', 'bold'], 'grey'],
   }),
-  [AtomsLoggerTransactionTypes.storeGet]: () => ({
+  [AtomTransactionTypes.storeGet]: () => ({
     plainText: () => 'retrieved value of',
     formatted: () => ['%cretrieved value %cof', ['blue', 'bold'], 'grey'],
   }),
-  [AtomsLoggerTransactionTypes.promiseResolved]: () => ({
+  [AtomTransactionTypes.promiseResolved]: () => ({
     plainText: () => 'resolved promise of',
     formatted: () => ['%cresolved %cpromise %cof', ['green', 'bold'], ['pink', 'bold'], 'grey'],
   }),
-  [AtomsLoggerTransactionTypes.promiseRejected]: () => ({
+  [AtomTransactionTypes.promiseRejected]: () => ({
     plainText: () => 'rejected promise of',
     formatted: () => ['%crejected %cpromise %cof', ['red', 'bold'], ['pink', 'bold'], 'grey'],
   }),
@@ -60,7 +60,7 @@ const addTransactionTypeToLogsMapping: Record<
 
 export const TransactionLogPipeline = new LogPipeline()
   .withArgs<{
-    transaction: AtomsLoggerTransaction;
+    transaction: AtomTransaction;
     options: ConsoleFormatterState;
   }>()
 
@@ -346,10 +346,7 @@ export const TransactionLogPipeline = new LogPipeline()
       }
   >(function addAtomToTransactionMeta(context) {
     const { transaction } = context;
-    if (
-      transaction.type !== AtomsLoggerTransactionTypes.unknown &&
-      transaction.atom !== undefined
-    ) {
+    if (transaction.type !== AtomTransactionTypes.unknown && transaction.atom !== undefined) {
       const atom = transaction.atom;
       context.showAtom = true;
       context.atom = atom;
@@ -362,7 +359,7 @@ export const TransactionLogPipeline = new LogPipeline()
 
   .withMeta<{ showTransactionName?: true }>(function addTransactionNameToTransactionMeta(context) {
     const { showAtom, transaction } = context;
-    if (showAtom === true && transaction.type !== AtomsLoggerTransactionTypes.unknown) {
+    if (showAtom === true && transaction.type !== AtomTransactionTypes.unknown) {
       context.showTransactionName = true;
     }
   })
@@ -458,10 +455,7 @@ export const TransactionLogPipeline = new LogPipeline()
       logs,
       options,
       addTransactionTypeToLogsMapping[
-        transaction.type as Exclude<
-          AtomsLoggerTransactionType,
-          AtomsLoggerTransactionTypes['unknown']
-        >
+        transaction.type as Exclude<AtomTransactionType, AtomTransactionTypes['unknown']>
       ]({ hasCustomWriteMethod }),
     );
   })

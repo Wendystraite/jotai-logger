@@ -1,6 +1,6 @@
-import type { AnyAtom, AtomId, AtomsLoggerEvent } from './event.js';
+import type { AnyAtom, AtomId, AtomEvent } from './event.js';
 
-export const AtomsLoggerTransactionTypes = {
+export const AtomTransactionTypes = {
   unknown: 1,
   storeGet: 2,
   storeSet: 3,
@@ -10,15 +10,14 @@ export const AtomsLoggerTransactionTypes = {
   promiseRejected: 7,
 } as const;
 
-export type AtomsLoggerTransactionTypes = typeof AtomsLoggerTransactionTypes;
+export type AtomTransactionTypes = typeof AtomTransactionTypes;
 
-export type AtomsLoggerTransactionType =
-  AtomsLoggerTransactionTypes[keyof AtomsLoggerTransactionTypes];
+export type AtomTransactionType = AtomTransactionTypes[keyof AtomTransactionTypes];
 
 /**
  * Fields common to all transaction types.
  */
-export interface AtomsLoggerTransactionBase {
+export interface AtomTransactionBase {
   /** The atom that triggered the transaction, if any. */
   atom: AnyAtom | AtomId | undefined;
   /** Monotonically increasing counter identifying this transaction. */
@@ -28,7 +27,7 @@ export interface AtomsLoggerTransactionBase {
   /** Display name of the React component that triggered the transaction (experimental). */
   componentDisplayName?: string | undefined;
   /** Ordered list of events recorded during this transaction. */
-  events: (AtomsLoggerEvent | undefined)[];
+  events: (AtomEvent | undefined)[];
   /** Number of events in this transaction. */
   eventsCount: number;
   /** `performance.now()` timestamp when the transaction started. */
@@ -38,18 +37,18 @@ export interface AtomsLoggerTransactionBase {
 }
 
 /** Transaction produced when the origin of the state change cannot be determined. */
-export interface AtomsLoggerTransactionUnknown extends AtomsLoggerTransactionBase {
-  type: AtomsLoggerTransactionTypes['unknown'];
+export interface AtomTransactionUnknown extends AtomTransactionBase {
+  type: AtomTransactionTypes['unknown'];
 }
 
 /** Transaction produced by a `store.get` call. */
-export interface AtomsLoggerTransactionStoreGet extends AtomsLoggerTransactionBase {
-  type: AtomsLoggerTransactionTypes['storeGet'];
+export interface AtomTransactionStoreGet extends AtomTransactionBase {
+  type: AtomTransactionTypes['storeGet'];
 }
 
 /** Transaction produced by a `store.set` call. */
-export interface AtomsLoggerTransactionStoreSet extends AtomsLoggerTransactionBase {
-  type: AtomsLoggerTransactionTypes['storeSet'];
+export interface AtomTransactionStoreSet extends AtomTransactionBase {
+  type: AtomTransactionTypes['storeSet'];
   /** Arguments passed to `store.set`. */
   args: unknown[];
   /** Return value of the atom's write function, if any. */
@@ -57,42 +56,42 @@ export interface AtomsLoggerTransactionStoreSet extends AtomsLoggerTransactionBa
 }
 
 /** Transaction produced by a `store.sub` call (subscription started). */
-export interface AtomsLoggerTransactionStoreSubscribe extends AtomsLoggerTransactionBase {
-  type: AtomsLoggerTransactionTypes['storeSubscribe'];
+export interface AtomTransactionStoreSubscribe extends AtomTransactionBase {
+  type: AtomTransactionTypes['storeSubscribe'];
   /** The listener function registered with `store.sub`. */
   listener: () => void;
 }
 
 /** Transaction produced when a subscription created by `store.sub` is unsubscribed. */
-export interface AtomsLoggerTransactionStoreUnsubscribe extends AtomsLoggerTransactionBase {
-  type: AtomsLoggerTransactionTypes['storeUnsubscribe'];
+export interface AtomTransactionStoreUnsubscribe extends AtomTransactionBase {
+  type: AtomTransactionTypes['storeUnsubscribe'];
   /** The listener function that was unsubscribed. */
   listener: () => void;
 }
 
 /** Transaction produced when a pending promise atom resolves. */
-export interface AtomsLoggerTransactionPromiseResolved extends AtomsLoggerTransactionBase {
-  type: AtomsLoggerTransactionTypes['promiseResolved'];
+export interface AtomTransactionPromiseResolved extends AtomTransactionBase {
+  type: AtomTransactionTypes['promiseResolved'];
 }
 
 /** Transaction produced when a pending promise atom rejects. */
-export interface AtomsLoggerTransactionPromiseRejected extends AtomsLoggerTransactionBase {
-  type: AtomsLoggerTransactionTypes['promiseRejected'];
+export interface AtomTransactionPromiseRejected extends AtomTransactionBase {
+  type: AtomTransactionTypes['promiseRejected'];
 }
 
 /**
  * Map from transaction type number to its concrete transaction shape.
  * Used for discriminated union lookup.
  */
-export interface AtomsLoggerTransactionMap {
-  [AtomsLoggerTransactionTypes.unknown]: AtomsLoggerTransactionUnknown;
-  [AtomsLoggerTransactionTypes.storeGet]: AtomsLoggerTransactionStoreGet;
-  [AtomsLoggerTransactionTypes.storeSet]: AtomsLoggerTransactionStoreSet;
-  [AtomsLoggerTransactionTypes.storeSubscribe]: AtomsLoggerTransactionStoreSubscribe;
-  [AtomsLoggerTransactionTypes.storeUnsubscribe]: AtomsLoggerTransactionStoreUnsubscribe;
-  [AtomsLoggerTransactionTypes.promiseResolved]: AtomsLoggerTransactionPromiseResolved;
-  [AtomsLoggerTransactionTypes.promiseRejected]: AtomsLoggerTransactionPromiseRejected;
+export interface AtomTransactionMap {
+  [AtomTransactionTypes.unknown]: AtomTransactionUnknown;
+  [AtomTransactionTypes.storeGet]: AtomTransactionStoreGet;
+  [AtomTransactionTypes.storeSet]: AtomTransactionStoreSet;
+  [AtomTransactionTypes.storeSubscribe]: AtomTransactionStoreSubscribe;
+  [AtomTransactionTypes.storeUnsubscribe]: AtomTransactionStoreUnsubscribe;
+  [AtomTransactionTypes.promiseResolved]: AtomTransactionPromiseResolved;
+  [AtomTransactionTypes.promiseRejected]: AtomTransactionPromiseRejected;
 }
 
 /** Union of all concrete transaction types. */
-export type AtomsLoggerTransaction = AtomsLoggerTransactionMap[keyof AtomsLoggerTransactionMap];
+export type AtomTransaction = AtomTransactionMap[keyof AtomTransactionMap];

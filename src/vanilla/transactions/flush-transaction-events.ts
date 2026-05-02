@@ -1,7 +1,7 @@
 import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
-import { AtomsLoggerEventTypes } from '../types/event.js';
-import type { AtomsLoggerTransaction } from '../types/transaction.js';
+import { AtomEventTypes } from '../types/event.js';
+import type { AtomTransaction } from '../types/transaction.js';
 
 export function flushTransactionEvents(store: StoreWithAtomsLogger): void {
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- should never happen since it is called in endTransaction
@@ -26,14 +26,14 @@ export function flushTransactionEvents(store: StoreWithAtomsLogger): void {
 
 function updatePreviousDependencyChangedEvents(
   store: StoreWithAtomsLogger,
-  transaction: AtomsLoggerTransaction,
+  transaction: AtomTransaction,
 ): void {
   for (const event of transaction.events) {
     if (!event) continue;
-    if (event.type === AtomsLoggerEventTypes.dependenciesChanged) {
+    if (event.type === AtomEventTypes.dependenciesChanged) {
       // Update the previous dependencies with the new dependencies for the next transaction.
       store[ATOMS_LOGGER_SYMBOL].prevTransactionDependenciesMap.set(event.atom, event.dependencies);
-    } else if (event.type === AtomsLoggerEventTypes.initialized) {
+    } else if (event.type === AtomEventTypes.initialized) {
       // Atoms initialized with only private deps produce no dependenciesChanged events, so
       // prevTransactionDependenciesMap is never set for them. Initialize it here so that
       // future dep additions can be correctly detected.

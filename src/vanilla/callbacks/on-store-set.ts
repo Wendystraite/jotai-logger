@@ -4,7 +4,7 @@ import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
 import { endTransaction } from '../transactions/end-transaction.js';
 import { startTransaction } from '../transactions/start-transaction.js';
 import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
-import { AtomsLoggerTransactionTypes } from '../types/transaction.js';
+import { AtomTransactionTypes } from '../types/transaction.js';
 
 export function getOnStoreSet(store: StoreWithAtomsLogger): StoreWithAtomsLogger['set'] {
   return function onStoreSet<TValue, TArgs extends unknown[], TResult>(
@@ -14,7 +14,7 @@ export function getOnStoreSet(store: StoreWithAtomsLogger): StoreWithAtomsLogger
     const doStartTransaction = !store[ATOMS_LOGGER_SYMBOL].isInsideTransaction;
     try {
       const transaction = {
-        type: AtomsLoggerTransactionTypes.storeSet,
+        type: AtomTransactionTypes.storeSet,
         atom,
         args,
         result: undefined as unknown,

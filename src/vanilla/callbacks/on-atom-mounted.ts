@@ -1,15 +1,15 @@
 import { addEventToTransaction } from '../transactions/add-event-to-transaction.js';
 import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
-import { AtomsLoggerEventTypes, type AnyAtom } from '../types/event.js';
+import { AtomEventTypes, type AnyAtom } from '../types/event.js';
 import { getAtomValue } from '../utils/get-atom-value.js';
 
 export function getOnAtomMounted(store: StoreWithAtomsLogger) {
   return function onAtomMounted(atom: AnyAtom) {
     const { hasValue, value } = getAtomValue(store, atom);
     if (hasValue) {
-      addEventToTransaction(store, { type: AtomsLoggerEventTypes.mounted, atom, value });
+      addEventToTransaction(store, { type: AtomEventTypes.mounted, atom, value });
     } else {
-      addEventToTransaction(store, { type: AtomsLoggerEventTypes.mounted, atom });
+      addEventToTransaction(store, { type: AtomEventTypes.mounted, atom });
     }
   };
 }

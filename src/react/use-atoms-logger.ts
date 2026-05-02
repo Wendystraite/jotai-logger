@@ -6,9 +6,9 @@ import {
   isAtomsLoggerBoundToStore,
 } from '../vanilla/bind-atoms-logger-to-store.js';
 import { ATOMS_LOGGER_SYMBOL } from '../vanilla/consts/atom-logger-symbol.js';
-import type { AtomsLoggerOptions } from '../vanilla/types/atoms-logger.js';
+import type { AtomLoggerOptions } from '../vanilla/types/atoms-logger.js';
 import {
-  atomsLoggerOptionsToState,
+  atomLoggerOptionsToState,
   type AtomsLoggerCoreState,
 } from '../vanilla/utils/logger-options-to-state.js';
 
@@ -27,9 +27,7 @@ import {
  * }
  * ```
  */
-export function useAtomsLogger(
-  options?: Parameters<typeof useStore>[0] & AtomsLoggerOptions,
-): void {
+export function useAtomsLogger(options?: Parameters<typeof useStore>[0] & AtomLoggerOptions): void {
   const store = useStore(options);
 
   const storeRef = useRef(store);
@@ -48,7 +46,7 @@ export function useAtomsLogger(
 
   // Update the core logger options if they change (formatter is preserved, only changed if explicitly passed)
   if (isAtomsLoggerBoundToStore(store)) {
-    const stateOptions: AtomsLoggerCoreState = atomsLoggerOptionsToState(options);
+    const stateOptions: AtomsLoggerCoreState = atomLoggerOptionsToState(options);
     Object.assign(store[ATOMS_LOGGER_SYMBOL], stateOptions);
     if (options?.formatter !== undefined) {
       store[ATOMS_LOGGER_SYMBOL].formatter = options.formatter;

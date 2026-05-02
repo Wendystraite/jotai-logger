@@ -1,4 +1,4 @@
-import type { AtomsLoggerFormatter } from '../../vanilla/types/formatter.js';
+import type { AtomLoggerFormatter } from '../../vanilla/types/formatter.js';
 import { logTransaction } from './log-transaction.js';
 import type { ConsoleFormatterOptions, ConsoleFormatterState } from './types.js';
 
@@ -71,7 +71,7 @@ function consoleFormatterOptionsToState(
  * });
  * ```
  */
-export function consoleFormatter(options?: ConsoleFormatterOptions): AtomsLoggerFormatter {
+export function consoleFormatter(options?: ConsoleFormatterOptions): AtomLoggerFormatter {
   const state: ConsoleFormatterState = consoleFormatterOptionsToState(options);
   return (transaction) => {
     logTransaction(transaction, state);

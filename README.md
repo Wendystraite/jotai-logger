@@ -91,18 +91,18 @@ bindAtomsLoggerToStore(store);
 
 ## Logger Configuration
 
-Options passed to `bindAtomsLoggerToStore` / `useAtomsLogger` via `AtomsLoggerOptions`.
+Options passed to `bindAtomsLoggerToStore` / `useAtomsLogger` via `AtomLoggerOptions`.
 These control **event collection and transaction scheduling** only — display options live in `ConsoleFormatterOptions`.
 
 <details>
-<summary><code>AtomsLoggerOptions</code> reference</summary>
+<summary><code>AtomLoggerOptions</code> reference</summary>
 
 ```ts
-import type { AtomsLoggerOptions } from 'jotai-logger/vanilla';
+import type { AtomLoggerOptions } from 'jotai-logger/vanilla';
 
-type AtomsLoggerOptions = {
+type AtomLoggerOptions = {
   /** Custom formatter called for each completed transaction. Defaults to consoleFormatter(). */
-  formatter?: AtomsLoggerFormatter;
+  formatter?: AtomLoggerFormatter;
 
   /** Enable or disable the logger. @default true */
   enabled?: boolean;

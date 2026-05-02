@@ -1,12 +1,9 @@
-import type { AtomsLoggerTransaction } from '../../vanilla/types/transaction.js';
+import type { AtomTransaction } from '../../vanilla/types/transaction.js';
 import { logEvent } from './log-event.js';
 import { TransactionLogPipeline } from './transaction-log-pipeline.js';
 import type { ConsoleFormatterState } from './types.js';
 
-export function logTransaction(
-  transaction: AtomsLoggerTransaction,
-  options: ConsoleFormatterState,
-): void {
+export function logTransaction(transaction: AtomTransaction, options: ConsoleFormatterState): void {
   const { logger, collapseTransactions } = options;
 
   let { groupTransactions } = options;

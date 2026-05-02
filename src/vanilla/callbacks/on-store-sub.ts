@@ -3,7 +3,7 @@ import { endTransaction } from '../transactions/end-transaction.js';
 import { startTransaction } from '../transactions/start-transaction.js';
 import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
 import type { AnyAtom } from '../types/event.js';
-import { AtomsLoggerTransactionTypes } from '../types/transaction.js';
+import { AtomTransactionTypes } from '../types/transaction.js';
 
 export function getOnStoreSub(store: StoreWithAtomsLogger): StoreWithAtomsLogger['sub'] {
   return function onStoreSub(atom: AnyAtom, listener: () => void): () => void {
@@ -11,7 +11,7 @@ export function getOnStoreSub(store: StoreWithAtomsLogger): StoreWithAtomsLogger
     try {
       if (doStartTransaction) {
         startTransaction(store, {
-          type: AtomsLoggerTransactionTypes.storeSubscribe,
+          type: AtomTransactionTypes.storeSubscribe,
           atom,
           listener,
         });
@@ -38,7 +38,7 @@ function getOnStoreUnsubscribe(
       if (doStartTransaction) {
         {
           startTransaction(store, {
-            type: AtomsLoggerTransactionTypes.storeUnsubscribe,
+            type: AtomTransactionTypes.storeUnsubscribe,
             atom,
             listener,
           });

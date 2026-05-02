@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bindAtomsLoggerToStore } from '../src/index.js';
 import { ATOMS_LOGGER_SYMBOL } from '../src/vanilla/consts/atom-logger-symbol.js';
 import type { StoreWithAtomsLogger } from '../src/vanilla/types/atoms-logger.js';
-import type { AtomsLoggerFormatter } from '../src/vanilla/types/formatter.js';
-import type { AtomsLoggerTransaction } from '../src/vanilla/types/transaction.js';
+import type { AtomLoggerFormatter } from '../src/vanilla/types/formatter.js';
+import type { AtomTransaction } from '../src/vanilla/types/transaction.js';
 
 describe('custom formatter', () => {
   let store: ReturnType<typeof createStore>;
@@ -22,8 +22,8 @@ describe('custom formatter', () => {
   });
 
   it('should call the custom formatter with each completed transaction', () => {
-    const transactions: AtomsLoggerTransaction[] = [];
-    const customFormatter: AtomsLoggerFormatter = (transaction) => {
+    const transactions: AtomTransaction[] = [];
+    const customFormatter: AtomLoggerFormatter = (transaction) => {
       transactions.push(transaction);
     };
 
@@ -81,7 +81,7 @@ describe('custom formatter', () => {
 
   it('should call the custom formatter for every transaction', () => {
     const callCount = { value: 0 };
-    const customFormatter: AtomsLoggerFormatter = () => {
+    const customFormatter: AtomLoggerFormatter = () => {
       callCount.value += 1;
     };
 
@@ -103,8 +103,8 @@ describe('custom formatter', () => {
   });
 
   it('should provide correct transaction data to the custom formatter', () => {
-    const received: AtomsLoggerTransaction[] = [];
-    const customFormatter: AtomsLoggerFormatter = (t) => received.push(t);
+    const received: AtomTransaction[] = [];
+    const customFormatter: AtomLoggerFormatter = (t) => received.push(t);
 
     bindAtomsLoggerToStore(store, { formatter: customFormatter, synchronous: true });
 
@@ -121,8 +121,8 @@ describe('custom formatter', () => {
   });
 
   it('should call a new formatter after re-binding with a different one', () => {
-    const firstFormatter = vi.fn<AtomsLoggerFormatter>();
-    const secondFormatter = vi.fn<AtomsLoggerFormatter>();
+    const firstFormatter = vi.fn<AtomLoggerFormatter>();
+    const secondFormatter = vi.fn<AtomLoggerFormatter>();
 
     bindAtomsLoggerToStore(store, { formatter: firstFormatter, synchronous: true });
 
@@ -144,7 +144,7 @@ describe('custom formatter', () => {
   });
 
   it('should not call the formatter when the logger is disabled', () => {
-    const customFormatter = vi.fn<AtomsLoggerFormatter>();
+    const customFormatter = vi.fn<AtomLoggerFormatter>();
 
     bindAtomsLoggerToStore(store, {
       formatter: customFormatter,
@@ -160,8 +160,8 @@ describe('custom formatter', () => {
   });
 
   it('should not call the formatter for private atoms when shouldShowPrivateAtoms is false', () => {
-    const received: AtomsLoggerTransaction[] = [];
-    const customFormatter: AtomsLoggerFormatter = (t) => received.push(t);
+    const received: AtomTransaction[] = [];
+    const customFormatter: AtomLoggerFormatter = (t) => received.push(t);
 
     bindAtomsLoggerToStore(store, {
       formatter: customFormatter,
@@ -183,8 +183,8 @@ describe('custom formatter', () => {
   });
 
   it('should allow shouldShowAtom to filter which atoms reach the formatter', () => {
-    const received: AtomsLoggerTransaction[] = [];
-    const customFormatter: AtomsLoggerFormatter = (t) => received.push(t);
+    const received: AtomTransaction[] = [];
+    const customFormatter: AtomLoggerFormatter = (t) => received.push(t);
 
     const allowedAtom = atom(1);
     const ignoredAtom = atom(2);
@@ -218,7 +218,7 @@ describe('custom formatter', () => {
     }
 
     const logs: LogEntry[] = [];
-    const structuredFormatter: AtomsLoggerFormatter = (transaction) => {
+    const structuredFormatter: AtomLoggerFormatter = (transaction) => {
       logs.push({
         level: 'info',
         transactionNumber: transaction.transactionNumber,
@@ -243,7 +243,7 @@ describe('custom formatter', () => {
   });
 
   it('should store the formatter in the ATOMS_LOGGER_SYMBOL state', () => {
-    const customFormatter: AtomsLoggerFormatter = vi.fn();
+    const customFormatter: AtomLoggerFormatter = vi.fn();
     bindAtomsLoggerToStore(store, { formatter: customFormatter });
 
     expect((store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL].formatter).toBe(customFormatter);

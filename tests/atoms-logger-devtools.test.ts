@@ -17,7 +17,7 @@ import {
 import { consoleFormatter } from '../src/formatters/console/index.js';
 import { bindAtomsLoggerToStore, useAtomsLogger } from '../src/index.js';
 import { isAtomsLoggerBoundToStore } from '../src/vanilla/bind-atoms-logger-to-store.js';
-import type { AtomsLoggerOptions } from '../src/vanilla/types/atoms-logger.js';
+import type { AtomLoggerOptions } from '../src/vanilla/types/atoms-logger.js';
 
 function isDevtoolsStore(store: Store): boolean {
   return 'get_internal_weak_map' in store;
@@ -77,7 +77,7 @@ describe('bindAtomsLoggerToStore', () => {
     groupEnd: Mock;
     groupCollapsed: Mock;
   };
-  let defaultOptions: AtomsLoggerOptions;
+  let defaultOptions: AtomLoggerOptions;
 
   beforeEach(() => {
     store = createStore();

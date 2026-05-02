@@ -10,7 +10,7 @@ export type AtomId = string;
  */
 export type AnyAtom = Atom<unknown>;
 
-export const AtomsLoggerEventTypes = {
+export const AtomEventTypes = {
   initialized: 1,
   initialPromisePending: 2,
   initialPromiseResolved: 3,
@@ -27,14 +27,14 @@ export const AtomsLoggerEventTypes = {
   destroyed: 14,
 } as const;
 
-export type AtomsLoggerEventTypes = typeof AtomsLoggerEventTypes;
+export type AtomEventTypes = typeof AtomEventTypes;
 
-export type AtomsLoggerEventType = AtomsLoggerEventTypes[keyof AtomsLoggerEventTypes];
+export type AtomEventType = AtomEventTypes[keyof AtomEventTypes];
 
 /**
  * Fields common to all event types.
  */
-export interface AtomsLoggerEventBase {
+export interface AtomEventBase {
   /** Atoms whose pending promises are blocking this atom at the time of the event. @see {@link INTERNAL_AtomState.p} */
   pendingPromises?: AtomId[];
   /** The set of atoms this atom depends on at the time of the event. @see {@link INTERNAL_AtomState.d} @see {@link INTERNAL_Mounted.d} */
@@ -44,44 +44,44 @@ export interface AtomsLoggerEventBase {
 }
 
 /** Event emitted when an atom is initialized with a synchronous value. */
-export interface AtomsLoggerEventInitialized extends AtomsLoggerEventBase {
-  type: AtomsLoggerEventTypes['initialized'];
+export interface AtomEventInitialized extends AtomEventBase {
+  type: AtomEventTypes['initialized'];
   atom: AnyAtom;
   /** The initial value of the atom. */
   value: unknown;
 }
 
 /** Event emitted when an atom's initial promise is pending. */
-export interface AtomsLoggerEventInitialPromisePending extends AtomsLoggerEventBase {
-  type: AtomsLoggerEventTypes['initialPromisePending'];
+export interface AtomEventInitialPromisePending extends AtomEventBase {
+  type: AtomEventTypes['initialPromisePending'];
   atom: AnyAtom;
 }
 
 /** Event emitted when an atom's initial promise resolves. */
-export interface AtomsLoggerEventInitialPromiseResolved extends AtomsLoggerEventBase {
-  type: AtomsLoggerEventTypes['initialPromiseResolved'];
+export interface AtomEventInitialPromiseResolved extends AtomEventBase {
+  type: AtomEventTypes['initialPromiseResolved'];
   atom: AnyAtom;
   /** The resolved value of the promise. */
   value: unknown;
 }
 
 /** Event emitted when an atom's initial promise rejects. */
-export interface AtomsLoggerEventInitialPromiseRejected extends AtomsLoggerEventBase {
-  type: AtomsLoggerEventTypes['initialPromiseRejected'];
+export interface AtomEventInitialPromiseRejected extends AtomEventBase {
+  type: AtomEventTypes['initialPromiseRejected'];
   atom: AnyAtom;
   /** The rejection reason. */
   error: unknown;
 }
 
 /** Event emitted when an atom's initial promise is aborted. */
-export interface AtomsLoggerEventInitialPromiseAborted extends AtomsLoggerEventBase {
-  type: AtomsLoggerEventTypes['initialPromiseAborted'];
+export interface AtomEventInitialPromiseAborted extends AtomEventBase {
+  type: AtomEventTypes['initialPromiseAborted'];
   atom: AnyAtom;
 }
 
 /** Event emitted when an atom's value changes. */
-export interface AtomsLoggerEventChanged extends AtomsLoggerEventBase {
-  type: AtomsLoggerEventTypes['changed'];
+export interface AtomEventChanged extends AtomEventBase {
+  type: AtomEventTypes['changed'];
   atom: AnyAtom;
   /** The previous value of the atom, if known. */
   oldValue?: unknown;
@@ -92,16 +92,16 @@ export interface AtomsLoggerEventChanged extends AtomsLoggerEventBase {
 }
 
 /** Event emitted when an atom changes to a pending promise. */
-export interface AtomsLoggerEventChangedPromisePending extends AtomsLoggerEventBase {
-  type: AtomsLoggerEventTypes['changedPromisePending'];
+export interface AtomEventChangedPromisePending extends AtomEventBase {
+  type: AtomEventTypes['changedPromisePending'];
   atom: AnyAtom;
   /** The previous synchronous value before the promise became pending. */
   oldValue: unknown;
 }
 
 /** Event emitted when an atom's changed promise resolves. */
-export interface AtomsLoggerEventChangedPromiseResolved extends AtomsLoggerEventBase {
-  type: AtomsLoggerEventTypes['changedPromiseResolved'];
+export interface AtomEventChangedPromiseResolved extends AtomEventBase {
+  type: AtomEventTypes['changedPromiseResolved'];
   atom: AnyAtom;
   /** The value before the promise was pending. */
   oldValue: unknown;
@@ -110,8 +110,8 @@ export interface AtomsLoggerEventChangedPromiseResolved extends AtomsLoggerEvent
 }
 
 /** Event emitted when an atom's changed promise rejects. */
-export interface AtomsLoggerEventChangedPromiseRejected extends AtomsLoggerEventBase {
-  type: AtomsLoggerEventTypes['changedPromiseRejected'];
+export interface AtomEventChangedPromiseRejected extends AtomEventBase {
+  type: AtomEventTypes['changedPromiseRejected'];
   atom: AnyAtom;
   /** The value before the promise was pending. */
   oldValue: unknown;
@@ -120,16 +120,16 @@ export interface AtomsLoggerEventChangedPromiseRejected extends AtomsLoggerEvent
 }
 
 /** Event emitted when an atom's changed promise is aborted. */
-export interface AtomsLoggerEventChangedPromiseAborted extends AtomsLoggerEventBase {
-  type: AtomsLoggerEventTypes['changedPromiseAborted'];
+export interface AtomEventChangedPromiseAborted extends AtomEventBase {
+  type: AtomEventTypes['changedPromiseAborted'];
   atom: AnyAtom;
   /** The value before the promise was pending. */
   oldValue: unknown;
 }
 
 /** Event emitted when an atom's dependencies change. */
-export interface AtomsLoggerEventDependenciesChanged extends AtomsLoggerEventBase {
-  type: AtomsLoggerEventTypes['dependenciesChanged'];
+export interface AtomEventDependenciesChanged extends AtomEventBase {
+  type: AtomEventTypes['dependenciesChanged'];
   atom: AnyAtom;
   /** The set of dependencies after this transaction. Overrides base optional field. */
   dependencies: Set<AtomId>;
@@ -142,22 +142,22 @@ export interface AtomsLoggerEventDependenciesChanged extends AtomsLoggerEventBas
 }
 
 /** Event emitted when an atom is mounted (subscribed to). */
-export interface AtomsLoggerEventMounted extends AtomsLoggerEventBase {
-  type: AtomsLoggerEventTypes['mounted'];
+export interface AtomEventMounted extends AtomEventBase {
+  type: AtomEventTypes['mounted'];
   atom: AnyAtom;
   /** The atom's value at mount time, if already initialized. */
   value?: unknown;
 }
 
 /** Event emitted when an atom is unmounted (no more subscribers). */
-export interface AtomsLoggerEventUnmounted extends AtomsLoggerEventBase {
-  type: AtomsLoggerEventTypes['unmounted'];
+export interface AtomEventUnmounted extends AtomEventBase {
+  type: AtomEventTypes['unmounted'];
   atom: AnyAtom;
 }
 
 /** Event emitted when an atom is garbage collected. */
-export interface AtomsLoggerEventDestroyed extends AtomsLoggerEventBase {
-  type: AtomsLoggerEventTypes['destroyed'];
+export interface AtomEventDestroyed extends AtomEventBase {
+  type: AtomEventTypes['destroyed'];
   atom: AtomId;
 }
 
@@ -165,22 +165,22 @@ export interface AtomsLoggerEventDestroyed extends AtomsLoggerEventBase {
  * Map from event type number to its concrete event shape.
  * Used for discriminated union lookup.
  */
-export interface AtomsLoggerEventMap {
-  [AtomsLoggerEventTypes.initialized]: AtomsLoggerEventInitialized;
-  [AtomsLoggerEventTypes.initialPromisePending]: AtomsLoggerEventInitialPromisePending;
-  [AtomsLoggerEventTypes.initialPromiseResolved]: AtomsLoggerEventInitialPromiseResolved;
-  [AtomsLoggerEventTypes.initialPromiseRejected]: AtomsLoggerEventInitialPromiseRejected;
-  [AtomsLoggerEventTypes.initialPromiseAborted]: AtomsLoggerEventInitialPromiseAborted;
-  [AtomsLoggerEventTypes.changed]: AtomsLoggerEventChanged;
-  [AtomsLoggerEventTypes.changedPromisePending]: AtomsLoggerEventChangedPromisePending;
-  [AtomsLoggerEventTypes.changedPromiseResolved]: AtomsLoggerEventChangedPromiseResolved;
-  [AtomsLoggerEventTypes.changedPromiseRejected]: AtomsLoggerEventChangedPromiseRejected;
-  [AtomsLoggerEventTypes.changedPromiseAborted]: AtomsLoggerEventChangedPromiseAborted;
-  [AtomsLoggerEventTypes.dependenciesChanged]: AtomsLoggerEventDependenciesChanged;
-  [AtomsLoggerEventTypes.mounted]: AtomsLoggerEventMounted;
-  [AtomsLoggerEventTypes.unmounted]: AtomsLoggerEventUnmounted;
-  [AtomsLoggerEventTypes.destroyed]: AtomsLoggerEventDestroyed;
+export interface AtomEventMap {
+  [AtomEventTypes.initialized]: AtomEventInitialized;
+  [AtomEventTypes.initialPromisePending]: AtomEventInitialPromisePending;
+  [AtomEventTypes.initialPromiseResolved]: AtomEventInitialPromiseResolved;
+  [AtomEventTypes.initialPromiseRejected]: AtomEventInitialPromiseRejected;
+  [AtomEventTypes.initialPromiseAborted]: AtomEventInitialPromiseAborted;
+  [AtomEventTypes.changed]: AtomEventChanged;
+  [AtomEventTypes.changedPromisePending]: AtomEventChangedPromisePending;
+  [AtomEventTypes.changedPromiseResolved]: AtomEventChangedPromiseResolved;
+  [AtomEventTypes.changedPromiseRejected]: AtomEventChangedPromiseRejected;
+  [AtomEventTypes.changedPromiseAborted]: AtomEventChangedPromiseAborted;
+  [AtomEventTypes.dependenciesChanged]: AtomEventDependenciesChanged;
+  [AtomEventTypes.mounted]: AtomEventMounted;
+  [AtomEventTypes.unmounted]: AtomEventUnmounted;
+  [AtomEventTypes.destroyed]: AtomEventDestroyed;
 }
 
 /** Union of all concrete event types. */
-export type AtomsLoggerEvent = AtomsLoggerEventMap[keyof AtomsLoggerEventMap];
+export type AtomEvent = AtomEventMap[keyof AtomEventMap];

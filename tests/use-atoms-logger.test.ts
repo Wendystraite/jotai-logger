@@ -9,7 +9,7 @@ import { isAtomsLoggerBoundToStore } from '../src/vanilla/bind-atoms-logger-to-s
 import * as bindAtomsLoggerToStoreModule from '../src/vanilla/bind-atoms-logger-to-store.js';
 import { ATOMS_LOGGER_SYMBOL } from '../src/vanilla/consts/atom-logger-symbol.js';
 import {
-  type AtomsLoggerOptions,
+  type AtomLoggerOptions,
   type Store,
   type StoreWithAtomsLogger,
 } from '../src/vanilla/types/atoms-logger.js';
@@ -62,7 +62,7 @@ describe('useAtomsLogger', () => {
   it('should update logger options when they change', () => {
     const store = createStore();
     renderHook(() => {
-      const [options, setOptions] = useState<AtomsLoggerOptions>({
+      const [options, setOptions] = useState<AtomLoggerOptions>({
         shouldShowPrivateAtoms: false,
         synchronous: false,
       });
