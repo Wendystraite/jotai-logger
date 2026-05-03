@@ -89,7 +89,7 @@ const store = createLoggedStore(parentStore, options);
 ## Logger Configuration
 
 Options passed to `createLoggedStore` / `AtomLoggerProvider` via `AtomLoggerOptions`.
-These control **event collection and transaction scheduling** only — display options live in `ConsoleFormatterOptions`.
+These control event collection and transaction scheduling only.
 
 <details>
 <summary><code>AtomLoggerOptions</code> reference</summary>
@@ -273,6 +273,25 @@ Internally, the logger uses a multi-stage approach:
 
 This approach ensures that even when handling large queues of transactions, UI responsiveness is maintained by
 spreading the work across multiple idle periods.
+
+</details>
+
+<details>
+<summary>Custom Formatter</summary>
+
+The `formatter` option accepts any function with the signature `(transaction: AtomTransaction) => void`,
+letting you send atom events to any logging backend.
+
+```ts
+import { createLoggedStore } from 'jotai-logger/vanilla';
+import type { AtomLoggerFormatter, AtomTransaction } from 'jotai-logger/vanilla';
+
+const myFormatter: AtomLoggerFormatter = (transaction: AtomTransaction) => {
+  console.log('[jotai]', transaction.type, transaction.events);
+};
+
+const store = createLoggedStore(parentStore, { formatter: myFormatter });
+```
 
 </details>
 
@@ -629,7 +648,7 @@ function App() {
 ## Lifecycle of atoms
 
 <details>
-<summary>Atom lifecycle reference</summary>
+<summary>Atom lifecycle events</summary>
 
 - **initialized** — the atom is created and its value is set for the first time.
 - **changed** — the atom value changed.
@@ -638,19 +657,28 @@ function App() {
 - **destroyed** — the atom is no longer referenced and its value is removed from memory.
 - **pending / resolved / rejected / aborted** — states for async atoms.
 
-**In vanilla Jotai:**
+</details>
+
+<details>
+<summary>How the lifecycle events are triggered in vanilla Jotai</summary>
 
 - `store.get`, `store.set`, `store.sub` → atom is **initialized**.
 - `store.sub` → atom is **mounted**; the returned unsubscribe function → **unmounted**.
 - `store.set` → atom is **changed**.
 
-**In React:**
+</details>
+
+<details>
+<summary>How the lifecycle events are triggered in React</summary>
 
 - `useAtom` / `useAtomValue` → atom is **initialized** then **mounted**.
 - All components stop using the atom → **unmounted**.
 - `useAtom` / `useSetAtom` setter → atom is **changed**.
 
-**Memory management:**
+</details>
+
+<details>
+<summary>Memory management</summary>
 
 Jotai uses a `WeakMap` to store atom state, so when an atom is no longer referenced it is removed by the garbage
 collector. The logger uses

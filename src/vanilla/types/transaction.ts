@@ -18,7 +18,10 @@ export type AtomTransactionType = AtomTransactionTypes[keyof AtomTransactionType
  * Fields common to all transaction types.
  */
 export interface AtomTransactionBase {
-  /** The atom that triggered the transaction, if any. */
+  /**
+   * The atom that triggered the transaction, if any.
+   * When the transaction contains a {@link AtomEventTypes.destroyed} event, this is an {@link AtomId} string because the atom object has been garbage collected.
+   */
   atom: AnyAtom | AtomId | undefined;
   /** Monotonically increasing counter identifying this transaction. */
   transactionNumber: number;

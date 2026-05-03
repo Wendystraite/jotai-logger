@@ -2,6 +2,7 @@ import type { Atom } from 'jotai';
 
 /**
  * String representation of an atom.
+ * It is the result of calling `atom.toString()`.
  */
 export type AtomId = string;
 
@@ -158,6 +159,7 @@ export interface AtomEventUnmounted extends AtomEventBase {
 /** Event emitted when an atom is garbage collected. */
 export interface AtomEventDestroyed extends AtomEventBase {
   type: AtomEventTypes['destroyed'];
+  /** Only the {@link AtomId} string is available because the atom object has been garbage collected. */
   atom: AtomId;
 }
 
