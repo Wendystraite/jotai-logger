@@ -1,19 +1,19 @@
-import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import { atomLoggerStoreSymbol } from '../consts/store-symbol.js';
 import type { AnyAtom, AtomId } from '../types/event.js';
+import type { AtomLoggerStore } from '../types/store.js';
 
-export function shouldShowAtom(store: StoreWithAtomsLogger, atom: AnyAtom | AtomId): boolean {
-  if (!store[ATOMS_LOGGER_SYMBOL].enabled) {
+export function shouldShowAtom(store: AtomLoggerStore, atom: AnyAtom | AtomId): boolean {
+  if (!store[atomLoggerStoreSymbol].enabled) {
     return false;
   }
   if (typeof atom === 'string') {
     return true;
   }
-  if (!store[ATOMS_LOGGER_SYMBOL].shouldShowPrivateAtoms && atom.debugPrivate === true) {
+  if (!store[atomLoggerStoreSymbol].shouldShowPrivateAtoms && atom.debugPrivate === true) {
     return false;
   }
-  if (store[ATOMS_LOGGER_SYMBOL].shouldShowAtom) {
-    return store[ATOMS_LOGGER_SYMBOL].shouldShowAtom(atom);
+  if (store[atomLoggerStoreSymbol].shouldShowAtom) {
+    return store[atomLoggerStoreSymbol].shouldShowAtom(atom);
   }
   return true;
 }

@@ -1,9 +1,9 @@
-import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import { atomLoggerStoreSymbol } from '../consts/store-symbol.js';
+import type { AtomLoggerStore } from '../types/store.js';
 
-export function stopEndTransactionDebounce(store: StoreWithAtomsLogger) {
-  if (store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId !== undefined) {
-    clearTimeout(store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId);
-    store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId = undefined;
+export function stopEndTransactionDebounce(store: AtomLoggerStore) {
+  if (store[atomLoggerStoreSymbol].transactionsDebounceTimeoutId !== undefined) {
+    clearTimeout(store[atomLoggerStoreSymbol].transactionsDebounceTimeoutId);
+    store[atomLoggerStoreSymbol].transactionsDebounceTimeoutId = undefined;
   }
 }

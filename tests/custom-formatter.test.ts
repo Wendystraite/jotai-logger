@@ -2,10 +2,10 @@ import { atom } from 'jotai';
 import { createStore } from 'jotai/vanilla';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { bindAtomsLoggerToStore } from '../src/index.js';
-import { ATOMS_LOGGER_SYMBOL } from '../src/vanilla/consts/atom-logger-symbol.js';
-import type { StoreWithAtomsLogger } from '../src/vanilla/types/atoms-logger.js';
+import { createLoggedStore } from '../src/index.js';
+import { atomLoggerStoreSymbol } from '../src/vanilla/consts/store-symbol.js';
 import type { AtomLoggerFormatter } from '../src/vanilla/types/formatter.js';
+import type { AtomLoggerStore } from '../src/vanilla/types/store.js';
 import type { AtomTransaction } from '../src/vanilla/types/transaction.js';
 
 describe('custom formatter', () => {
@@ -27,7 +27,7 @@ describe('custom formatter', () => {
       transactions.push(transaction);
     };
 
-    bindAtomsLoggerToStore(store, { formatter: customFormatter, synchronous: true });
+    store = createLoggedStore(store, { formatter: customFormatter, synchronous: true });
 
     const testAtom = atom(42);
     store.get(testAtom);
@@ -85,7 +85,7 @@ describe('custom formatter', () => {
       callCount.value += 1;
     };
 
-    bindAtomsLoggerToStore(store, { formatter: customFormatter, synchronous: true });
+    store = createLoggedStore(store, { formatter: customFormatter, synchronous: true });
 
     const atomA = atom(1);
     const atomB = atom(2);
@@ -106,7 +106,7 @@ describe('custom formatter', () => {
     const received: AtomTransaction[] = [];
     const customFormatter: AtomLoggerFormatter = (t) => received.push(t);
 
-    bindAtomsLoggerToStore(store, { formatter: customFormatter, synchronous: true });
+    store = createLoggedStore(store, { formatter: customFormatter, synchronous: true });
 
     const counterAtom = atom(0);
     store.set(counterAtom, 99);
@@ -120,11 +120,11 @@ describe('custom formatter', () => {
     expect(tx.endTimestamp).toBeGreaterThanOrEqual(tx.startTimestamp);
   });
 
-  it('should call a new formatter after re-binding with a different one', () => {
+  it('should call a new formatter after updating the formatter directly', () => {
     const firstFormatter = vi.fn<AtomLoggerFormatter>();
     const secondFormatter = vi.fn<AtomLoggerFormatter>();
 
-    bindAtomsLoggerToStore(store, { formatter: firstFormatter, synchronous: true });
+    store = createLoggedStore(store, { formatter: firstFormatter, synchronous: true });
 
     const testAtom = atom(0);
     store.get(testAtom);
@@ -133,8 +133,8 @@ describe('custom formatter', () => {
     expect(firstFormatter).toHaveBeenCalledTimes(1);
     expect(secondFormatter).toHaveBeenCalledTimes(0);
 
-    // Replace formatter by re-binding
-    bindAtomsLoggerToStore(store, { formatter: secondFormatter });
+    // Replace formatter by updating the logger state directly
+    (store as AtomLoggerStore)[atomLoggerStoreSymbol].formatter = secondFormatter;
 
     store.set(testAtom, 1);
     vi.runAllTimers();
@@ -146,7 +146,7 @@ describe('custom formatter', () => {
   it('should not call the formatter when the logger is disabled', () => {
     const customFormatter = vi.fn<AtomLoggerFormatter>();
 
-    bindAtomsLoggerToStore(store, {
+    store = createLoggedStore(store, {
       formatter: customFormatter,
       enabled: false,
       synchronous: true,
@@ -163,7 +163,7 @@ describe('custom formatter', () => {
     const received: AtomTransaction[] = [];
     const customFormatter: AtomLoggerFormatter = (t) => received.push(t);
 
-    bindAtomsLoggerToStore(store, {
+    store = createLoggedStore(store, {
       formatter: customFormatter,
       shouldShowPrivateAtoms: false,
       synchronous: true,
@@ -189,7 +189,7 @@ describe('custom formatter', () => {
     const allowedAtom = atom(1);
     const ignoredAtom = atom(2);
 
-    bindAtomsLoggerToStore(store, {
+    store = createLoggedStore(store, {
       formatter: customFormatter,
       shouldShowAtom: (a) => a === allowedAtom,
       synchronous: true,
@@ -228,7 +228,7 @@ describe('custom formatter', () => {
       });
     };
 
-    bindAtomsLoggerToStore(store, { formatter: structuredFormatter, synchronous: true });
+    store = createLoggedStore(store, { formatter: structuredFormatter, synchronous: true });
 
     const myAtom = atom(0);
     store.get(myAtom);
@@ -242,17 +242,17 @@ describe('custom formatter', () => {
     expect(logs[1]).toMatchObject({ level: 'info', transactionNumber: 2 });
   });
 
-  it('should store the formatter in the ATOMS_LOGGER_SYMBOL state', () => {
+  it('should store the formatter in the atomLoggerStoreSymbol state', () => {
     const customFormatter: AtomLoggerFormatter = vi.fn();
-    bindAtomsLoggerToStore(store, { formatter: customFormatter });
+    store = createLoggedStore(store, { formatter: customFormatter });
 
-    expect((store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL].formatter).toBe(customFormatter);
+    expect((store as AtomLoggerStore)[atomLoggerStoreSymbol].formatter).toBe(customFormatter);
   });
 
   it('should use a default consoleFormatter when no formatter is provided', () => {
-    bindAtomsLoggerToStore(store);
+    store = createLoggedStore(store);
 
-    const formatter = (store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL].formatter;
+    const formatter = (store as AtomLoggerStore)[atomLoggerStoreSymbol].formatter;
     expect(typeof formatter).toBe('function');
   });
 });

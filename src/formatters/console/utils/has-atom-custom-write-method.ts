@@ -1,5 +1,5 @@
 import { type WritableAtom, atom } from 'jotai';
-import { INTERNAL_isActuallyWritableAtom } from 'jotai/vanilla/internals';
+import { INTERNAL_isActuallyWritableAtom as isActuallyWritableAtom } from 'jotai/vanilla/internals';
 
 import type { AnyAtom } from '../../../vanilla/types/event.js';
 
@@ -11,5 +11,5 @@ const defaultAtomWrite = noopAtom.write as WritableAtom<unknown, unknown[], unkn
  * Check if the atom is a writeable atom with a custom write method.
  */
 export function hasAtomCustomWriteMethod(atom: AnyAtom): boolean {
-  return INTERNAL_isActuallyWritableAtom(atom) && atom.write !== defaultAtomWrite;
+  return isActuallyWritableAtom(atom) && atom.write !== defaultAtomWrite;
 }

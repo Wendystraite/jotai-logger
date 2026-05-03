@@ -1,18 +1,18 @@
-import { ATOMS_LOGGER_SYMBOL } from './consts/atom-logger-symbol.js';
-import type { AtomsLoggerState, StoreWithAtomsLogger } from './types/atoms-logger.js';
+import { atomLoggerStoreSymbol } from './consts/store-symbol.js';
+import type { AtomLoggerStoreState, AtomLoggerStore } from './types/store.js';
 
 // Check the time every N processed transactions to avoid doing it too often.
 const checkTimeInterval = 10;
 
 export function createLogTransactionsScheduler(
-  store: StoreWithAtomsLogger,
-): AtomsLoggerState['logTransactionsScheduler'] {
-  const logTransactionsScheduler: AtomsLoggerState['logTransactionsScheduler'] = {
+  store: AtomLoggerStore,
+): AtomLoggerStoreState['logTransactionsScheduler'] {
+  const logTransactionsScheduler: AtomLoggerStoreState['logTransactionsScheduler'] = {
     queue: [],
     isProcessing: false,
-    process(this: AtomsLoggerState['logTransactionsScheduler']) {
+    process(this: AtomLoggerStoreState['logTransactionsScheduler']) {
       if (this.isProcessing || this.queue.length === 0) return;
-      const maxProcessingTimeMs = store[ATOMS_LOGGER_SYMBOL].maxProcessingTimeMs;
+      const maxProcessingTimeMs = store[atomLoggerStoreSymbol].maxProcessingTimeMs;
       this.isProcessing = true;
       schedule(() => {
         try {
@@ -22,7 +22,7 @@ export function createLogTransactionsScheduler(
           while (this.queue.length > 0) {
             const transaction = this.queue.shift();
             if (transaction) {
-              store[ATOMS_LOGGER_SYMBOL].formatter(transaction);
+              store[atomLoggerStoreSymbol].formatter(transaction);
               processedCount += 1;
 
               // Stop processing if we reached the max processing time
@@ -43,7 +43,7 @@ export function createLogTransactionsScheduler(
             this.process();
           }
         }
-      }, store[ATOMS_LOGGER_SYMBOL]);
+      }, store[atomLoggerStoreSymbol]);
     },
     add(transaction) {
       this.queue.push(transaction);

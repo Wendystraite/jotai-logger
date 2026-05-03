@@ -1,7 +1,7 @@
 import { add, complete, cycle, save, suite } from 'benny';
 import { type PrimitiveAtom, atom, createStore } from 'jotai';
 
-import { bindAtomsLoggerToStore } from '../dist/vanilla/bind-atoms-logger-to-store.js';
+import { createLoggedStore } from '../dist/vanilla/create-logged-store.js';
 
 /**
  * Taken from Jotai benchmarks : [subscribe-write.ts](https://github.com/pmndrs/jotai/blob/main/benchmarks/subscribe-write.ts).
@@ -17,11 +17,11 @@ const cleanup = () => {
 
 const createStateWithAtoms = (n: number, { withLogger }: { withLogger: boolean }) => {
   let targetAtom: PrimitiveAtom<number> | undefined;
-  const store = createStore();
+  let store = createStore();
   if (withLogger) {
-    bindAtomsLoggerToStore(store, {
+    store = createLoggedStore(store, {
       synchronous: true,
-      logger: { log: () => {}, group: () => {}, groupEnd: () => {} },
+      formatter: () => {},
     });
   }
   for (let i = 0; i < n; ++i) {

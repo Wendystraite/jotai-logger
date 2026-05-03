@@ -1,16 +1,16 @@
 import { atom, createStore } from 'jotai';
 
-import { bindAtomsLoggerToStore } from '../dist/vanilla/bind-atoms-logger-to-store.js';
+import { createLoggedStore } from '../dist/vanilla/create-logged-store.js';
 
 const ITERATIONS = 10_000;
 
 console.log(`running ${ITERATIONS} iterations...`);
 
-const store = createStore();
+let store = createStore();
 
-bindAtomsLoggerToStore(store, {
+store = createLoggedStore(store, {
   synchronous: true,
-  logger: { log: () => {}, group: () => {}, groupEnd: () => {} },
+  formatter: () => {},
 });
 
 const unsubscribes: (() => void)[] = [];

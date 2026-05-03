@@ -1,17 +1,17 @@
-import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import { atomLoggerStoreSymbol } from '../consts/store-symbol.js';
+import type { AtomLoggerStore } from '../types/store.js';
 import { flushTransactionEvents } from './flush-transaction-events.js';
 import { stopEndTransactionDebounce } from './stop-end-transaction-debounce.js';
 import { updateTransactionEndTimestamp } from './update-transaction-end-timestamp.js';
 
-export function debounceEndTransaction(store: StoreWithAtomsLogger) {
+export function debounceEndTransaction(store: AtomLoggerStore) {
   stopEndTransactionDebounce(store);
 
   // Store the transaction end timestamp BEFORE debouncing
   updateTransactionEndTimestamp(store);
 
-  store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId = setTimeout(() => {
-    store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId = undefined;
+  store[atomLoggerStoreSymbol].transactionsDebounceTimeoutId = setTimeout(() => {
+    store[atomLoggerStoreSymbol].transactionsDebounceTimeoutId = undefined;
     flushTransactionEvents(store);
-  }, store[ATOMS_LOGGER_SYMBOL].transactionDebounceMs);
+  }, store[atomLoggerStoreSymbol].transactionDebounceMs);
 }

@@ -1,20 +1,20 @@
-import { INTERNAL_isPromiseLike } from 'jotai/vanilla/internals';
+import { INTERNAL_isPromiseLike as isPromiseLike } from 'jotai/vanilla/internals';
 
-import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import { atomLoggerStoreSymbol } from '../consts/store-symbol.js';
 import type { AnyAtom } from '../types/event.js';
+import type { AtomLoggerStore } from '../types/store.js';
 
 export function getAtomValue(
-  store: StoreWithAtomsLogger,
+  store: AtomLoggerStore,
   atom: AnyAtom,
 ): { hasValue: boolean; value?: unknown } {
-  const state = store[ATOMS_LOGGER_SYMBOL].getState(atom);
+  const state = store[atomLoggerStoreSymbol].getState(atom);
   const value = state?.v;
-  if (INTERNAL_isPromiseLike(value)) {
-    if (!store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.has(value)) {
+  if (isPromiseLike(value)) {
+    if (!store[atomLoggerStoreSymbol].promisesResultsMap.has(value)) {
       return { hasValue: false };
     }
-    const promiseValue = store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.get(value);
+    const promiseValue = store[atomLoggerStoreSymbol].promisesResultsMap.get(value);
     return { hasValue: true, value: promiseValue };
   }
   return { hasValue: true, value };

@@ -57,20 +57,17 @@ See the table below for older Jotai versions.
 <summary>React Setup</summary>
 
 ```tsx
-import { useAtomsLogger } from 'jotai-logger';
+import { Provider } from 'jotai';
+import { AtomLoggerProvider } from 'jotai-logger';
 
 function App() {
   return (
-    <>
-      <AtomsLogger />
-      {/* your app */}
-    </>
+    <Provider>
+      <AtomLoggerProvider {...options}>
+        <MyApp />
+      </AtomLoggerProvider>
+    </Provider>
   );
-}
-
-function AtomsLogger() {
-  useAtomsLogger();
-  return null;
 }
 ```
 
@@ -81,17 +78,17 @@ function AtomsLogger() {
 
 ```ts
 import { createStore } from 'jotai';
-import { bindAtomsLoggerToStore } from 'jotai-logger/vanilla';
+import { createLoggedStore } from 'jotai-logger/vanilla';
 
-const store = createStore();
-bindAtomsLoggerToStore(store);
+const parentStore = createStore();
+const store = createLoggedStore(parentStore, options);
 ```
 
 </details>
 
 ## Logger Configuration
 
-Options passed to `bindAtomsLoggerToStore` / `useAtomsLogger` via `AtomLoggerOptions`.
+Options passed to `createLoggedStore` / `AtomLoggerProvider` via `AtomLoggerOptions`.
 These control **event collection and transaction scheduling** only — display options live in `ConsoleFormatterOptions`.
 
 <details>
@@ -146,10 +143,10 @@ Displays the React component hierarchy that triggered a transaction.
 Accepts React 19.1+'s [`captureOwnerStack`](https://react.dev/reference/react/captureOwnerStack).
 
 ```tsx
-import { useAtomsLogger } from 'jotai-logger';
+import { createLoggedStore } from 'jotai-logger/vanilla';
 import { captureOwnerStack } from 'react';
 
-useAtomsLogger({
+createLoggedStore(parentStore, {
   getOwnerStack: captureOwnerStack,
 });
 ```
@@ -158,9 +155,10 @@ The number of parent components shown is controlled by `ownerStackLimit` in `con
 
 ```tsx
 import { consoleFormatter } from 'jotai-logger/formatters/console';
+import { createLoggedStore } from 'jotai-logger/vanilla';
 import { captureOwnerStack } from 'react';
 
-useAtomsLogger({
+createLoggedStore(parentStore, {
   getOwnerStack: captureOwnerStack,
   formatter: consoleFormatter({ ownerStackLimit: 5 }),
 });
@@ -172,9 +170,9 @@ Shows the current component's display name in transaction logs.
 If it is already shown at the end of the owner stack, it won't be duplicated.
 
 ```tsx
-import { useAtomsLogger } from 'jotai-logger';
+import { createLoggedStore } from 'jotai-logger/vanilla';
 
-useAtomsLogger({
+createLoggedStore(parentStore, {
   getComponentDisplayName: getReact19ComponentDisplayName,
 });
 ```
@@ -214,7 +212,7 @@ By default the logger uses asynchronous logging to minimise performance impact.
 ### Synchronous
 
 ```tsx
-useAtomsLogger({ synchronous: true });
+createLoggedStore(parentStore, { synchronous: true });
 ```
 
 Useful for debugging, testing, or deterministic log ordering.
@@ -236,21 +234,21 @@ Three parameters control the async pipeline:
 
 ```tsx
 // Quick feedback
-useAtomsLogger({
+createLoggedStore(parentStore, {
   transactionDebounceMs: 50,
   requestIdleCallbackTimeoutMs: 100,
   maxProcessingTimeMs: 10,
 });
 
 // Performance priority
-useAtomsLogger({
+createLoggedStore(parentStore, {
   transactionDebounceMs: 500,
   requestIdleCallbackTimeoutMs: 0,
   maxProcessingTimeMs: 50,
 });
 
 // Default
-useAtomsLogger({
+createLoggedStore(parentStore, {
   transactionDebounceMs: 250,
   requestIdleCallbackTimeoutMs: 250,
   maxProcessingTimeMs: 16,
@@ -360,23 +358,24 @@ The `colorScheme` option adjusts contrast ratios to meet WCAG AA (min 5:1) on wh
 
 ```ts
 import { consoleFormatter } from 'jotai-logger/formatters/console';
+import { createLoggedStore } from 'jotai-logger/vanilla';
 
 // Follow the system preference
-useAtomsLogger({
+createLoggedStore(parentStore, {
   formatter: consoleFormatter({
     colorScheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
   }),
 });
 
 // Read from an environment variable (Vite)
-useAtomsLogger({
+createLoggedStore(parentStore, {
   formatter: consoleFormatter({
     colorScheme: import.meta.env.VITE_ATOMS_LOGGER_COLOR_SCHEME,
   }),
 });
 
 // Disable colors entirely
-useAtomsLogger({
+createLoggedStore(parentStore, {
   formatter: consoleFormatter({ formattedOutput: false }),
 });
 ```
@@ -396,8 +395,9 @@ By default atom values are converted to strings using `toString()` and `JSON.str
 // Custom serialiser with @vitest/pretty-format
 import { format as prettyFormat } from '@vitest/pretty-format';
 import { consoleFormatter } from 'jotai-logger/formatters/console';
+import { createLoggedStore } from 'jotai-logger/vanilla';
 
-useAtomsLogger({
+createLoggedStore(parentStore, {
   formatter: consoleFormatter({
     stringifyValues: true,
     stringifyLimit: 0,
@@ -576,20 +576,20 @@ conditional and tree-shake it out to avoid accidental production usage.
 <summary>Using with Vite.js</summary>
 
 ```tsx
-import { useAtomsLogger } from 'jotai-logger';
+import { AtomLoggerProvider } from 'jotai-logger';
 
 function App() {
   return (
     <>
-      {import.meta.env.DEV && <AtomsLogger />}
-      {/* your app */}
+      {import.meta.env.DEV ? (
+        <AtomLoggerProvider>
+          <MyApp />
+        </AtomLoggerProvider>
+      ) : (
+        <MyApp />
+      )}
     </>
   );
-}
-
-function AtomsLogger() {
-  useAtomsLogger();
-  return null;
 }
 ```
 
@@ -602,29 +602,25 @@ function AtomsLogger() {
 // App.tsx
 import dynamic from 'next/dynamic';
 
-const AtomsLogger =
+const AtomLoggerProvider =
   process.env.NODE_ENV === 'development'
-    ? dynamic(
-        () => import('./AtomsLogger').then((mod) => ({ default: mod.AtomsLogger })),
-        { ssr: false },
-      )
+    ? dynamic(() => import('jotai-logger').then((mod) => ({ default: mod.AtomLoggerProvider })), {
+        ssr: false,
+      })
     : null;
 
 function App() {
   return (
     <>
-      {AtomsLogger && <AtomsLogger />}
-      {/* your app */}
+      {AtomLoggerProvider ? (
+        <AtomLoggerProvider>
+          <MyApp />
+        </AtomLoggerProvider>
+      ) : (
+        <MyApp />
+      )}
     </>
   );
-}
-
-// AtomsLogger.tsx
-import { useAtomsLogger } from 'jotai-logger';
-
-export function AtomsLogger() {
-  useAtomsLogger();
-  return null;
 }
 ```
 
@@ -662,3 +658,73 @@ collector. The logger uses
 to track when atoms are destroyed.
 
 </details>
+
+## Migration guide
+
+<details>
+<summary>From v4 to v5</summary>
+
+The v5 API no longer mutates the store. Instead of patching `store.get/set/sub` in place, it
+creates a **new derived store** that shares all internal state with the parent.
+
+#### React API
+
+`useAtomsLogger` is replaced by `AtomLoggerProvider`, a Provider-like component that
+automatically picks up the nearest Jotai store from context and wraps children in a new logged store:
+
+```diff
+- import { useAtomsLogger } from 'jotai-logger';
++ import { AtomLoggerProvider } from 'jotai-logger';
+
+- function AtomsLoggerComponent() {
+-   useAtomsLogger(options);
+-   return null;
+- }
+-
+  function App() {
+    return (
+      <Provider>
+-       <AtomsLoggerComponent />
+-       <MyApp />
++       <AtomLoggerProvider {...options}>
++         <MyApp />
++       </AtomLoggerProvider>
+      </Provider>
+    );
+  }
+```
+
+All props of `AtomLoggerProvider` are the same options as `AtomLoggerOptions`.
+
+### Vanilla API
+
+`bindAtomsLoggerToStore` is replaced by `createLoggedStore` that creates and return a new store:
+
+```diff
+- import { bindAtomsLoggerToStore } from 'jotai-logger';
++ import { createLoggedStore } from 'jotai-logger';
+
+  const parentStore = createStore();
+- bindAtomsLoggerToStore(parentStore, options);
+- parentStore.get(myAtom);
++ const store = createLoggedStore(parentStore, options);
++ store.get(myAtom);
+```
+
+`isAtomsLoggerBoundToStore` → `isLoggedStore`:
+
+```diff
+- import { isAtomsLoggerBoundToStore } from 'jotai-logger/vanilla';
++ import { isLoggedStore } from 'jotai-logger/vanilla';
+
+- isAtomsLoggerBoundToStore(store);
++ isLoggedStore(store);
+```
+
+Updating options at runtime (no re-bind; mutate the logger state directly):
+
+```diff
+- bindAtomsLoggerToStore(store, { enabled: false });
++ import { atomLoggerStoreSymbol, type AtomLoggerStore } from 'jotai-logger/vanilla';
++ (store as AtomLoggerStore)[atomLoggerStoreSymbol].enabled = false;
+```

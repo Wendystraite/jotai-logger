@@ -1,54 +1,56 @@
-import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
+import { atomLoggerStoreSymbol } from '../consts/store-symbol.js';
 import { endTransaction } from '../transactions/end-transaction.js';
 import { startTransaction } from '../transactions/start-transaction.js';
-import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
 import type { AnyAtom } from '../types/event.js';
+import type { AtomLoggerStore } from '../types/store.js';
 import { AtomTransactionTypes } from '../types/transaction.js';
 
-export function getOnStoreSub(store: StoreWithAtomsLogger): StoreWithAtomsLogger['sub'] {
-  return function onStoreSub(atom: AnyAtom, listener: () => void): () => void {
-    const doStartTransaction = !store[ATOMS_LOGGER_SYMBOL].isInsideTransaction;
-    try {
-      if (doStartTransaction) {
+export function onStoreSub(
+  store: AtomLoggerStore,
+  atom: AnyAtom,
+  listener: () => void,
+): () => void {
+  const doStartTransaction = !store[atomLoggerStoreSymbol].isInsideTransaction;
+  try {
+    if (doStartTransaction) {
+      startTransaction(store, {
+        type: AtomTransactionTypes.storeSubscribe,
+        atom,
+        listener,
+      });
+    }
+    const unsubscribe = store[atomLoggerStoreSymbol].prevStoreSub(store, atom, listener);
+    return () => {
+      onStoreUnsubscribe(store, atom, listener, unsubscribe);
+    };
+  } finally {
+    if (doStartTransaction) {
+      endTransaction(store);
+    }
+  }
+}
+
+function onStoreUnsubscribe(
+  store: AtomLoggerStore,
+  atom: AnyAtom,
+  listener: () => void,
+  unsubscribe: () => void,
+) {
+  const doStartTransaction = !store[atomLoggerStoreSymbol].isInsideTransaction;
+  try {
+    if (doStartTransaction) {
+      {
         startTransaction(store, {
-          type: AtomTransactionTypes.storeSubscribe,
+          type: AtomTransactionTypes.storeUnsubscribe,
           atom,
           listener,
         });
       }
-      const unsubscribe = store[ATOMS_LOGGER_SYMBOL].prevStoreSub(atom, listener);
-      return getOnStoreUnsubscribe(store, atom, listener, unsubscribe);
-    } finally {
-      if (doStartTransaction) {
-        endTransaction(store);
-      }
     }
-  };
-}
-
-function getOnStoreUnsubscribe(
-  store: StoreWithAtomsLogger,
-  atom: AnyAtom,
-  listener: () => void,
-  unsubscribe: () => void,
-): ReturnType<StoreWithAtomsLogger['sub']> {
-  return function onStoreUnsubscribe() {
-    const doStartTransaction = !store[ATOMS_LOGGER_SYMBOL].isInsideTransaction;
-    try {
-      if (doStartTransaction) {
-        {
-          startTransaction(store, {
-            type: AtomTransactionTypes.storeUnsubscribe,
-            atom,
-            listener,
-          });
-        }
-      }
-      unsubscribe();
-    } finally {
-      if (doStartTransaction) {
-        endTransaction(store);
-      }
+    unsubscribe();
+  } finally {
+    if (doStartTransaction) {
+      endTransaction(store);
     }
-  };
+  }
 }

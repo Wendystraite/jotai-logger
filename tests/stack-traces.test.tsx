@@ -14,8 +14,8 @@ import {
 } from 'vitest';
 
 import { consoleFormatter } from '../src/formatters/console/index.js';
-import { useAtomsLogger } from '../src/react/use-atoms-logger.js';
-import type { AtomLoggerOptions } from '../src/vanilla/types/atoms-logger.js';
+import { AtomLoggerProvider } from '../src/react/atom-logger-provider.js';
+import type { AtomLoggerOptions } from '../src/vanilla/types/options.js';
 
 let mockDate: MockInstance;
 
@@ -94,17 +94,13 @@ describe('stack traces', () => {
   );
   incrementAtom.debugLabel = 'incrementAtom';
 
-  function AtomsLogger(options?: AtomLoggerOptions) {
-    useAtomsLogger({ ...defaultOptions, ...options });
-    return null;
-  }
-
   function renderWithLogger(children: React.ReactNode, options?: AtomLoggerOptions) {
     const store = createStore();
     render(
       <Provider store={store}>
-        <AtomsLogger {...options} />
-        {children}
+        <AtomLoggerProvider {...defaultOptions} {...options}>
+          {children}
+        </AtomLoggerProvider>
       </Provider>,
     );
   }

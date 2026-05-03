@@ -1,6 +1,3 @@
-export { useAtomsLogger } from './react/use-atoms-logger.js';
-export {
-  bindAtomsLoggerToStore,
-  isAtomsLoggerBoundToStore,
-} from './vanilla/bind-atoms-logger-to-store.js';
-export type { AtomLoggerOptions } from './vanilla/types/atoms-logger.js';
+export { AtomLoggerProvider } from './react/atom-logger-provider.js';
+export { createLoggedStore, isLoggedStore } from './vanilla/create-logged-store.js';
+export type { AtomLoggerOptions } from './vanilla/types/options.js';

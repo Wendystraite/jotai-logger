@@ -1,4 +1,4 @@
-import { INTERNAL_isActuallyWritableAtom } from 'jotai/vanilla/internals';
+import { INTERNAL_isActuallyWritableAtom as isActuallyWritableAtom } from 'jotai/vanilla/internals';
 
 import type { AnyAtom, AtomId } from '../../vanilla/types/event.js';
 import {
@@ -351,7 +351,7 @@ export const TransactionLogPipeline = new LogPipeline()
       context.showAtom = true;
       context.atom = atom;
 
-      const isWriteMethod = typeof atom !== 'string' && INTERNAL_isActuallyWritableAtom(atom);
+      const isWriteMethod = typeof atom !== 'string' && isActuallyWritableAtom(atom);
       context.hasCustomWriteMethod = isWriteMethod && hasAtomCustomWriteMethod(atom);
       context.hasDefaultWriteMethod = isWriteMethod && !hasAtomCustomWriteMethod(atom);
     }

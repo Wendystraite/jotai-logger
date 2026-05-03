@@ -1,10 +1,11 @@
-import type { AtomLoggerOptions, AtomLoggerOptionsInState } from '../types/atoms-logger.js';
+import type { AtomLoggerOptions } from '../types/options.js';
+import type { AtomLoggerOptionsInStoreState } from '../types/store.js';
 
 /**
- * Core options subset of AtomLoggerOptionsInState — excludes the `formatter` field
+ * Core options subset of AtomLoggerOptionsInStoreState — excludes the `formatter` field
  * so that Object.assign on re-binds never accidentally overwrites the existing formatter.
  */
-export type AtomsLoggerCoreState = Omit<AtomLoggerOptionsInState, 'formatter'>;
+export type AtomsLoggerCoreState = Omit<AtomLoggerOptionsInStoreState, 'formatter'>;
 
 export function atomLoggerOptionsToState(options: AtomLoggerOptions = {}): AtomsLoggerCoreState {
   const {

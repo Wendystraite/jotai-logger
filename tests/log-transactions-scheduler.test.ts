@@ -10,9 +10,8 @@ import {
   type MockInstance,
 } from 'vitest';
 
-import { bindAtomsLoggerToStore } from '../src/vanilla/bind-atoms-logger-to-store.js';
+import { createLoggedStore } from '../src/vanilla/create-logged-store.js';
 import { createLogTransactionsScheduler } from '../src/vanilla/log-transactions-scheduler.js';
-import type { StoreWithAtomsLogger } from '../src/vanilla/types/atoms-logger.js';
 import type { AtomLoggerFormatter } from '../src/vanilla/types/formatter.js';
 import { AtomTransactionTypes, type AtomTransaction } from '../src/vanilla/types/transaction.js';
 
@@ -72,8 +71,7 @@ describe('logTransactionsScheduler', () => {
   });
 
   it('should schedule with requestIdleCallback if available', () => {
-    const store = createStore() as StoreWithAtomsLogger;
-    bindAtomsLoggerToStore(store, { formatter: formatterSpy });
+    const store = createLoggedStore(createStore(), { formatter: formatterSpy });
     const scheduler = createLogTransactionsScheduler(store);
 
     expect(formatterSpy).not.toHaveBeenCalled();
@@ -90,8 +88,7 @@ describe('logTransactionsScheduler', () => {
   it('should fallback to setTimeout if requestIdleCallback is not available', () => {
     delete (globalThis as Partial<typeof globalThis>).requestIdleCallback;
 
-    const store = createStore() as StoreWithAtomsLogger;
-    bindAtomsLoggerToStore(store, { formatter: formatterSpy });
+    const store = createLoggedStore(createStore(), { formatter: formatterSpy });
     const scheduler = createLogTransactionsScheduler(store);
 
     expect(formatterSpy).not.toHaveBeenCalled();
@@ -105,8 +102,7 @@ describe('logTransactionsScheduler', () => {
   });
 
   it('should process all transactions when maxProcessingTimeMs is 0 (disabled)', () => {
-    const store = createStore() as StoreWithAtomsLogger;
-    bindAtomsLoggerToStore(store, {
+    const store = createLoggedStore(createStore(), {
       formatter: formatterSpy,
       maxProcessingTimeMs: 0,
     });
@@ -119,8 +115,7 @@ describe('logTransactionsScheduler', () => {
   });
 
   it('should not call performance.now when maxProcessingTimeMs is disabled', () => {
-    const store = createStore() as StoreWithAtomsLogger;
-    bindAtomsLoggerToStore(store, {
+    const store = createLoggedStore(createStore(), {
       formatter: formatterSpy,
       maxProcessingTimeMs: 0,
     });
@@ -133,8 +128,7 @@ describe('logTransactionsScheduler', () => {
   });
 
   it('should call performance.now for start time on each process cycle', () => {
-    const store = createStore() as StoreWithAtomsLogger;
-    bindAtomsLoggerToStore(store, {
+    const store = createLoggedStore(createStore(), {
       formatter: formatterSpy,
       maxProcessingTimeMs: 10,
     });
@@ -171,8 +165,7 @@ describe('logTransactionsScheduler', () => {
       return 1;
     });
 
-    const store = createStore() as StoreWithAtomsLogger;
-    bindAtomsLoggerToStore(store, {
+    const store = createLoggedStore(createStore(), {
       formatter: formatterSpy,
       maxProcessingTimeMs: 10, // Allow processing to continue
     });
@@ -202,8 +195,7 @@ describe('logTransactionsScheduler', () => {
   });
 
   it('should handle empty queue gracefully', () => {
-    const store = createStore() as StoreWithAtomsLogger;
-    bindAtomsLoggerToStore(store, { formatter: formatterSpy });
+    const store = createLoggedStore(createStore(), { formatter: formatterSpy });
     const scheduler = createLogTransactionsScheduler(store);
 
     scheduler.process(); // Process empty queue
@@ -216,8 +208,7 @@ describe('logTransactionsScheduler', () => {
   });
 
   it('should prevent concurrent processing', () => {
-    const store = createStore() as StoreWithAtomsLogger;
-    bindAtomsLoggerToStore(store, { formatter: formatterSpy });
+    const store = createLoggedStore(createStore(), { formatter: formatterSpy });
     const scheduler = createLogTransactionsScheduler(store);
 
     scheduler.isProcessing = true; // Simulate ongoing processing
@@ -232,8 +223,7 @@ describe('logTransactionsScheduler', () => {
   });
 
   it('should handle null transactions in queue', () => {
-    const store = createStore() as StoreWithAtomsLogger;
-    bindAtomsLoggerToStore(store, { formatter: formatterSpy });
+    const store = createLoggedStore(createStore(), { formatter: formatterSpy });
     const scheduler = createLogTransactionsScheduler(store);
 
     // Manually add undefined to queue (edge case)
@@ -246,8 +236,7 @@ describe('logTransactionsScheduler', () => {
   });
 
   it('should use requestIdleCallback timeout from store configuration', () => {
-    const store = createStore() as StoreWithAtomsLogger;
-    bindAtomsLoggerToStore(store, {
+    const store = createLoggedStore(createStore(), {
       formatter: formatterSpy,
       requestIdleCallbackTimeoutMs: 500, // Custom timeout
     });
@@ -259,8 +248,7 @@ describe('logTransactionsScheduler', () => {
   });
 
   it('should execute immediately when requestIdleCallbackTimeoutMs is -1', () => {
-    const store = createStore() as StoreWithAtomsLogger;
-    bindAtomsLoggerToStore(store, {
+    const store = createLoggedStore(createStore(), {
       formatter: formatterSpy,
       requestIdleCallbackTimeoutMs: -1, // Immediate execution
       maxProcessingTimeMs: -1, // Disable time checks

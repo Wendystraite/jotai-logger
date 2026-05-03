@@ -1,6 +1,6 @@
-import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import { atomLoggerStoreSymbol } from '../consts/store-symbol.js';
 import { AtomEventTypes, type AtomEvent, type AtomEventMap } from '../types/event.js';
+import type { AtomLoggerStore } from '../types/store.js';
 import { AtomTransactionTypes, type AtomTransaction } from '../types/transaction.js';
 import { convertAtomsToStrings } from '../utils/convert-atoms-to-strings.js';
 import { shouldSetStateInEvent } from '../utils/should-set-state-in-event.js';
@@ -9,14 +9,14 @@ import { debounceEndTransaction } from './debounce-end-transaction.js';
 import { endTransaction } from './end-transaction.js';
 import { startTransaction } from './start-transaction.js';
 
-export function addEventToTransaction(store: StoreWithAtomsLogger, event: AtomEvent): void {
+export function addEventToTransaction(store: AtomLoggerStore, event: AtomEvent): void {
   if (!shouldShowAtom(store, event.atom)) {
     return;
   }
 
   setStateInEvent(store, event);
 
-  const transaction = store[ATOMS_LOGGER_SYMBOL].currentTransaction;
+  const transaction = store[atomLoggerStoreSymbol].currentTransaction;
 
   if (!transaction) {
     // Execute the event in an independent "unknown" transaction if there is no current transaction.
@@ -27,7 +27,7 @@ export function addEventToTransaction(store: StoreWithAtomsLogger, event: AtomEv
   }
 
   // Debounce the transaction since a new event is added to it.
-  if (store[ATOMS_LOGGER_SYMBOL].transactionsDebounceTimeoutId !== undefined) {
+  if (store[atomLoggerStoreSymbol].transactionsDebounceTimeoutId !== undefined) {
     debounceEndTransaction(store);
   }
 
@@ -43,17 +43,17 @@ export function addEventToTransaction(store: StoreWithAtomsLogger, event: AtomEv
 /**
  * Set the state of the atom in the event.
  */
-function setStateInEvent(store: StoreWithAtomsLogger, event: AtomEvent): void {
+function setStateInEvent(store: AtomLoggerStore, event: AtomEvent): void {
   if (typeof event.atom === 'string' || !shouldSetStateInEvent(event)) return;
 
-  event.dependencies = store[ATOMS_LOGGER_SYMBOL].dependenciesMap.get(event.atom);
+  event.dependencies = store[atomLoggerStoreSymbol].dependenciesMap.get(event.atom);
 
-  const options = store[ATOMS_LOGGER_SYMBOL];
+  const options = store[atomLoggerStoreSymbol];
 
-  const mountedState = store[ATOMS_LOGGER_SYMBOL].getMounted(event.atom);
+  const mountedState = store[atomLoggerStoreSymbol].getMounted(event.atom);
   event.dependents = convertAtomsToStrings(mountedState?.t.values(), options);
 
-  const atomState = store[ATOMS_LOGGER_SYMBOL].getState(event.atom);
+  const atomState = store[atomLoggerStoreSymbol].getState(event.atom);
   event.pendingPromises = convertAtomsToStrings(atomState?.p.values(), options);
 }
 

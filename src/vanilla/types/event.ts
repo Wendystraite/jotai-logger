@@ -35,11 +35,11 @@ export type AtomEventType = AtomEventTypes[keyof AtomEventTypes];
  * Fields common to all event types.
  */
 export interface AtomEventBase {
-  /** Atoms whose pending promises are blocking this atom at the time of the event. @see {@link INTERNAL_AtomState.p} */
+  /** Atoms whose pending promises are blocking this atom at the time of the event. @see {@link AtomState.p} */
   pendingPromises?: AtomId[];
-  /** The set of atoms this atom depends on at the time of the event. @see {@link INTERNAL_AtomState.d} @see {@link INTERNAL_Mounted.d} */
+  /** The set of atoms this atom depends on at the time of the event. @see {@link AtomState.d} @see {@link Mounted.d} */
   dependencies?: Set<AtomId>;
-  /** The set of atoms that depend on this atom at the time of the event. @see {@link INTERNAL_Mounted.t} */
+  /** The set of atoms that depend on this atom at the time of the event. @see {@link Mounted.t} */
   dependents?: AtomId[];
 }
 

@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { renderHook } from '@testing-library/react';
-import { atom, createStore } from 'jotai';
+import { render } from '@testing-library/react';
+import { atom, createStore, useStore } from 'jotai';
 import { useAtomsDevtools } from 'jotai-devtools';
 import type { Store } from 'jotai/vanilla/store';
+import React from 'react';
 import {
   type Mock,
   type MockInstance,
@@ -15,9 +16,8 @@ import {
 } from 'vitest';
 
 import { consoleFormatter } from '../src/formatters/console/index.js';
-import { bindAtomsLoggerToStore, useAtomsLogger } from '../src/index.js';
-import { isAtomsLoggerBoundToStore } from '../src/vanilla/bind-atoms-logger-to-store.js';
-import type { AtomLoggerOptions } from '../src/vanilla/types/atoms-logger.js';
+import { AtomLoggerProvider, createLoggedStore, isLoggedStore } from '../src/index.js';
+import type { AtomLoggerOptions } from '../src/vanilla/types/options.js';
 
 function isDevtoolsStore(store: Store): boolean {
   return 'get_internal_weak_map' in store;
@@ -51,26 +51,37 @@ afterEach(() => {
   mockDate.mockRestore();
 });
 
-describe('useAtomsLogger', () => {
+describe('AtomLoggerProvider', () => {
   it('jotai-devtools should create a dev store when calling createStore', () => {
     expect(isDevtoolsStore(createStore())).toBeTruthy();
   });
 
-  it('should bind the logger to the store created by jotai-devtools', () => {
-    const store = createStore();
-    expect(isAtomsLoggerBoundToStore(store)).toBeFalsy();
-    expect(isDevtoolsStore(store)).toBeTruthy();
-    renderHook(() => {
-      useAtomsDevtools('devtools', { store });
-      useAtomsLogger({ store });
-    });
-    expect(isAtomsLoggerBoundToStore(store)).toBeTruthy();
-    expect(isDevtoolsStore(store)).toBeTruthy();
+  it('should provide a logged store when wrapping a devtools store', () => {
+    const devtoolsStore = createStore();
+    expect(isDevtoolsStore(devtoolsStore)).toBeTruthy();
+
+    let childStore: Store | undefined;
+
+    function Child() {
+      useAtomsDevtools('devtools', { store: devtoolsStore });
+      childStore = useStore();
+      return null;
+    }
+
+    render(
+      <AtomLoggerProvider>
+        <Child />
+      </AtomLoggerProvider>,
+    );
+
+    expect(isLoggedStore(childStore!)).toBeTruthy();
+    expect(isDevtoolsStore(devtoolsStore)).toBeTruthy();
   });
 });
 
-describe('bindAtomsLoggerToStore', () => {
+describe('createLoggedStore', () => {
   let store: ReturnType<typeof createStore>;
+  let loggedStore: ReturnType<typeof createLoggedStore>;
   let consoleMock: {
     log: Mock;
     group: Mock;
@@ -103,21 +114,20 @@ describe('bindAtomsLoggerToStore', () => {
     vi.clearAllMocks();
   });
 
-  it('should bind the logger to the store created by jotai-devtools', () => {
-    expect(isAtomsLoggerBoundToStore(store)).toBeFalsy();
+  it('should create a logged store from a devtools store', () => {
     expect(isDevtoolsStore(store)).toBeTruthy();
-    expect(bindAtomsLoggerToStore(store)).toBe(true);
-    expect(isAtomsLoggerBoundToStore(store)).toBeTruthy();
+    loggedStore = createLoggedStore(store);
+    expect(isLoggedStore(loggedStore)).toBeTruthy();
     expect(isDevtoolsStore(store)).toBeTruthy();
   });
 
   it('should log mounted and unmounted atoms with a devtool store', () => {
     expect(isDevtoolsStore(store)).toBeTruthy();
-    bindAtomsLoggerToStore(store, defaultOptions);
+    loggedStore = createLoggedStore(store, defaultOptions);
 
     const testAtom = atom(42);
 
-    const unmount = store.sub(testAtom, vi.fn());
+    const unmount = loggedStore.sub(testAtom, vi.fn());
 
     vi.runAllTimers();
 
@@ -143,13 +153,13 @@ describe('bindAtomsLoggerToStore', () => {
 
   it('should log dependents when mounted with a devtool store', () => {
     expect(isDevtoolsStore(store)).toBeTruthy();
-    bindAtomsLoggerToStore(store, defaultOptions);
+    loggedStore = createLoggedStore(store, defaultOptions);
 
     const aAtom = atom(1);
     const bAtom = atom((get) => get(aAtom) * 2);
 
-    store.sub(bAtom, vi.fn()); // store.sub mounts the atom
-    store.set(aAtom, 2);
+    loggedStore.sub(bAtom, vi.fn());
+    loggedStore.set(aAtom, 2);
 
     vi.runAllTimers();
 
@@ -164,7 +174,7 @@ describe('bindAtomsLoggerToStore', () => {
       [
         `changed value of ${aAtom} from 1 to 2`,
         {
-          dependents: [`${bAtom}`], // OK
+          dependents: [`${bAtom}`],
           newValue: 2,
           oldValue: 1,
         },
@@ -172,7 +182,7 @@ describe('bindAtomsLoggerToStore', () => {
       [
         `changed value of ${bAtom} from 2 to 4`,
         {
-          dependencies: [`${aAtom}`], // OK
+          dependencies: [`${aAtom}`],
           newValue: 4,
           oldValue: 2,
         },

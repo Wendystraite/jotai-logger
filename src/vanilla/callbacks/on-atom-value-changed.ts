@@ -1,15 +1,15 @@
-import { INTERNAL_isPromiseLike } from 'jotai/vanilla/internals';
+import { INTERNAL_isPromiseLike as isPromiseLike } from 'jotai/vanilla/internals';
 
-import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
+import { atomLoggerStoreSymbol } from '../consts/store-symbol.js';
 import { addEventToTransaction } from '../transactions/add-event-to-transaction.js';
 import { endTransaction } from '../transactions/end-transaction.js';
 import { startTransaction } from '../transactions/start-transaction.js';
-import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
 import { AtomEventTypes, type AnyAtom } from '../types/event.js';
+import type { AtomLoggerStore } from '../types/store.js';
 import { AtomTransactionTypes } from '../types/transaction.js';
 
 export function onAtomValueChanged(
-  store: StoreWithAtomsLogger,
+  store: AtomLoggerStore,
   atom: AnyAtom,
   args: { isInitialValue?: boolean; oldValue?: unknown; newValue: unknown },
 ) {
@@ -17,7 +17,7 @@ export function onAtomValueChanged(
   let { isInitialValue = false } = args;
   let { oldValue } = args;
 
-  if (!INTERNAL_isPromiseLike(newValueOrPromise)) {
+  if (!isPromiseLike(newValueOrPromise)) {
     const newValue = newValueOrPromise;
     if (isInitialValue) {
       addEventToTransaction(store, {
@@ -39,10 +39,10 @@ export function onAtomValueChanged(
   const newPromise = newValueOrPromise;
 
   if (!isInitialValue) {
-    if (INTERNAL_isPromiseLike(oldValue)) {
-      if (store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.has(oldValue)) {
+    if (isPromiseLike(oldValue)) {
+      if (store[atomLoggerStoreSymbol].promisesResultsMap.has(oldValue)) {
         // uses the result of the previous promise instead of the promise itself
-        oldValue = store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.get(oldValue);
+        oldValue = store[atomLoggerStoreSymbol].promisesResultsMap.get(oldValue);
       } else {
         // Edge case to know if the current promise is still the initial promise after the previous (initial) promise was aborted :
         // if we don't have the result of the previous promise it means that is
@@ -58,7 +58,7 @@ export function onAtomValueChanged(
     // - If this promise is aborted, the oldValue will be retrieved from the results map in the above code.
     //   This also prevent the new promise to think it was an initial promise is the above edge case.
     // - Else, it will be replaced by the new value or error of the resolved/rejected promise.
-    store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.set(newPromise, oldValue);
+    store[atomLoggerStoreSymbol].promisesResultsMap.set(newPromise, oldValue);
   }
 
   let isAborted = false;
@@ -76,7 +76,7 @@ export function onAtomValueChanged(
     });
   }
 
-  store[ATOMS_LOGGER_SYMBOL].registerAbortHandler(store, newPromise, () => {
+  store[atomLoggerStoreSymbol].registerAbortHandler(store, newPromise, () => {
     isAborted = true;
     if (isInitialValue) {
       addEventToTransaction(store, {
@@ -92,10 +92,10 @@ export function onAtomValueChanged(
     }
   });
 
-  const transactionWhenPending = store[ATOMS_LOGGER_SYMBOL].currentTransaction;
+  const transactionWhenPending = store[atomLoggerStoreSymbol].currentTransaction;
 
   const canStartNewTransaction = () => {
-    const currentTransaction = store[ATOMS_LOGGER_SYMBOL].currentTransaction;
+    const currentTransaction = store[atomLoggerStoreSymbol].currentTransaction;
 
     // No transaction started : start a new one
     if (currentTransaction === undefined) {
@@ -125,7 +125,7 @@ export function onAtomValueChanged(
   newPromise.then(
     (newValue: unknown) => {
       if (!isAborted) {
-        store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.set(newPromise, newValue);
+        store[atomLoggerStoreSymbol].promisesResultsMap.set(newPromise, newValue);
 
         const doStartTransaction = canStartNewTransaction();
 
@@ -167,7 +167,7 @@ export function onAtomValueChanged(
           });
         }
 
-        store[ATOMS_LOGGER_SYMBOL].promisesResultsMap.set(newPromise, error);
+        store[atomLoggerStoreSymbol].promisesResultsMap.set(newPromise, error);
 
         if (isInitialValue) {
           addEventToTransaction(store, {

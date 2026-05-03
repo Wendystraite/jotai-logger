@@ -1,27 +1,24 @@
-import { ATOMS_LOGGER_SYMBOL } from '../consts/atom-logger-symbol.js';
-import type { StoreWithAtomsLogger } from '../types/atoms-logger.js';
+import { atomLoggerStoreSymbol } from '../consts/store-symbol.js';
+import type { AtomLoggerStore } from '../types/store.js';
 import { debounceEndTransaction } from './debounce-end-transaction.js';
 import { flushTransactionEvents } from './flush-transaction-events.js';
 import { stopEndTransactionDebounce } from './stop-end-transaction-debounce.js';
 import { updateTransactionEndTimestamp } from './update-transaction-end-timestamp.js';
 
-export function endTransaction(
-  store: StoreWithAtomsLogger,
-  { immediate } = { immediate: false },
-): void {
-  store[ATOMS_LOGGER_SYMBOL].isInsideTransaction = false;
+export function endTransaction(store: AtomLoggerStore, { immediate } = { immediate: false }): void {
+  store[atomLoggerStoreSymbol].isInsideTransaction = false;
 
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- should never happen since it is called after startTransaction
-  const transaction = store[ATOMS_LOGGER_SYMBOL].currentTransaction!;
+  const transaction = store[atomLoggerStoreSymbol].currentTransaction!;
 
   // Retrieve the owner stack if there are events to log (for better logging performance)
   if (
     transaction.eventsCount > 0 &&
     !transaction.ownerStack &&
-    store[ATOMS_LOGGER_SYMBOL].getOwnerStack
+    store[atomLoggerStoreSymbol].getOwnerStack
   ) {
     try {
-      transaction.ownerStack = store[ATOMS_LOGGER_SYMBOL].getOwnerStack();
+      transaction.ownerStack = store[atomLoggerStoreSymbol].getOwnerStack();
     } catch {
       transaction.ownerStack = undefined;
     }
@@ -42,16 +39,16 @@ export function endTransaction(
    *   To compare the previous and next value of the atom, it calls `store.get`.
    *   This store call is done in the component body (inside `useReducer`), so the component display name can be retrieved here.
    */
-  if (!transaction.componentDisplayName && store[ATOMS_LOGGER_SYMBOL].getComponentDisplayName) {
+  if (!transaction.componentDisplayName && store[atomLoggerStoreSymbol].getComponentDisplayName) {
     try {
-      transaction.componentDisplayName = store[ATOMS_LOGGER_SYMBOL].getComponentDisplayName();
+      transaction.componentDisplayName = store[atomLoggerStoreSymbol].getComponentDisplayName();
     } catch {
       transaction.componentDisplayName = undefined;
     }
   }
 
   // Flush the transaction events immediately (useful when starting a new transaction).
-  if (immediate || store[ATOMS_LOGGER_SYMBOL].transactionDebounceMs <= 0) {
+  if (immediate || store[atomLoggerStoreSymbol].transactionDebounceMs <= 0) {
     stopEndTransactionDebounce(store);
     updateTransactionEndTimestamp(store);
     flushTransactionEvents(store);

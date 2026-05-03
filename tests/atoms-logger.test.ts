@@ -17,11 +17,11 @@ import {
 
 import { consoleFormatter } from '../src/formatters/console/index.js';
 import type { ConsoleFormatterOptions } from '../src/formatters/console/types.js';
-import { type AtomLoggerOptions, bindAtomsLoggerToStore } from '../src/index.js';
-import { isAtomsLoggerBoundToStore } from '../src/vanilla/bind-atoms-logger-to-store.js';
-import { ATOMS_LOGGER_SYMBOL } from '../src/vanilla/consts/atom-logger-symbol.js';
-import type { Store, StoreWithAtomsLogger } from '../src/vanilla/types/atoms-logger.js';
+import { type AtomLoggerOptions, createLoggedStore } from '../src/index.js';
+import { atomLoggerStoreSymbol } from '../src/vanilla/consts/store-symbol.js';
+import { isLoggedStore } from '../src/vanilla/create-logged-store.js';
 import type { AnyAtom, AtomId } from '../src/vanilla/types/event.js';
+import type { Store, AtomLoggerStore } from '../src/vanilla/types/store.js';
 
 let mockDate: MockInstance;
 
@@ -41,7 +41,7 @@ afterEach(() => {
   mockDate.mockRestore();
 });
 
-describe('bindAtomsLoggerToStore', () => {
+describe('createLoggedStore', () => {
   let store: ReturnType<typeof createStore>;
   let consoleMock: {
     log: Mock;
@@ -90,15 +90,14 @@ describe('bindAtomsLoggerToStore', () => {
       expect(isDevtoolsStore(createStore())).toBeFalsy();
     });
 
-    it('should bind the logger to the store', () => {
-      expect(isAtomsLoggerBoundToStore(store)).toBeFalsy();
-      expect(bindAtomsLoggerToStore(store, defaultOptions)).toBe(true);
-      expect(isAtomsLoggerBoundToStore(store)).toBeTruthy();
+    it('should create a logged store', () => {
+      expect(isLoggedStore(store)).toBeFalsy();
+      store = createLoggedStore(store, defaultOptions);
+      expect(isLoggedStore(store)).toBeTruthy();
       expect(consoleMock.log.mock.calls).toEqual([]);
     });
 
     it('should not bind the logger to the store if the store does not contain jotai internal building blocks', () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const fakeStore: Store = {
         get() {
           throw new Error('Function not implemented.');
@@ -110,103 +109,81 @@ describe('bindAtomsLoggerToStore', () => {
           throw new Error('Function not implemented.');
         },
       };
-      expect(bindAtomsLoggerToStore(fakeStore, defaultOptions)).toBe(false);
-      expect(consoleErrorSpy.mock.calls).toEqual([
-        [
-          'Fail to bind atoms logger to',
-          fakeStore,
-          ':',
-          new Error('Store must be created by buildStore to read its building blocks'),
-        ],
-      ]);
-      consoleErrorSpy.mockRestore();
+      expect(() => createLoggedStore(fakeStore, defaultOptions)).toThrow(
+        'Store must be created by buildStore to read its building blocks',
+      );
     });
 
-    it('should override store methods', () => {
+    it('should return a new store with different get/set/sub methods', () => {
+      const parentStore = store;
       const originalGet = store.get;
       const originalSet = store.set;
       const originalSub = store.sub;
 
-      if (!bindAtomsLoggerToStore(store, defaultOptions)) {
-        expect.fail('store should be bound to logger');
-      }
+      store = createLoggedStore(store, defaultOptions);
 
       expect(store.get).not.toBe(originalGet);
       expect(store.set).not.toBe(originalSet);
       expect(store.sub).not.toBe(originalSub);
 
-      expect(store[ATOMS_LOGGER_SYMBOL].prevStoreGet).toBe(originalGet);
-      expect(store[ATOMS_LOGGER_SYMBOL].prevStoreSet).toBe(originalSet);
-      expect(store[ATOMS_LOGGER_SYMBOL].prevStoreSub).toBe(originalSub);
+      // Parent store remains unmodified
+      expect(parentStore.get).toBe(originalGet);
+      expect(parentStore.set).toBe(originalSet);
+      expect(parentStore.sub).toBe(originalSub);
     });
 
-    it('should call original store methods', () => {
-      store.get = vi.fn(store.get) as Store['get'];
-      store.set = vi.fn(store.set) as Store['set'];
-      store.sub = vi.fn(store.sub);
-
-      const originalGet = store.get;
-      const originalSet = store.set;
-      const originalSub = store.sub;
-
-      bindAtomsLoggerToStore(store, defaultOptions);
+    it('should log operations performed through the logged store', () => {
+      store = createLoggedStore(store, defaultOptions);
 
       const testAtom = atom(42);
 
       store.get(testAtom);
-      expect(originalGet).toHaveBeenCalledWith(testAtom);
-
       store.set(testAtom, 43);
-      expect(originalSet).toHaveBeenCalledWith(testAtom, 43);
-
       const listener = vi.fn();
       store.sub(testAtom, listener);
-      expect(originalSub).toHaveBeenCalledWith(testAtom, listener);
+
+      vi.runAllTimers();
+
+      expect(consoleMock.log.mock.calls.length).toBeGreaterThan(0);
     });
 
-    it('should not bind the logger to the store if it is already bound', () => {
-      expect(isAtomsLoggerBoundToStore(store)).toBeFalsy();
-      expect(bindAtomsLoggerToStore(store, defaultOptions)).toBe(true);
-      expect(isAtomsLoggerBoundToStore(store)).toBeTruthy();
-      expect(bindAtomsLoggerToStore(store, defaultOptions)).toBe(true);
-      expect(isAtomsLoggerBoundToStore(store)).toBeTruthy();
+    it('should create an independent logged store', () => {
+      expect(isLoggedStore(store)).toBeFalsy();
+      store = createLoggedStore(store, defaultOptions);
+      expect(isLoggedStore(store)).toBeTruthy();
       expect(consoleMock.log.mock.calls).toEqual([]);
     });
 
-    it('should change store options when binding multiple times', () => {
-      bindAtomsLoggerToStore(store, {
+    it('should allow updating options on the logged store state', () => {
+      store = createLoggedStore(store, {
         ...defaultOptions,
         enabled: true,
       });
 
-      expect((store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL]).toEqual(
+      expect((store as AtomLoggerStore)[atomLoggerStoreSymbol]).toEqual(
         expect.objectContaining({ enabled: true }),
       );
 
-      bindAtomsLoggerToStore(store, {
-        ...defaultOptions,
-        enabled: false,
-      });
+      (store as AtomLoggerStore)[atomLoggerStoreSymbol].enabled = false;
 
-      expect((store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL]).toEqual(
+      expect((store as AtomLoggerStore)[atomLoggerStoreSymbol]).toEqual(
         expect.objectContaining({ enabled: false }),
       );
     });
 
-    it('should keep the existing formatter when re-binding without a formatter', () => {
+    it('should keep the existing formatter when updating options after creation', () => {
       const customFormatter = vi.fn();
-      bindAtomsLoggerToStore(store, { formatter: customFormatter, enabled: true });
+      store = createLoggedStore(store, { formatter: customFormatter, enabled: true });
 
-      const formatterAfterFirstBind = (store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL]
-        .formatter;
-      expect(formatterAfterFirstBind).toBe(customFormatter);
+      const formatterAfterCreation = (store as AtomLoggerStore)[atomLoggerStoreSymbol].formatter;
+      expect(formatterAfterCreation).toBe(customFormatter);
 
-      // Re-bind with only a core option, no formatter provided
-      bindAtomsLoggerToStore(store, { enabled: false });
+      // Update a core option directly, formatter should remain
+      (store as AtomLoggerStore)[atomLoggerStoreSymbol].enabled = false;
 
       // Formatter should remain the same instance
-      expect((store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL].formatter).toBe(customFormatter);
-      expect((store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL]).toEqual(
+      expect((store as AtomLoggerStore)[atomLoggerStoreSymbol].formatter).toBe(customFormatter);
+      expect((store as AtomLoggerStore)[atomLoggerStoreSymbol]).toEqual(
         expect.objectContaining({ enabled: false }),
       );
     });
@@ -214,7 +191,7 @@ describe('bindAtomsLoggerToStore', () => {
 
   describe('debugLabel', () => {
     it('should log atoms without debug labels', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const testAtom = atom(42);
 
@@ -233,7 +210,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log atoms with debug labels', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const testAtom = atom(42);
       testAtom.debugLabel = 'Test Atom';
@@ -253,7 +230,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log atoms with a custom toString method', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const testAtom = atom(42);
       testAtom.toString = () => 'Custom Atom';
@@ -269,7 +246,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log atoms with a custom toString method in colors', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({ ...defaultFormatterOptions, formattedOutput: true }),
       });
       const testAtom = atom(42);
@@ -316,20 +293,18 @@ describe('bindAtomsLoggerToStore', () => {
         ownerStackLimit: 5,
       };
 
-      if (!bindAtomsLoggerToStore(store, customOptions)) {
-        expect.fail('store should be bound to logger');
-      }
+      store = createLoggedStore(store, customOptions);
 
-      // Only core options are stored in ATOMS_LOGGER_SYMBOL state
-      expect(store[ATOMS_LOGGER_SYMBOL].enabled).toBe(false);
-      expect(store[ATOMS_LOGGER_SYMBOL].shouldShowPrivateAtoms).toBe(true);
+      // Only core options are stored in atomLoggerStoreSymbol state
+      expect((store as AtomLoggerStore)[atomLoggerStoreSymbol].enabled).toBe(false);
+      expect((store as AtomLoggerStore)[atomLoggerStoreSymbol].shouldShowPrivateAtoms).toBe(true);
       // Formatter-specific options (stringifyLimit, logger, groupTransactions, etc.)
       // are managed inside the formatter closure, not in the core state
     });
 
     describe('enabled', () => {
       it('should log atom interactions when enabled', () => {
-        bindAtomsLoggerToStore(store, defaultOptions);
+        store = createLoggedStore(store, defaultOptions);
 
         const testAtom = atom(42);
         store.get(testAtom);
@@ -343,7 +318,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should not log atom interactions when disabled', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           enabled: false,
           formatter: consoleFormatter({ logger: consoleMock }),
         });
@@ -357,7 +332,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should not log atom interactions anymore after disabling', () => {
-        bindAtomsLoggerToStore(store, { ...defaultOptions, enabled: true });
+        store = createLoggedStore(store, { ...defaultOptions, enabled: true });
 
         const testAtom = atom(42);
 
@@ -371,7 +346,8 @@ describe('bindAtomsLoggerToStore', () => {
 
         vi.clearAllMocks();
 
-        bindAtomsLoggerToStore(store, { ...defaultOptions, enabled: false });
+        // Update the enabled option directly on the logger state
+        (store as AtomLoggerStore)[atomLoggerStoreSymbol].enabled = false;
 
         store.get(testAtom);
         store.set(testAtom, 43);
@@ -384,7 +360,7 @@ describe('bindAtomsLoggerToStore', () => {
     describe('shouldShowAtom', () => {
       it('should respect shouldShowAtom option', () => {
         const shouldShowAtom = (a: AnyAtom) => a === testAtom1;
-        bindAtomsLoggerToStore(store, { ...defaultOptions, shouldShowAtom });
+        store = createLoggedStore(store, { ...defaultOptions, shouldShowAtom });
 
         const testAtom1 = atom(1);
         const testAtom2 = atom(2);
@@ -404,7 +380,7 @@ describe('bindAtomsLoggerToStore', () => {
 
     describe('shouldShowPrivateAtoms', () => {
       it('should not log private atoms by default', () => {
-        bindAtomsLoggerToStore(store, defaultOptions);
+        store = createLoggedStore(store, defaultOptions);
 
         const privateAtom = atom(0);
         privateAtom.debugPrivate = true;
@@ -424,7 +400,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should log private atoms when shouldShowPrivateAtoms is true', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           ...defaultOptions,
           shouldShowPrivateAtoms: true,
         });
@@ -453,7 +429,7 @@ describe('bindAtomsLoggerToStore', () => {
 
     describe('showTransactionNumber', () => {
       it('should not log transaction numbers when showTransactionNumber is disabled', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({ ...defaultFormatterOptions, showTransactionNumber: false }),
         });
 
@@ -469,7 +445,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should not log transaction when showTransactionNumber, showTransactionElapsedTime and showTransactionLocaleTime are disabled', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionNumber: false,
@@ -492,7 +468,7 @@ describe('bindAtomsLoggerToStore', () => {
 
     describe('showTransactionElapsedTime', () => {
       it('should log elapsed time when showTransactionElapsedTime is enabled', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionElapsedTime: true,
@@ -514,7 +490,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should not log elapsed time when showTransactionElapsedTime is disabled', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionElapsedTime: false,
@@ -533,7 +509,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should not log elapsed time if endTimestamp is equal or less than startTimestamp', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionElapsedTime: true,
@@ -557,7 +533,7 @@ describe('bindAtomsLoggerToStore', () => {
       it('should call performance.now when showTransactionElapsedTime is enabled', () => {
         const performanceNowSpy = vi.spyOn(performance, 'now');
 
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           synchronous: true,
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
@@ -581,7 +557,7 @@ describe('bindAtomsLoggerToStore', () => {
       it('should call performance.now when showTransactionLocaleTime is enabled', () => {
         const performanceNowSpy = vi.spyOn(performance, 'now');
 
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           synchronous: true,
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
@@ -605,7 +581,7 @@ describe('bindAtomsLoggerToStore', () => {
       it('should not call performance.now when showTransactionElapsedTime and showTransactionLocaleTime are disabled', () => {
         const performanceNowSpy = vi.spyOn(performance, 'now');
 
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           synchronous: true,
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
@@ -631,7 +607,7 @@ describe('bindAtomsLoggerToStore', () => {
 
     describe('showTransactionLocaleTime', () => {
       it('should log timestamps when showTransactionLocaleTime is enabled', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionLocaleTime: true,
@@ -650,7 +626,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should not log timestamps when showTransactionLocaleTime is disabled', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionLocaleTime: false,
@@ -669,7 +645,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should log timestamps and elapsed time when both options are enabled', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionElapsedTime: true,
@@ -692,7 +668,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should log timestamps and elapsed time with colors', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionElapsedTime: true,
@@ -743,7 +719,7 @@ describe('bindAtomsLoggerToStore', () => {
 
     describe('showTransactionEventsCount', () => {
       it('should show the number of events when showTransactionEventsCount is enabled', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionEventsCount: true,
@@ -762,7 +738,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should not show the number of events when showTransactionEventsCount is disabled', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionEventsCount: false,
@@ -781,7 +757,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should show the correct number of events for multiple events in a transaction', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionEventsCount: true,
@@ -808,7 +784,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should show singular form for one event', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionEventsCount: true,
@@ -827,7 +803,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should show events count with colors when formattedOutput is enabled', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionEventsCount: true,
@@ -872,7 +848,7 @@ describe('bindAtomsLoggerToStore', () => {
 
     describe('autoAlignTransactions', () => {
       it('should automatically align transaction components when autoAlignTransactions is enabled', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionNumber: true,
@@ -960,7 +936,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should align left events count when autoAlignTransactions is true', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionNumber: false,
@@ -1014,7 +990,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should align left elapsed time when autoAlignTransactions is true', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionNumber: false,
@@ -1062,7 +1038,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should log zero elapsed time when autoAlignTransactions is true', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionElapsedTime: true,
@@ -1092,7 +1068,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should not apply alignment when autoAlignTransactions is disabled', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             showTransactionEventsCount: true,
@@ -1136,7 +1112,7 @@ describe('bindAtomsLoggerToStore', () => {
 
     describe('indentSpaces', () => {
       it('should log indentation when `indentSpaces` is set to a value greater than 0', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({ ...defaultFormatterOptions, indentSpaces: 2 }),
         });
 
@@ -1152,7 +1128,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should not log indentation when `indentSpaces` is set to 0', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({ ...defaultFormatterOptions, indentSpaces: 0 }),
         });
 
@@ -1168,7 +1144,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should log group indentation when `indentSpaces` is set to a value greater than 0', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             indentSpaces: 3,
@@ -1197,7 +1173,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should log sub-log indentation when `indentSpaces` is set and there are sub-logs', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({ ...defaultFormatterOptions, indentSpaces: 2 }),
         });
 
@@ -1217,7 +1193,7 @@ describe('bindAtomsLoggerToStore', () => {
 
     describe('stringifyLimit', () => {
       it('should truncate atom values with stringifyLimit', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({ ...defaultFormatterOptions, stringifyLimit: 5 }),
         });
 
@@ -1248,7 +1224,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should truncate atom values by default', () => {
-        bindAtomsLoggerToStore(store, { ...defaultOptions });
+        store = createLoggedStore(store, { ...defaultOptions });
 
         const value = Array.from({ length: 60 }, () => 'a').join('');
         const testAtom = atom(value);
@@ -1265,7 +1241,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should not truncate atom values when stringifyLimit is 0', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({ ...defaultFormatterOptions, stringifyLimit: 0 }),
         });
 
@@ -1290,7 +1266,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should stringify values when stringifyValues is true and formattedOutput is false', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             formattedOutput: false,
@@ -1318,7 +1294,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should stringify values with colors when stringifyValues is true and formattedOutput is true', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             formattedOutput: true,
@@ -1389,7 +1365,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should log values as is when stringifyValues is false and formattedOutput is false', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             formattedOutput: false,
@@ -1415,7 +1391,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should log values using string substitution and colors when stringifyValues is false and formattedOutput is true', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             formattedOutput: true,
@@ -1497,7 +1473,7 @@ describe('bindAtomsLoggerToStore', () => {
           return String(value);
         };
 
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({ ...defaultFormatterOptions, stringify: customStringify }),
         });
 
@@ -1517,7 +1493,7 @@ describe('bindAtomsLoggerToStore', () => {
           throw new Error('Custom stringify error');
         };
 
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({ ...defaultFormatterOptions, stringify: customStringify }),
         });
 
@@ -1535,7 +1511,7 @@ describe('bindAtomsLoggerToStore', () => {
       it('should truncate values when using custom stringify function', () => {
         const customStringify = String;
 
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             stringify: customStringify,
@@ -1555,7 +1531,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it("should not crash if stringify doesn't returns a string", () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             stringify: () => ({ foo: 'bar' }) as unknown as string,
@@ -1576,7 +1552,7 @@ describe('bindAtomsLoggerToStore', () => {
 
     describe('domain', () => {
       it('should not log domain when empty', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({ ...defaultFormatterOptions, domain: '' }),
         });
 
@@ -1592,7 +1568,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should log domain when set', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({ ...defaultFormatterOptions, domain: 'test-domain' }),
         });
 
@@ -1608,7 +1584,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should log domain with colors when set', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             formattedOutput: true,
@@ -1653,7 +1629,7 @@ describe('bindAtomsLoggerToStore', () => {
 
     describe('synchronous', () => {
       it('should log asynchronously by default', () => {
-        bindAtomsLoggerToStore(store, defaultOptions);
+        store = createLoggedStore(store, defaultOptions);
 
         const testAtom = atom(42);
         store.get(testAtom);
@@ -1672,7 +1648,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should log synchronously when synchronous is true', () => {
-        bindAtomsLoggerToStore(store, { ...defaultOptions, synchronous: true });
+        store = createLoggedStore(store, { ...defaultOptions, synchronous: true });
 
         const testAtom = atom(42);
         store.get(testAtom);
@@ -1694,7 +1670,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should ignore transactionDebounceMs, requestIdleCallbackTimeoutMs and maxProcessingTimeMs options when synchronous is true', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           ...defaultOptions,
           synchronous: true,
           requestIdleCallbackTimeoutMs: 345,
@@ -1702,7 +1678,7 @@ describe('bindAtomsLoggerToStore', () => {
           maxProcessingTimeMs: 789,
         });
 
-        const options = (store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL];
+        const options = (store as AtomLoggerStore)[atomLoggerStoreSymbol];
 
         expect(options).toEqual(
           expect.objectContaining({
@@ -1717,11 +1693,11 @@ describe('bindAtomsLoggerToStore', () => {
           }),
         );
 
-        bindAtomsLoggerToStore(store, {
-          ...defaultOptions,
-          synchronous: false,
+        // Update options directly on the logger state (non-synchronous values)
+        Object.assign(options, {
           requestIdleCallbackTimeoutMs: 345,
           transactionDebounceMs: 456,
+          maxProcessingTimeMs: 16,
         });
 
         expect(options).toEqual(
@@ -1735,7 +1711,7 @@ describe('bindAtomsLoggerToStore', () => {
 
     describe('transactionDebounceMs', () => {
       it('should log transactions with debounce by default', () => {
-        bindAtomsLoggerToStore(store, defaultOptions);
+        store = createLoggedStore(store, defaultOptions);
 
         const testAtom = atom('trans-1.0');
         const setTestAtom = atom(null, (get, set) => {
@@ -1778,7 +1754,7 @@ describe('bindAtomsLoggerToStore', () => {
       it('should log transactions with debounce with transactionDebounceMs option', () => {
         const transactionDebounceMs = 100;
 
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           ...defaultOptions,
           transactionDebounceMs,
         });
@@ -1822,7 +1798,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should log transactions without debounce when transactionDebounceMs is 0', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           ...defaultOptions,
           transactionDebounceMs: 0,
         });
@@ -1878,7 +1854,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should schedule and log transactions using requestIdleCallback by default', () => {
-        bindAtomsLoggerToStore(store, defaultOptions);
+        store = createLoggedStore(store, defaultOptions);
 
         const testAtom = atom(0);
 
@@ -1905,7 +1881,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should schedule and log transactions using requestIdleCallback with requestIdleCallbackTimeoutMs option', () => {
-        bindAtomsLoggerToStore(store, { ...defaultOptions, requestIdleCallbackTimeoutMs: 666 });
+        store = createLoggedStore(store, { ...defaultOptions, requestIdleCallbackTimeoutMs: 666 });
 
         const testAtom = atom(0);
 
@@ -1932,7 +1908,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should schedule and log transactions using requestIdleCallback without timeout with requestIdleCallbackTimeoutMs option to 0', () => {
-        bindAtomsLoggerToStore(store, { ...defaultOptions, requestIdleCallbackTimeoutMs: 0 });
+        store = createLoggedStore(store, { ...defaultOptions, requestIdleCallbackTimeoutMs: 0 });
 
         const testAtom = atom(0);
 
@@ -1959,7 +1935,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should log transactions synchronously when requestIdleCallbackTimeoutMs is -1', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           ...defaultOptions,
           requestIdleCallbackTimeoutMs: -1,
         });
@@ -1984,7 +1960,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should log transactions synchronously when requestIdleCallbackTimeoutMs and transactionDebounceMs are -1', () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           ...defaultOptions,
           requestIdleCallbackTimeoutMs: -1,
           transactionDebounceMs: -1,
@@ -2030,7 +2006,7 @@ describe('bindAtomsLoggerToStore', () => {
           delete (globalThis as Partial<typeof globalThis>).requestIdleCallback;
         });
 
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           ...defaultOptions,
         });
 
@@ -2082,7 +2058,7 @@ describe('bindAtomsLoggerToStore', () => {
 
   describe('promises', () => {
     it('should log promise states', async () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const promiseAtom = atom(() => {
         return new Promise((resolve) =>
@@ -2123,7 +2099,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log rejected promises', async () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const myError = new Error('Promise rejected');
       const promiseAtom = atom(() => {
@@ -2153,7 +2129,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should show promise resolved and rejected in the same transaction if they resolve before the debounce', async () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const instantPromiseAtom = atom(() => {
         return new Promise((resolve) =>
@@ -2226,7 +2202,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should show promise resolved in the same transaction if they are waiting for the same async dependency', async () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const otherAtom = atom(0);
       const doGetOtherAtom = () => {
@@ -2294,7 +2270,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log aborted promises', async () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const dependencyAtom = atom('first');
       const promiseAtom = atom(async (get, { signal }) => {
@@ -2350,7 +2326,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log atom promise changes', async () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const testAtom = atom<unknown>(0);
 
@@ -2384,7 +2360,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should show initial promise aborted before a new promise is pending', async () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const dependencyAtom = atom(0);
       dependencyAtom.debugPrivate = true;
@@ -2423,7 +2399,7 @@ describe('bindAtomsLoggerToStore', () => {
 
     it('should not log promise resolved when promise was already aborted', async () => {
       // Covers the isAborted=true branch in the .then() callback
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       let externalResolve: (value: number) => void;
       const promiseAtom = atom(async (get, { signal }) => {
@@ -2471,7 +2447,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should show changed promise aborted before a new promise is pending', async () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const dependencyAtom = atom(0);
       dependencyAtom.debugPrivate = true;
@@ -2522,7 +2498,7 @@ describe('bindAtomsLoggerToStore', () => {
 
     it('should not swap events when abort is the only event in the transaction', async () => {
       // Covers add-event-to-transaction.ts:152 false branch: events.length <= 1
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const promiseAtom = atom<unknown>(0);
 
@@ -2547,7 +2523,7 @@ describe('bindAtomsLoggerToStore', () => {
 
     it('should not swap events when the event before abort is not a pending promise event', async () => {
       // Covers add-event-to-transaction.ts:154 false branch: preceding event is not pending
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const aAtom = atom(1);
       const bAtom = atom(2);
@@ -2591,7 +2567,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log promises in colors', async () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({ ...defaultFormatterOptions, formattedOutput: true }),
       });
 
@@ -2935,7 +2911,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log aborted promise due to changing dependencies', async () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const abortedFn = vi.fn();
 
@@ -2995,7 +2971,7 @@ describe('bindAtomsLoggerToStore', () => {
     it('should not log aborted promise due to unmount', async () => {
       // **not** aborted is expected due to https://github.com/pmndrs/jotai/issues/2625
 
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const abortedFn = vi.fn();
 
@@ -3037,7 +3013,7 @@ describe('bindAtomsLoggerToStore', () => {
 
   describe('errors', () => {
     it('should log error values without stringifying when stringifyValues is false', async () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({ ...defaultFormatterOptions, stringifyValues: false }),
       });
 
@@ -3058,7 +3034,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log old error and new error without stringifying when stringifyValues is false', async () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({ ...defaultFormatterOptions, stringifyValues: false }),
       });
 
@@ -3092,7 +3068,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log custom errors', async () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const customError = RangeError('Custom error message');
       const promiseAtom = atom(() => {
@@ -3122,7 +3098,7 @@ describe('bindAtomsLoggerToStore', () => {
 
   describe('changes', () => {
     it('should log atom value changes', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const testAtom = atom<unknown>(42);
 
@@ -3144,7 +3120,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log atom value and promise changes', async () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const valueTypeAtom = atom<'value' | 'resolve' | 'reject' | 'reject2'>('resolve');
       valueTypeAtom.debugPrivate = true;
@@ -3265,7 +3241,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should merge atom value changes if they are in the same transaction', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const valueAtom = atom(0);
 
@@ -3292,7 +3268,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log merged atom value changes as is', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({
           ...defaultFormatterOptions,
           formattedOutput: false,
@@ -3322,7 +3298,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log merged atom value changes in colors', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({ ...defaultFormatterOptions, formattedOutput: true }),
       });
 
@@ -3384,7 +3360,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should not crash when logging an atom with a circular value', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const circularValue = {} as { self: unknown };
       circularValue.self = circularValue;
@@ -3403,7 +3379,7 @@ describe('bindAtomsLoggerToStore', () => {
 
   describe('dependencies', () => {
     it('should log dependencies', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
       const valueAtom = atom(1);
       const multiplyAtom = atom(2);
       const resultAtom = atom((get) => get(valueAtom) * get(multiplyAtom));
@@ -3434,7 +3410,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should not log dependencies if the only dependencies are private', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
       const privateAtom = atom(0);
       privateAtom.debugPrivate = true;
       const publicAtom = atom((get) => get(privateAtom) + 1);
@@ -3447,7 +3423,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log when an atom dependencies have changed', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const aAtom = atom(1);
       const bAtom = atom(2);
@@ -3510,7 +3486,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should not track atom dependencies of private atoms', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const aAtom = atom(1);
       const bAtom = atom(2);
@@ -3531,7 +3507,7 @@ describe('bindAtomsLoggerToStore', () => {
         [`mounted ${aAtom}`, { value: 1 }],
       ]);
 
-      const storeData = (store as StoreWithAtomsLogger)[ATOMS_LOGGER_SYMBOL];
+      const storeData = (store as AtomLoggerStore)[atomLoggerStoreSymbol];
       expect(storeData.dependenciesMap.has(aAtom)).toBeTruthy();
       expect(storeData.dependenciesMap.has(bAtom)).toBeFalsy();
       expect(storeData.dependenciesMap.has(cAtom)).toBeFalsy();
@@ -3544,7 +3520,7 @@ describe('bindAtomsLoggerToStore', () => {
       // Covers add-event-to-transaction.ts:102 — the else-if (existingEvent.dependencies !== undefined) branch
       // when a removedDependency event is processed and a non-dependenciesChanged event with
       // dependencies also exists in the current transaction
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const aAtom = atom(1);
       const bAtom = atom(2);
@@ -3576,7 +3552,7 @@ describe('bindAtomsLoggerToStore', () => {
     it('should add a dependenciesChanged event when a dep is first removed (no prior dependenciesChanged in transaction)', () => {
       // Covers add-event-to-transaction.ts:95-97 (currentTransaction=null / no prior dep event)
       // and the pure-deletion case where no hasExistingDepsChangedEvent
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const aAtom = atom(1);
       const bAtom = atom(2);
@@ -3605,7 +3581,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log when an atom dependencies are removed', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const aAtom = atom(1);
       const bAtom = atom(2);
@@ -3647,7 +3623,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log when an atom dependencies are added', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const aAtom = atom(1);
       const bAtom = atom(2);
@@ -3685,7 +3661,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should not log atom dependencies changes if the new dependencies are private', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const aAtom = atom(1);
       const bAtom = atom(2);
@@ -3719,7 +3695,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should not log when a private atom dependency is removed', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const aAtom = atom(1);
       const privateAtom = atom(2);
@@ -3754,7 +3730,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log atom dependencies without duplicated atoms', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const aAtom = atom(1);
       const bAtom = atom(2);
@@ -3799,7 +3775,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log atom dependencies changed in colors', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({ ...defaultFormatterOptions, formattedOutput: true }),
       });
 
@@ -3915,7 +3891,7 @@ describe('bindAtomsLoggerToStore', () => {
 
   describe('dependents', () => {
     it('should not log dependents when not mounted', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const aAtom = atom(1);
       const bAtom = atom((get) => get(aAtom) * 2);
@@ -3932,7 +3908,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log dependents when mounted', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const aAtom = atom(1);
       const bAtom = atom((get) => get(aAtom) * 2);
@@ -3951,7 +3927,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log dependents after dependent is initialized', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const firstAtom = atom('first');
       const secondAtom = atom('second');
@@ -4011,7 +3987,7 @@ describe('bindAtomsLoggerToStore', () => {
 
   describe('transactions', () => {
     it('should log transactions details triggered by public atoms', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
       const publicAtom = atom(0);
       const notPrivateSetAtom = atom(null, (get, set) => {
         set(publicAtom, 1);
@@ -4025,7 +4001,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should not log transactions details triggered by private atoms', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
       const publicAtom = atom(0);
       const privateSetAtom = atom(null, (get, set) => {
         set(publicAtom, 1);
@@ -4040,7 +4016,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should not log transactions with only private atoms', () => {
-      bindAtomsLoggerToStore(store, { ...defaultOptions, shouldShowPrivateAtoms: false });
+      store = createLoggedStore(store, { ...defaultOptions, shouldShowPrivateAtoms: false });
       const privateAtom = atom(0);
       privateAtom.debugPrivate = true;
       const privateSetAtom = atom(null, (get, set) => {
@@ -4053,7 +4029,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should not log transactions without events', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
       const testSetAtom = atom(null, () => {
         // No events
       });
@@ -4063,7 +4039,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log changes made outside of transactions inside an unknown transaction', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const testAtom = atom(0);
       const setTestAtom = atom(null, (get, set) => {
@@ -4082,7 +4058,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should debounce events in the same transaction', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const testAtom = atom('trans-1.0');
       const setTestAtom = atom(null, (get, set) => {
@@ -4136,7 +4112,7 @@ describe('bindAtomsLoggerToStore', () => {
           delete (globalThis as Partial<typeof globalThis>).requestIdleCallback;
         });
 
-        bindAtomsLoggerToStore(store, defaultOptions);
+        store = createLoggedStore(store, defaultOptions);
 
         const testAtom = atom(0);
 
@@ -4172,7 +4148,7 @@ describe('bindAtomsLoggerToStore', () => {
         consoleWarnSpy.mockRestore();
       });
 
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const otherAtom1 = atom(0);
       const otherAtom2 = atom(0);
@@ -4582,7 +4558,7 @@ describe('bindAtomsLoggerToStore', () => {
           showTransactionLocaleTime,
           expected,
         }) => {
-          bindAtomsLoggerToStore(store, {
+          store = createLoggedStore(store, {
             formatter: consoleFormatter({
               ...defaultFormatterOptions,
               showTransactionNumber,
@@ -4616,7 +4592,7 @@ describe('bindAtomsLoggerToStore', () => {
           showTransactionLocaleTime,
           expectedColors,
         }) => {
-          bindAtomsLoggerToStore(store, {
+          store = createLoggedStore(store, {
             formatter: consoleFormatter({
               ...defaultFormatterOptions,
               formattedOutput: true,
@@ -4659,7 +4635,7 @@ describe('bindAtomsLoggerToStore', () => {
   describe('mounting', () => {
     it('should unsubscribe while inside a transaction without starting a new one', () => {
       // Covers on-store-sub.ts lines 40-51: doStartTransaction=false in onStoreUnsubscribe
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const testAtom = atom(0);
       let capturedUnsubscribe: (() => void) | undefined;
@@ -4688,7 +4664,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log mounted and unmounted atoms', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const testAtom = atom(42);
 
@@ -4717,7 +4693,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log mounted and unmounted atoms in colors', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({ ...defaultFormatterOptions, formattedOutput: true }),
       });
 
@@ -4787,7 +4763,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log atom value when mounted', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const testAtom = atom(42);
 
@@ -4803,7 +4779,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log atom promise value when mounted', async () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const testAtom = atom(() => {
         return new Promise((resolve) => {
@@ -4835,7 +4811,7 @@ describe('bindAtomsLoggerToStore', () => {
 
   describe('setters', () => {
     it('should log default atom setter', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const simpleAtom = atom(0);
       store.set(simpleAtom, 1);
@@ -4849,7 +4825,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log default atom setter in colors', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({ ...defaultFormatterOptions, formattedOutput: true }),
       });
 
@@ -4889,7 +4865,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log custom atom setter', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const valueAtom = atom(0);
       const oneSetAtom = atom(null, (get, set) => {
@@ -4954,7 +4930,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log default atom setter with previous state function', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const simpleAtom = atom(0);
       store.set(simpleAtom, (prev) => prev + 1);
@@ -4971,7 +4947,7 @@ describe('bindAtomsLoggerToStore', () => {
 
   describe('complex graphs', () => {
     it('should log async atoms with dependencies and dependents', async () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       const firstAtom = atom('first');
       const secondAtom = atom('second');
@@ -5098,7 +5074,7 @@ describe('bindAtomsLoggerToStore', () => {
 
   describe('colors', () => {
     it('should not log colors if formattedOutput is false', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({ ...defaultFormatterOptions, formattedOutput: false }),
       });
 
@@ -5114,7 +5090,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log colors if formattedOutput is true', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({ ...defaultFormatterOptions, formattedOutput: true }),
       });
 
@@ -5153,7 +5129,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log atom name without namespaces with color', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({ ...defaultFormatterOptions, formattedOutput: true }),
       });
 
@@ -5197,7 +5173,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log atom name namespaces with colors', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({ ...defaultFormatterOptions, formattedOutput: true }),
       });
 
@@ -5251,7 +5227,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log dark colors with dark colorScheme option', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({
           ...defaultFormatterOptions,
           formattedOutput: true,
@@ -5294,7 +5270,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log light colors with light colorScheme option', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({
           ...defaultFormatterOptions,
           formattedOutput: true,
@@ -5337,7 +5313,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log colored stack traces', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({ ...defaultFormatterOptions, formattedOutput: true }),
         getOwnerStack() {
           return `at MyComponentParent (http://localhost:5173/src/myComponent.tsx?t=1757750948197:31:21)`;
@@ -5384,7 +5360,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log colored stack traces with hooks', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({ ...defaultFormatterOptions, formattedOutput: true }),
         getOwnerStack() {
           return `at ParentContainer (http://localhost:5173/src/App.tsx?t=1757750948197:31:21)
@@ -5434,7 +5410,7 @@ describe('bindAtomsLoggerToStore', () => {
 
   describe('groups', () => {
     it('should group transactions if groupTransactions is true', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({ ...defaultFormatterOptions, groupTransactions: true }),
       });
 
@@ -5454,7 +5430,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should collapse transaction groups if collapseTransactions is true', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({
           ...defaultFormatterOptions,
           groupTransactions: true,
@@ -5478,7 +5454,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should group events if groupEvents is true', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({ ...defaultFormatterOptions, groupEvents: true }),
       });
 
@@ -5497,7 +5473,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should collapse event groups if collapseEvents is true', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({
           ...defaultFormatterOptions,
           groupEvents: true,
@@ -5522,7 +5498,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should group transactions and events if both groupTransactions and groupEvents are true', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({
           ...defaultFormatterOptions,
           groupTransactions: true,
@@ -5545,7 +5521,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should group collapsed events and transactions if both collapseTransactions and collapseEvents are true', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({
           ...defaultFormatterOptions,
           groupTransactions: true,
@@ -5570,7 +5546,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log collapsed transaction groups even if logger.group is not defined', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({
           ...defaultFormatterOptions,
           groupTransactions: true,
@@ -5600,7 +5576,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log event groups even if logger.group is not defined', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({
           ...defaultFormatterOptions,
           groupEvents: true,
@@ -5631,7 +5607,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log transaction groups even if logger.groupCollapsed is not defined', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({
           ...defaultFormatterOptions,
           groupTransactions: true,
@@ -5661,7 +5637,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log event groups even if logger.groupCollapsed is not defined', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({
           ...defaultFormatterOptions,
           groupEvents: true,
@@ -5690,7 +5666,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should not log transaction and event groups if logger.groupEnd is not defined', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({
           ...defaultFormatterOptions,
           groupTransactions: true,
@@ -5741,7 +5717,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should register atoms with FinalizationRegistry for garbage collection tracking', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       expect(finalizationRegistryRegisterMock).not.toHaveBeenCalled();
 
@@ -5755,7 +5731,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log when an atom is garbage collected', () => {
-      bindAtomsLoggerToStore(store, defaultOptions);
+      store = createLoggedStore(store, defaultOptions);
 
       expect(registeredCallback).not.toBeNull();
 
@@ -5778,7 +5754,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should log when an atom is garbage collected with colors', () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         formatter: consoleFormatter({ ...defaultFormatterOptions, formattedOutput: true }),
       });
 
@@ -5808,7 +5784,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should not log when an atom is garbage collected if the store is disabled', () => {
-      bindAtomsLoggerToStore(store, { ...defaultOptions, enabled: false });
+      store = createLoggedStore(store, { ...defaultOptions, enabled: false });
 
       expect(registeredCallback).not.toBeNull();
 
@@ -5825,7 +5801,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should not log when an atom is garbage collected if the store just got disabled', () => {
-      bindAtomsLoggerToStore(store, { ...defaultOptions, enabled: true });
+      store = createLoggedStore(store, { ...defaultOptions, enabled: true });
 
       expect(registeredCallback).not.toBeNull();
 
@@ -5834,7 +5810,7 @@ describe('bindAtomsLoggerToStore', () => {
 
       vi.runAllTimers();
 
-      bindAtomsLoggerToStore(store, { ...defaultOptions, enabled: false });
+      store = createLoggedStore(store, { ...defaultOptions, enabled: false });
 
       registeredCallback!(testAtom.toString());
 
@@ -5851,7 +5827,7 @@ describe('bindAtomsLoggerToStore', () => {
     it('should show owner stack', async () => {
       let stackId = 0;
 
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         ...defaultOptions,
         getOwnerStack() {
           return `at MyCounterParent${++stackId} (http://localhost:5173/src/myComponent.tsx?t=1757750948197:31:21)`;
@@ -5874,7 +5850,7 @@ describe('bindAtomsLoggerToStore', () => {
     it('should show component display name', async () => {
       let displayNameId = 0;
 
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         ...defaultOptions,
         getComponentDisplayName() {
           return `MyCounter${++displayNameId}`;
@@ -5898,7 +5874,7 @@ describe('bindAtomsLoggerToStore', () => {
       let stackId = 0;
       let displayNameId = 0;
 
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         ...defaultOptions,
         getOwnerStack() {
           return `at MyCounterParent${++stackId} (http://localhost:5173/src/myComponent.tsx?t=1757750948197:31:21)`;
@@ -5923,7 +5899,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should not show component display name if it is shown at the end of the owner stack components', async () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         ...defaultOptions,
         getOwnerStack() {
           return `at ParentComponent (http://localhost:5173/src/parent.tsx:30:21)
@@ -5946,7 +5922,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should show component display name if it is not shown at the end of the owner stack components', async () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         ...defaultOptions,
         getOwnerStack() {
           return `at ParentComponent (http://localhost:5173/src/parent.tsx:30:21)
@@ -5971,7 +5947,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should ignore crashes in getOwnerStack', async () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         ...defaultOptions,
         getOwnerStack: () => {
           throw new Error('Error in getOwnerStack');
@@ -5990,7 +5966,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should ignore crashes in getComponentDisplayName', async () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         ...defaultOptions,
         getComponentDisplayName: () => {
           throw new Error('Error in getComponentDisplayName');
@@ -6009,7 +5985,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should ignore undefined owner stack traces', async () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         ...defaultOptions,
         getOwnerStack: () => {
           return undefined;
@@ -6028,7 +6004,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should ignore null owner stack traces', async () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         ...defaultOptions,
         getOwnerStack: () => {
           return null;
@@ -6047,7 +6023,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should handle malformed owner stack gracefully', async () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         ...defaultOptions,
         getOwnerStack() {
           return `malformed stack trace without proper format`;
@@ -6066,7 +6042,7 @@ describe('bindAtomsLoggerToStore', () => {
     });
 
     it('should handle empty owner stack', async () => {
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         ...defaultOptions,
         getOwnerStack() {
           return '';
@@ -6089,7 +6065,7 @@ describe('bindAtomsLoggerToStore', () => {
         return `at MyCounterParent (http://localhost:5173/src/myComponent.tsx?t=1757750948197:31:21)`;
       });
 
-      bindAtomsLoggerToStore(store, {
+      store = createLoggedStore(store, {
         ...defaultOptions,
         getOwnerStack: getOwnerStackMock,
       });
@@ -6142,7 +6118,7 @@ describe('bindAtomsLoggerToStore', () => {
     at RootComponent (http://localhost:5173/src/root.tsx:50:21)`;
 
       it('should respect ownerStackLimit default value of 2', async () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           ...defaultOptions,
           getOwnerStack() {
             return BIG_OWNER_STACK;
@@ -6161,7 +6137,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should show all components when ownerStackLimit is -1', async () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({ ...defaultFormatterOptions, ownerStackLimit: -1 }),
           getOwnerStack() {
             return BIG_OWNER_STACK;
@@ -6182,7 +6158,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should show all components when ownerStackLimit is Infinity', async () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({ ...defaultFormatterOptions, ownerStackLimit: Infinity }),
           getOwnerStack() {
             return BIG_OWNER_STACK;
@@ -6203,7 +6179,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should show no components when ownerStackLimit is 0', async () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({ ...defaultFormatterOptions, ownerStackLimit: 0 }),
           getOwnerStack() {
             return BIG_OWNER_STACK;
@@ -6222,7 +6198,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should show only 1 component when ownerStackLimit is 1', async () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({ ...defaultFormatterOptions, ownerStackLimit: 1 }),
           getOwnerStack() {
             return BIG_OWNER_STACK;
@@ -6241,7 +6217,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should show limited components when ownerStackLimit is 3', async () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({ ...defaultFormatterOptions, ownerStackLimit: 3 }),
           getOwnerStack() {
             return BIG_OWNER_STACK;
@@ -6262,7 +6238,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should handle single component in owner stack', async () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({ ...defaultFormatterOptions, ownerStackLimit: 2 }),
           getOwnerStack() {
             return `at ChildComponent (http://localhost:5173/src/child.tsx:10:21)`;
@@ -6281,7 +6257,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should work with ownerStackLimit and component display name', async () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({ ...defaultFormatterOptions, ownerStackLimit: 1 }),
           getOwnerStack() {
             return BIG_OWNER_STACK;
@@ -6303,7 +6279,7 @@ describe('bindAtomsLoggerToStore', () => {
       });
 
       it('should work with ownerStackLimit in colored output', async () => {
-        bindAtomsLoggerToStore(store, {
+        store = createLoggedStore(store, {
           formatter: consoleFormatter({
             ...defaultFormatterOptions,
             formattedOutput: true,

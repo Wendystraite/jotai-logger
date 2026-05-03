@@ -63,10 +63,10 @@ function consoleFormatterOptionsToState(
  *
  * @example
  * ```ts
- * import { bindAtomsLoggerToStore } from 'jotai-logger/vanilla';
+ * import { createLoggedStore } from 'jotai-logger/vanilla';
  * import { consoleFormatter } from 'jotai-logger/formatters/console';
  *
- * bindAtomsLoggerToStore(store, {
+ * const store = createLoggedStore(parentStore, {
  *   formatter: consoleFormatter({ colorScheme: 'dark' }),
  * });
  * ```
