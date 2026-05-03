@@ -1,7 +1,7 @@
 import {
-  INTERNAL_buildStoreRev2 as buildStore,
-  INTERNAL_getBuildingBlocksRev2 as getBuildingBlocks,
-  INTERNAL_initializeStoreHooksRev2 as initializeStoreHooks,
+  INTERNAL_buildStoreRev3 as buildStore,
+  INTERNAL_getBuildingBlocksRev3 as getBuildingBlocks,
+  INTERNAL_initializeStoreHooksRev3 as initializeStoreHooks,
   type INTERNAL_AtomStateMap as AtomStateMap,
 } from 'jotai/vanilla/internals';
 
@@ -92,15 +92,17 @@ export function createLoggedStore(
     parentBuildingBlocks[18],
     parentBuildingBlocks[19],
     parentBuildingBlocks[20],
-    (_store, ...args) => onStoreGet(loggedStore, ...args),
-    (_store, ...args) => onStoreSet(loggedStore, ...args),
-    (_store, ...args) => onStoreSub(loggedStore, ...args),
+    (_buildingBlocks, _store, ...args) => onStoreGet(loggedStore, ...args),
+    (_buildingBlocks, _store, ...args) => onStoreSet(loggedStore, ...args),
+    (_buildingBlocks, _store, ...args) => onStoreSub(loggedStore, ...args),
     parentBuildingBlocks[24],
     parentBuildingBlocks[25],
     parentBuildingBlocks[26],
     parentBuildingBlocks[27],
     parentBuildingBlocks[28],
   ) as AtomLoggerStore;
+
+  const buildingBlocks = getBuildingBlocks(loggedStore);
 
   storeHooks.m.add(undefined, getOnAtomMounted(loggedStore));
   storeHooks.u.add(undefined, getOnAtomUnmounted(loggedStore));
@@ -114,6 +116,7 @@ export function createLoggedStore(
   loggedStore[atomLoggerStoreSymbol] = {
     ...newStateOptions,
     formatter,
+    buildingBlocks,
     registerAbortHandler: parentRegisterAbortHandler,
     prevStoreGet: parentStoreGet,
     prevStoreSet: parentStoreSet,

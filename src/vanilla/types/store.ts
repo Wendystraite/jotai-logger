@@ -29,6 +29,8 @@ export type AtomLoggerStore = Store & {
  * Contains configuration options, transaction tracking, and references to original store methods.
  */
 export type AtomLoggerStoreState = AtomLoggerOptionsInStoreState & {
+  /** The store's building blocks, used for calling the store's internal functions */
+  buildingBlocks: Readonly<BuildingBlocks>;
   /** Internal method to register abort handlers for promises */
   registerAbortHandler: BuildingBlocks[26];
   /** Incremental counter for transactions */

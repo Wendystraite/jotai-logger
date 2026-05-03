@@ -19,7 +19,12 @@ export function onStoreSub(
         listener,
       });
     }
-    const unsubscribe = store[atomLoggerStoreSymbol].prevStoreSub(store, atom, listener);
+    const unsubscribe = store[atomLoggerStoreSymbol].prevStoreSub(
+      store[atomLoggerStoreSymbol].buildingBlocks,
+      store,
+      atom,
+      listener,
+    );
     return () => {
       onStoreUnsubscribe(store, atom, listener, unsubscribe);
     };

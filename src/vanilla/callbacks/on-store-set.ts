@@ -22,7 +22,12 @@ export function onStoreSet<TValue, TArgs extends unknown[], TResult>(
     if (doStartTransaction) {
       startTransaction(store, transaction);
     }
-    const result = store[atomLoggerStoreSymbol].prevStoreSet(store, atom, ...args);
+    const result = store[atomLoggerStoreSymbol].prevStoreSet(
+      store[atomLoggerStoreSymbol].buildingBlocks,
+      store,
+      atom,
+      ...args,
+    );
     transaction.result = result;
     return result;
   } finally {

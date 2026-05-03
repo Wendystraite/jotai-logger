@@ -37,7 +37,7 @@ pnpm install jotai-logger
 
 ## Compatibility
 
-ESM Only. Compatible with React 17+ and Jotai 2.18+.
+ESM Only. Compatible with React 17+ and Jotai 2.20+.
 See the table below for older Jotai versions.
 
 <details>
@@ -47,7 +47,8 @@ See the table below for older Jotai versions.
 | ------------ | ------------------------------------------ | ---------------------------------------- | ----------------------------------------------------------- |
 | <= 2.5.2     | >=17.0.0                                   | >= 2.12.4 < 2.14.0                       | == 0.12.0                                                   |
 | >= 3.0.0     | >=17.0.0                                   | >= 2.14.0 < 2.18.0                       | >= 0.13.0                                                   |
-| >= 4.0.0     | >=17.0.0                                   | >= 2.18.0                                | >= 0.13.0                                                   |
+| >= 4.0.0     | >=17.0.0                                   | >= 2.18.0 < 2.20.0                       | >= 0.13.0                                                   |
+| >= 5.0.0     | >=17.0.0                                   | >= 2.20.0                                | >= 0.14.0                                                   |
 
 </details>
 
