@@ -1,20 +1,20 @@
 import type { AnyAtom, AtomId } from '../types/event.js';
 
 export function convertAtomsToStrings(
-  atoms: IteratorObject<AnyAtom> | undefined,
+  atoms: Set<AnyAtom> | undefined,
   options: {
     shouldShowPrivateAtoms: boolean;
   },
-): AtomId[] | undefined {
+): Set<AtomId> | undefined {
   if (!atoms) {
     return undefined;
   }
-  const strings: AtomId[] = [];
+  const strings = new Set<AtomId>();
   for (const atom of atoms) {
     if (!options.shouldShowPrivateAtoms && atom.debugPrivate === true) {
       continue;
     }
-    strings.push(atom.toString());
+    strings.add(atom.toString());
   }
   return strings;
 }

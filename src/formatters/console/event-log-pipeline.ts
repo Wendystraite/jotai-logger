@@ -279,15 +279,16 @@ export const EventLogPipeline = new LogPipeline()
 
     const { pendingPromises, dependencies, dependents } = event;
 
-    const showPendingPromises = pendingPromises && pendingPromises.length > 0;
-    const showDependents = dependents && dependents.length > 0;
+    const showPendingPromises = pendingPromises && pendingPromises.size > 0;
+    const showDependents = dependents && dependents.size > 0;
 
     const isDepsChangedEvent = event.type === AtomEventTypes.dependenciesChanged;
     const showDependencies = !isDepsChangedEvent && dependencies && dependencies.size > 0;
 
     if (showPendingPromises) {
-      subLogsArray.push(['pending promises', pendingPromises]);
-      subLogsObject.pendingPromises = pendingPromises;
+      const pendingPromisesArray = Array.from(pendingPromises);
+      subLogsArray.push(['pending promises', pendingPromisesArray]);
+      subLogsObject.pendingPromises = pendingPromisesArray;
     }
     if (isDepsChangedEvent) {
       const oldDependenciesArray = Array.from(event.oldDependencies);
@@ -303,8 +304,9 @@ export const EventLogPipeline = new LogPipeline()
       subLogsObject.dependencies = dependenciesArray;
     }
     if (showDependents) {
-      subLogsArray.push(['dependents', dependents]);
-      subLogsObject.dependents = dependents;
+      const dependentsArray = Array.from(dependents);
+      subLogsArray.push(['dependents', dependentsArray]);
+      subLogsObject.dependents = dependentsArray;
     }
   })
 

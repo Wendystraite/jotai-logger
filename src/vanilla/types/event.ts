@@ -37,11 +37,11 @@ export type AtomEventType = AtomEventTypes[keyof AtomEventTypes];
  */
 export interface AtomEventBase {
   /** Atoms whose pending promises are blocking this atom at the time of the event. @see {@link AtomState.p} */
-  pendingPromises?: AtomId[];
+  pendingPromises?: Set<AtomId>;
   /** The set of atoms this atom depends on at the time of the event. @see {@link AtomState.d} @see {@link Mounted.d} */
   dependencies?: Set<AtomId>;
   /** The set of atoms that depend on this atom at the time of the event. @see {@link Mounted.t} */
-  dependents?: AtomId[];
+  dependents?: Set<AtomId>;
 }
 
 /** Event emitted when an atom is initialized with a synchronous value. */
