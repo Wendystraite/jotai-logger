@@ -15,7 +15,7 @@ import { onStoreSet } from './callbacks/on-store-set.js';
 import { onStoreSub } from './callbacks/on-store-sub.js';
 import { atomLoggerStoreSymbol } from './consts/store-symbol.js';
 import { createLogTransactionsScheduler } from './log-transactions-scheduler.js';
-import type { AnyAtom, AtomId } from './types/event.js';
+import type { AtomId } from './types/event.js';
 import type { AtomLoggerOptions } from './types/options.js';
 import type { Store, AtomLoggerStore } from './types/store.js';
 import { atomLoggerOptionsToState } from './utils/logger-options-to-state.js';
@@ -47,15 +47,8 @@ export function createLoggedStore(
   const formatter = options?.formatter ?? consoleFormatter();
 
   const parentBuildingBlocks = getBuildingBlocks(parentStore);
-
   const parentAtomStateMap = parentBuildingBlocks[0];
-  const parentMountedMap = parentBuildingBlocks[1];
-  const parentStoreGet = parentBuildingBlocks[21];
-  const parentStoreSet = parentBuildingBlocks[22];
-  const parentStoreSub = parentBuildingBlocks[23];
-  const parentRegisterAbortHandler = parentBuildingBlocks[26];
 
-  const prevAtomStateMapSet = parentAtomStateMap.set.bind(parentAtomStateMap);
   const atomStateMap: AtomStateMap = {
     get: parentAtomStateMap.get.bind(parentAtomStateMap),
     delete: parentAtomStateMap.delete.bind(parentAtomStateMap),
@@ -64,9 +57,6 @@ export function createLoggedStore(
       onAtomStateMapSet(loggedStore, ...args);
     },
   };
-
-  const getState = (atom: AnyAtom) => parentAtomStateMap.get(atom);
-  const getMounted = (key: AnyAtom) => parentMountedMap.get(key);
 
   const storeHooks = initializeStoreHooks({});
   storeHooks.m.add(undefined, (atom) => {
@@ -119,14 +109,8 @@ export function createLoggedStore(
   loggedStore[atomLoggerStoreSymbol] = {
     ...newStateOptions,
     formatter,
+    parentBuildingBlocks,
     buildingBlocks,
-    registerAbortHandler: parentRegisterAbortHandler,
-    prevStoreGet: parentStoreGet,
-    prevStoreSet: parentStoreSet,
-    prevStoreSub: parentStoreSub,
-    prevAtomStateMapSet,
-    getState,
-    getMounted,
     logTransactionsScheduler,
     transactionNumber: 1,
     currentTransaction: undefined,

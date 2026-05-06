@@ -19,7 +19,8 @@ export function onStoreSub(
         listener,
       });
     }
-    const unsubscribe = store[atomLoggerStoreSymbol].prevStoreSub(
+    const parentStoreSub = store[atomLoggerStoreSymbol].parentBuildingBlocks[23];
+    const unsubscribe = parentStoreSub(
       store[atomLoggerStoreSymbol].buildingBlocks,
       store,
       atom,

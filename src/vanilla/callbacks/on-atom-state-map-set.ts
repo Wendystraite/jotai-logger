@@ -132,5 +132,6 @@ export function onAtomStateMapSet(
     },
   });
 
-  store[atomLoggerStoreSymbol].prevAtomStateMapSet(atom, stateProxy);
+  const parentAtomStateMap = store[atomLoggerStoreSymbol].parentBuildingBlocks[0];
+  parentAtomStateMap.set(atom, stateProxy);
 }

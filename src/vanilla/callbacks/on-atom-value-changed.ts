@@ -76,26 +76,22 @@ export function onAtomValueChanged(
     });
   }
 
-  store[atomLoggerStoreSymbol].registerAbortHandler(
-    store[atomLoggerStoreSymbol].buildingBlocks,
-    store,
-    newPromise,
-    () => {
-      isAborted = true;
-      if (isInitialValue) {
-        addEventToTransaction(store, {
-          type: AtomEventTypes.initialPromiseAborted,
-          atom,
-        });
-      } else {
-        addEventToTransaction(store, {
-          type: AtomEventTypes.changedPromiseAborted,
-          atom,
-          oldValue,
-        });
-      }
-    },
-  );
+  const registerAbortHandler = store[atomLoggerStoreSymbol].buildingBlocks[26];
+  registerAbortHandler(store[atomLoggerStoreSymbol].buildingBlocks, store, newPromise, () => {
+    isAborted = true;
+    if (isInitialValue) {
+      addEventToTransaction(store, {
+        type: AtomEventTypes.initialPromiseAborted,
+        atom,
+      });
+    } else {
+      addEventToTransaction(store, {
+        type: AtomEventTypes.changedPromiseAborted,
+        atom,
+        oldValue,
+      });
+    }
+  });
 
   const transactionWhenPending = store[atomLoggerStoreSymbol].currentTransaction;
 

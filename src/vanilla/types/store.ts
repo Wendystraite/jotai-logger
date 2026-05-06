@@ -1,10 +1,5 @@
 import type { Atom, useStore } from 'jotai';
-import type {
-  INTERNAL_AtomState as AtomState,
-  INTERNAL_AtomStateMap as AtomStateMap,
-  INTERNAL_BuildingBlocks as BuildingBlocks,
-  INTERNAL_Mounted as Mounted,
-} from 'jotai/vanilla/internals';
+import type { INTERNAL_BuildingBlocks as BuildingBlocks } from 'jotai/vanilla/internals';
 
 import type { atomLoggerStoreSymbol } from '../consts/store-symbol.js';
 import type { AnyAtom, AtomId } from './event.js';
@@ -29,10 +24,10 @@ export type AtomLoggerStore = Store & {
  * Contains configuration options, transaction tracking, and references to original store methods.
  */
 export type AtomLoggerStoreState = AtomLoggerOptionsInStoreState & {
-  /** The store's building blocks, used for calling the store's internal functions */
+  /** The parent store's internal building blocks */
+  parentBuildingBlocks: Readonly<BuildingBlocks>;
+  /** The store's internal building blocks */
   buildingBlocks: Readonly<BuildingBlocks>;
-  /** Internal method to register abort handlers for promises */
-  registerAbortHandler: BuildingBlocks[26];
   /** Incremental counter for transactions */
   transactionNumber: number;
   /** The currently active transaction being tracked, if any */
@@ -60,18 +55,6 @@ export type AtomLoggerStoreState = AtomLoggerOptionsInStoreState & {
     /** Add a transaction to the queue and process it */
     add: (transaction: AtomTransaction) => void;
   };
-  /** Underlying store.get implementation (bypasses the logging wrapper) */
-  prevStoreGet: BuildingBlocks[21];
-  /** Underlying store.set implementation (bypasses the logging wrapper) */
-  prevStoreSet: BuildingBlocks[22];
-  /** Underlying store.sub implementation (bypasses the logging wrapper) */
-  prevStoreSub: BuildingBlocks[23];
-  /** Underlying atom state map setter method */
-  prevAtomStateMapSet: AtomStateMap['set'];
-  /** Return the state of an atom */
-  getState(this: void, atom: AnyAtom): AtomState | undefined;
-  /** Return the mounted state of an atom */
-  getMounted(this: void, atom: AnyAtom): Mounted | undefined;
 };
 
 /**

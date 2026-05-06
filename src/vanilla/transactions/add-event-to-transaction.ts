@@ -50,10 +50,12 @@ function setStateInEvent(store: AtomLoggerStore, event: AtomEvent): void {
 
   const options = store[atomLoggerStoreSymbol];
 
-  const mountedState = store[atomLoggerStoreSymbol].getMounted(event.atom);
+  const parentMountedMap = store[atomLoggerStoreSymbol].parentBuildingBlocks[1];
+  const mountedState = parentMountedMap.get(event.atom);
   event.dependents = convertAtomsToStrings(mountedState?.t, options);
 
-  const atomState = store[atomLoggerStoreSymbol].getState(event.atom);
+  const parentAtomStateMap = store[atomLoggerStoreSymbol].parentBuildingBlocks[0];
+  const atomState = parentAtomStateMap.get(event.atom);
   event.pendingPromises = convertAtomsToStrings(atomState?.p, options);
 }
 

@@ -12,11 +12,8 @@ export function onStoreGet<TValue>(store: AtomLoggerStore, atom: Atom<TValue>): 
     if (doStartTransaction) {
       startTransaction(store, { type: AtomTransactionTypes.storeGet, atom });
     }
-    return store[atomLoggerStoreSymbol].prevStoreGet(
-      store[atomLoggerStoreSymbol].buildingBlocks,
-      store,
-      atom,
-    );
+    const parentStoreGet = store[atomLoggerStoreSymbol].parentBuildingBlocks[21];
+    return parentStoreGet(store[atomLoggerStoreSymbol].buildingBlocks, store, atom);
   } finally {
     if (doStartTransaction) {
       endTransaction(store);

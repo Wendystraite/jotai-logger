@@ -8,7 +8,8 @@ export function getAtomValue(
   store: AtomLoggerStore,
   atom: AnyAtom,
 ): { hasValue: boolean; value?: unknown } {
-  const state = store[atomLoggerStoreSymbol].getState(atom);
+  const parentAtomStateMap = store[atomLoggerStoreSymbol].parentBuildingBlocks[0];
+  const state = parentAtomStateMap.get(atom);
   const value = state?.v;
   if (isPromiseLike(value)) {
     if (!store[atomLoggerStoreSymbol].promisesResultsMap.has(value)) {
