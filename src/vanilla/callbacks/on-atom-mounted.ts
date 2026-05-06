@@ -3,13 +3,11 @@ import { AtomEventTypes, type AnyAtom } from '../types/event.js';
 import type { AtomLoggerStore } from '../types/store.js';
 import { getAtomValue } from '../utils/get-atom-value.js';
 
-export function getOnAtomMounted(store: AtomLoggerStore) {
-  return function onAtomMounted(atom: AnyAtom) {
-    const { hasValue, value } = getAtomValue(store, atom);
-    if (hasValue) {
-      addEventToTransaction(store, { type: AtomEventTypes.mounted, atom, value });
-    } else {
-      addEventToTransaction(store, { type: AtomEventTypes.mounted, atom });
-    }
-  };
+export function onAtomMounted(store: AtomLoggerStore, atom: AnyAtom) {
+  const { hasValue, value } = getAtomValue(store, atom);
+  if (hasValue) {
+    addEventToTransaction(store, { type: AtomEventTypes.mounted, atom, value });
+  } else {
+    addEventToTransaction(store, { type: AtomEventTypes.mounted, atom });
+  }
 }

@@ -7,9 +7,9 @@ import {
 
 import { consoleFormatter } from '../formatters/console/index.js';
 import { onAtomGarbageCollected } from './callbacks/on-atom-garbage-collected.js';
-import { getOnAtomMounted } from './callbacks/on-atom-mounted.js';
+import { onAtomMounted } from './callbacks/on-atom-mounted.js';
 import { onAtomStateMapSet } from './callbacks/on-atom-state-map-set.js';
-import { getOnAtomUnmounted } from './callbacks/on-atom-unmounted.js';
+import { onAtomUnmounted } from './callbacks/on-atom-unmounted.js';
 import { onStoreGet } from './callbacks/on-store-get.js';
 import { onStoreSet } from './callbacks/on-store-set.js';
 import { onStoreSub } from './callbacks/on-store-sub.js';
@@ -69,6 +69,12 @@ export function createLoggedStore(
   const getMounted = (key: AnyAtom) => parentMountedMap.get(key);
 
   const storeHooks = initializeStoreHooks({});
+  storeHooks.m.add(undefined, (atom) => {
+    onAtomMounted(loggedStore, atom);
+  });
+  storeHooks.u.add(undefined, (atom) => {
+    onAtomUnmounted(loggedStore, atom);
+  });
 
   const loggedStore = buildStore(
     atomStateMap,
@@ -103,9 +109,6 @@ export function createLoggedStore(
   ) as AtomLoggerStore;
 
   const buildingBlocks = getBuildingBlocks(loggedStore);
-
-  storeHooks.m.add(undefined, getOnAtomMounted(loggedStore));
-  storeHooks.u.add(undefined, getOnAtomUnmounted(loggedStore));
 
   const atomsFinalizationRegistry = new FinalizationRegistry<string>((atomId: AtomId) => {
     onAtomGarbageCollected(loggedStore, atomId);
