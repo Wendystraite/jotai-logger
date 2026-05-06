@@ -1,9 +1,8 @@
-import { atomLoggerStoreSymbol } from '../consts/store-symbol.js';
-import type { AtomLoggerStore } from '../types/store.js';
+import type { AtomLoggerStoreState } from '../types/store.js';
 
-export function stopEndTransactionDebounce(store: AtomLoggerStore) {
-  if (store[atomLoggerStoreSymbol].transactionsDebounceTimeoutId !== undefined) {
-    clearTimeout(store[atomLoggerStoreSymbol].transactionsDebounceTimeoutId);
-    store[atomLoggerStoreSymbol].transactionsDebounceTimeoutId = undefined;
+export function stopEndTransactionDebounce(loggerState: AtomLoggerStoreState) {
+  if (loggerState.transactionsDebounceTimeoutId !== undefined) {
+    clearTimeout(loggerState.transactionsDebounceTimeoutId);
+    loggerState.transactionsDebounceTimeoutId = undefined;
   }
 }

@@ -1,15 +1,18 @@
 import { INTERNAL_isPromiseLike as isPromiseLike } from 'jotai/vanilla/internals';
+import type { INTERNAL_BuildingBlocks as BuildingBlocks } from 'jotai/vanilla/internals';
 
-import { atomLoggerStoreSymbol } from '../consts/store-symbol.js';
 import { addEventToTransaction } from '../transactions/add-event-to-transaction.js';
 import { endTransaction } from '../transactions/end-transaction.js';
 import { startTransaction } from '../transactions/start-transaction.js';
 import { AtomEventTypes, type AnyAtom } from '../types/event.js';
-import type { AtomLoggerStore } from '../types/store.js';
+import type { AtomLoggerStoreState, Store } from '../types/store.js';
 import { AtomTransactionTypes } from '../types/transaction.js';
 
 export function onAtomValueChanged(
-  store: AtomLoggerStore,
+  store: Store,
+  loggerState: AtomLoggerStoreState,
+  parentBuildingBlocks: Readonly<BuildingBlocks>,
+  buildingBlocks: Readonly<BuildingBlocks>,
   atom: AnyAtom,
   args: { isInitialValue?: boolean; oldValue?: unknown; newValue: unknown },
 ) {
@@ -20,13 +23,13 @@ export function onAtomValueChanged(
   if (!isPromiseLike(newValueOrPromise)) {
     const newValue = newValueOrPromise;
     if (isInitialValue) {
-      addEventToTransaction(store, {
+      addEventToTransaction(loggerState, parentBuildingBlocks, {
         type: AtomEventTypes.initialized,
         atom,
         value: newValue,
       });
     } else if (oldValue !== newValueOrPromise) {
-      addEventToTransaction(store, {
+      addEventToTransaction(loggerState, parentBuildingBlocks, {
         type: AtomEventTypes.changed,
         atom,
         oldValue,
@@ -40,9 +43,9 @@ export function onAtomValueChanged(
 
   if (!isInitialValue) {
     if (isPromiseLike(oldValue)) {
-      if (store[atomLoggerStoreSymbol].promisesResultsMap.has(oldValue)) {
+      if (loggerState.promisesResultsMap.has(oldValue)) {
         // uses the result of the previous promise instead of the promise itself
-        oldValue = store[atomLoggerStoreSymbol].promisesResultsMap.get(oldValue);
+        oldValue = loggerState.promisesResultsMap.get(oldValue);
       } else {
         // Edge case to know if the current promise is still the initial promise after the previous (initial) promise was aborted :
         // if we don't have the result of the previous promise it means that is
@@ -58,34 +61,34 @@ export function onAtomValueChanged(
     // - If this promise is aborted, the oldValue will be retrieved from the results map in the above code.
     //   This also prevent the new promise to think it was an initial promise is the above edge case.
     // - Else, it will be replaced by the new value or error of the resolved/rejected promise.
-    store[atomLoggerStoreSymbol].promisesResultsMap.set(newPromise, oldValue);
+    loggerState.promisesResultsMap.set(newPromise, oldValue);
   }
 
   let isAborted = false;
 
   if (isInitialValue) {
-    addEventToTransaction(store, {
+    addEventToTransaction(loggerState, parentBuildingBlocks, {
       type: AtomEventTypes.initialPromisePending,
       atom,
     });
   } else {
-    addEventToTransaction(store, {
+    addEventToTransaction(loggerState, parentBuildingBlocks, {
       type: AtomEventTypes.changedPromisePending,
       atom,
       oldValue,
     });
   }
 
-  const registerAbortHandler = store[atomLoggerStoreSymbol].buildingBlocks[26];
-  registerAbortHandler(store[atomLoggerStoreSymbol].buildingBlocks, store, newPromise, () => {
+  const registerAbortHandler = buildingBlocks[26];
+  registerAbortHandler(buildingBlocks, store, newPromise, () => {
     isAborted = true;
     if (isInitialValue) {
-      addEventToTransaction(store, {
+      addEventToTransaction(loggerState, parentBuildingBlocks, {
         type: AtomEventTypes.initialPromiseAborted,
         atom,
       });
     } else {
-      addEventToTransaction(store, {
+      addEventToTransaction(loggerState, parentBuildingBlocks, {
         type: AtomEventTypes.changedPromiseAborted,
         atom,
         oldValue,
@@ -93,10 +96,10 @@ export function onAtomValueChanged(
     }
   });
 
-  const transactionWhenPending = store[atomLoggerStoreSymbol].currentTransaction;
+  const transactionWhenPending = loggerState.currentTransaction;
 
   const canStartNewTransaction = () => {
-    const currentTransaction = store[atomLoggerStoreSymbol].currentTransaction;
+    const currentTransaction = loggerState.currentTransaction;
 
     // No transaction started : start a new one
     if (currentTransaction === undefined) {
@@ -126,25 +129,25 @@ export function onAtomValueChanged(
   newPromise.then(
     (newValue: unknown) => {
       if (!isAborted) {
-        store[atomLoggerStoreSymbol].promisesResultsMap.set(newPromise, newValue);
+        loggerState.promisesResultsMap.set(newPromise, newValue);
 
         const doStartTransaction = canStartNewTransaction();
 
         if (doStartTransaction) {
-          startTransaction(store, {
+          startTransaction(loggerState, {
             type: AtomTransactionTypes.promiseResolved,
             atom,
           });
         }
 
         if (isInitialValue) {
-          addEventToTransaction(store, {
+          addEventToTransaction(loggerState, parentBuildingBlocks, {
             type: AtomEventTypes.initialPromiseResolved,
             atom,
             value: newValue,
           });
         } else {
-          addEventToTransaction(store, {
+          addEventToTransaction(loggerState, parentBuildingBlocks, {
             type: AtomEventTypes.changedPromiseResolved,
             atom,
             oldValue,
@@ -153,7 +156,7 @@ export function onAtomValueChanged(
         }
 
         if (doStartTransaction) {
-          endTransaction(store);
+          endTransaction(loggerState);
         }
       }
     },
@@ -162,22 +165,22 @@ export function onAtomValueChanged(
         const doStartTransaction = canStartNewTransaction();
 
         if (doStartTransaction) {
-          startTransaction(store, {
+          startTransaction(loggerState, {
             type: AtomTransactionTypes.promiseRejected,
             atom,
           });
         }
 
-        store[atomLoggerStoreSymbol].promisesResultsMap.set(newPromise, error);
+        loggerState.promisesResultsMap.set(newPromise, error);
 
         if (isInitialValue) {
-          addEventToTransaction(store, {
+          addEventToTransaction(loggerState, parentBuildingBlocks, {
             type: AtomEventTypes.initialPromiseRejected,
             atom,
             error,
           });
         } else {
-          addEventToTransaction(store, {
+          addEventToTransaction(loggerState, parentBuildingBlocks, {
             type: AtomEventTypes.changedPromiseRejected,
             atom,
             oldValue,
@@ -186,7 +189,7 @@ export function onAtomValueChanged(
         }
 
         if (doStartTransaction) {
-          endTransaction(store);
+          endTransaction(loggerState);
         }
       }
     },

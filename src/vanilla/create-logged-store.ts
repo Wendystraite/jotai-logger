@@ -3,6 +3,7 @@ import {
   INTERNAL_getBuildingBlocksRev3 as getBuildingBlocks,
   INTERNAL_initializeStoreHooksRev3 as initializeStoreHooks,
   type INTERNAL_AtomStateMap as AtomStateMap,
+  type INTERNAL_BuildingBlocks as BuildingBlocks,
 } from 'jotai/vanilla/internals';
 
 import { consoleFormatter } from '../formatters/console/index.js';
@@ -17,7 +18,7 @@ import { atomLoggerStoreSymbol } from './consts/store-symbol.js';
 import { createLogTransactionsScheduler } from './log-transactions-scheduler.js';
 import type { AtomId } from './types/event.js';
 import type { AtomLoggerOptions } from './types/options.js';
-import type { Store, AtomLoggerStore } from './types/store.js';
+import type { Store, AtomLoggerStore, AtomLoggerStoreState } from './types/store.js';
 import { atomLoggerOptionsToState } from './utils/logger-options-to-state.js';
 
 /**
@@ -49,21 +50,28 @@ export function createLoggedStore(
   const parentBuildingBlocks = getBuildingBlocks(parentStore);
   const parentAtomStateMap = parentBuildingBlocks[0];
 
+  // Declare buildingBlocks and loggerState early for closure access in callbacks before they are initialized below
+  /* eslint-disable prefer-const */
+  let buildingBlocks!: Readonly<BuildingBlocks>;
+  const loggerState = {} as AtomLoggerStoreState;
+  /* eslint-enable prefer-const */
+
   const atomStateMap: AtomStateMap = {
     get: parentAtomStateMap.get.bind(parentAtomStateMap),
     delete: parentAtomStateMap.delete.bind(parentAtomStateMap),
     has: parentAtomStateMap.has.bind(parentAtomStateMap),
     set(...args) {
-      onAtomStateMapSet(loggedStore, ...args);
+      onAtomStateMapSet(loggedStore, loggerState, parentBuildingBlocks, buildingBlocks, ...args);
     },
   };
 
   const storeHooks = initializeStoreHooks({});
+
   storeHooks.m.add(undefined, (atom) => {
-    onAtomMounted(loggedStore, atom);
+    onAtomMounted(loggerState, parentBuildingBlocks, atom);
   });
   storeHooks.u.add(undefined, (atom) => {
-    onAtomUnmounted(loggedStore, atom);
+    onAtomUnmounted(loggerState, parentBuildingBlocks, atom);
   });
 
   const loggedStore = buildStore(
@@ -88,9 +96,15 @@ export function createLoggedStore(
     parentBuildingBlocks[18],
     parentBuildingBlocks[19],
     parentBuildingBlocks[20],
-    (_buildingBlocks, _store, ...args) => onStoreGet(loggedStore, ...args),
-    (_buildingBlocks, _store, ...args) => onStoreSet(loggedStore, ...args),
-    (_buildingBlocks, _store, ...args) => onStoreSub(loggedStore, ...args),
+    (buildingBlocks, store, ...args) => {
+      return onStoreGet(store, loggerState, parentBuildingBlocks, buildingBlocks, ...args);
+    },
+    (buildingBlocks, store, ...args) => {
+      return onStoreSet(store, loggerState, parentBuildingBlocks, buildingBlocks, ...args);
+    },
+    (buildingBlocks, store, ...args) => {
+      return onStoreSub(store, loggerState, parentBuildingBlocks, buildingBlocks, ...args);
+    },
     parentBuildingBlocks[24],
     parentBuildingBlocks[25],
     parentBuildingBlocks[26],
@@ -98,19 +112,17 @@ export function createLoggedStore(
     parentBuildingBlocks[28],
   ) as AtomLoggerStore;
 
-  const buildingBlocks = getBuildingBlocks(loggedStore);
+  buildingBlocks = getBuildingBlocks(loggedStore);
 
   const atomsFinalizationRegistry = new FinalizationRegistry<string>((atomId: AtomId) => {
-    onAtomGarbageCollected(loggedStore, atomId);
+    onAtomGarbageCollected(loggerState, parentBuildingBlocks, atomId);
   });
 
-  const logTransactionsScheduler = createLogTransactionsScheduler(loggedStore);
+  const logTransactionsScheduler = createLogTransactionsScheduler(loggerState);
 
-  loggedStore[atomLoggerStoreSymbol] = {
+  Object.assign(loggerState, {
     ...newStateOptions,
     formatter,
-    parentBuildingBlocks,
-    buildingBlocks,
     logTransactionsScheduler,
     transactionNumber: 1,
     currentTransaction: undefined,
@@ -120,7 +132,9 @@ export function createLoggedStore(
     dependenciesMap: new WeakMap(),
     prevTransactionDependenciesMap: new WeakMap(),
     transactionsDebounceTimeoutId: undefined,
-  };
+  });
+
+  loggedStore[atomLoggerStoreSymbol] = loggerState;
 
   return loggedStore;
 }

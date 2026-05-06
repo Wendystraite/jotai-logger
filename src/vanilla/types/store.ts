@@ -1,5 +1,4 @@
 import type { Atom, useStore } from 'jotai';
-import type { INTERNAL_BuildingBlocks as BuildingBlocks } from 'jotai/vanilla/internals';
 
 import type { atomLoggerStoreSymbol } from '../consts/store-symbol.js';
 import type { AnyAtom, AtomId } from './event.js';
@@ -24,10 +23,6 @@ export type AtomLoggerStore = Store & {
  * Contains configuration options, transaction tracking, and references to original store methods.
  */
 export type AtomLoggerStoreState = AtomLoggerOptionsInStoreState & {
-  /** The parent store's internal building blocks */
-  parentBuildingBlocks: Readonly<BuildingBlocks>;
-  /** The store's internal building blocks */
-  buildingBlocks: Readonly<BuildingBlocks>;
   /** Incremental counter for transactions */
   transactionNumber: number;
   /** The currently active transaction being tracked, if any */

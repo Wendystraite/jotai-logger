@@ -1,22 +1,28 @@
 import type { Atom } from 'jotai';
+import type { INTERNAL_BuildingBlocks as BuildingBlocks } from 'jotai/vanilla/internals';
 
-import { atomLoggerStoreSymbol } from '../consts/store-symbol.js';
 import { endTransaction } from '../transactions/end-transaction.js';
 import { startTransaction } from '../transactions/start-transaction.js';
-import type { AtomLoggerStore } from '../types/store.js';
+import type { AtomLoggerStoreState, Store } from '../types/store.js';
 import { AtomTransactionTypes } from '../types/transaction.js';
 
-export function onStoreGet<TValue>(store: AtomLoggerStore, atom: Atom<TValue>): TValue {
-  const doStartTransaction = !store[atomLoggerStoreSymbol].isInsideTransaction;
+export function onStoreGet<TValue>(
+  store: Store,
+  loggerState: AtomLoggerStoreState,
+  parentBuildingBlocks: Readonly<BuildingBlocks>,
+  buildingBlocks: Readonly<BuildingBlocks>,
+  atom: Atom<TValue>,
+): TValue {
+  const doStartTransaction = !loggerState.isInsideTransaction;
   try {
     if (doStartTransaction) {
-      startTransaction(store, { type: AtomTransactionTypes.storeGet, atom });
+      startTransaction(loggerState, { type: AtomTransactionTypes.storeGet, atom });
     }
-    const parentStoreGet = store[atomLoggerStoreSymbol].parentBuildingBlocks[21];
-    return parentStoreGet(store[atomLoggerStoreSymbol].buildingBlocks, store, atom);
+    const parentStoreGet = parentBuildingBlocks[21];
+    return parentStoreGet(buildingBlocks, store, atom);
   } finally {
     if (doStartTransaction) {
-      endTransaction(store);
+      endTransaction(loggerState);
     }
   }
 }

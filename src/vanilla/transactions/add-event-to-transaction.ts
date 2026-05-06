@@ -1,6 +1,7 @@
-import { atomLoggerStoreSymbol } from '../consts/store-symbol.js';
+import type { INTERNAL_BuildingBlocks as BuildingBlocks } from 'jotai/vanilla/internals';
+
 import { AtomEventTypes, type AtomEvent, type AtomEventMap } from '../types/event.js';
-import type { AtomLoggerStore } from '../types/store.js';
+import type { AtomLoggerStoreState } from '../types/store.js';
 import { AtomTransactionTypes, type AtomTransaction } from '../types/transaction.js';
 import { convertAtomsToStrings } from '../utils/convert-atoms-to-strings.js';
 import { shouldSetStateInEvent } from '../utils/should-set-state-in-event.js';
@@ -9,26 +10,30 @@ import { debounceEndTransaction } from './debounce-end-transaction.js';
 import { endTransaction } from './end-transaction.js';
 import { startTransaction } from './start-transaction.js';
 
-export function addEventToTransaction(store: AtomLoggerStore, event: AtomEvent): void {
-  if (!shouldShowAtom(store, event.atom)) {
+export function addEventToTransaction(
+  loggerState: AtomLoggerStoreState,
+  parentBuildingBlocks: Readonly<BuildingBlocks>,
+  event: AtomEvent,
+): void {
+  if (!shouldShowAtom(loggerState, event.atom)) {
     return;
   }
 
-  setStateInEvent(store, event);
+  setStateInEvent(loggerState, parentBuildingBlocks, event);
 
-  const transaction = store[atomLoggerStoreSymbol].currentTransaction;
+  const transaction = loggerState.currentTransaction;
 
   if (!transaction) {
     // Execute the event in an independent "unknown" transaction if there is no current transaction.
-    startTransaction(store, { type: AtomTransactionTypes.unknown, atom: event.atom });
-    addEventToTransaction(store, event);
-    endTransaction(store);
+    startTransaction(loggerState, { type: AtomTransactionTypes.unknown, atom: event.atom });
+    addEventToTransaction(loggerState, parentBuildingBlocks, event);
+    endTransaction(loggerState);
     return;
   }
 
   // Debounce the transaction since a new event is added to it.
-  if (store[atomLoggerStoreSymbol].transactionsDebounceTimeoutId !== undefined) {
-    debounceEndTransaction(store);
+  if (loggerState.transactionsDebounceTimeoutId !== undefined) {
+    debounceEndTransaction(loggerState);
   }
 
   // Add the event to the current transaction.
@@ -43,20 +48,22 @@ export function addEventToTransaction(store: AtomLoggerStore, event: AtomEvent):
 /**
  * Set the state of the atom in the event.
  */
-function setStateInEvent(store: AtomLoggerStore, event: AtomEvent): void {
+function setStateInEvent(
+  loggerState: AtomLoggerStoreState,
+  parentBuildingBlocks: Readonly<BuildingBlocks>,
+  event: AtomEvent,
+): void {
   if (typeof event.atom === 'string' || !shouldSetStateInEvent(event)) return;
 
-  event.dependencies = store[atomLoggerStoreSymbol].dependenciesMap.get(event.atom);
+  event.dependencies = loggerState.dependenciesMap.get(event.atom);
 
-  const options = store[atomLoggerStoreSymbol];
-
-  const parentMountedMap = store[atomLoggerStoreSymbol].parentBuildingBlocks[1];
+  const parentMountedMap = parentBuildingBlocks[1];
   const mountedState = parentMountedMap.get(event.atom);
-  event.dependents = convertAtomsToStrings(mountedState?.t, options);
+  event.dependents = convertAtomsToStrings(mountedState?.t, loggerState);
 
-  const parentAtomStateMap = store[atomLoggerStoreSymbol].parentBuildingBlocks[0];
+  const parentAtomStateMap = parentBuildingBlocks[0];
   const atomState = parentAtomStateMap.get(event.atom);
-  event.pendingPromises = convertAtomsToStrings(atomState?.p, options);
+  event.pendingPromises = convertAtomsToStrings(atomState?.p, loggerState);
 }
 
 /**

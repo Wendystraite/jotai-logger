@@ -10,6 +10,7 @@ import {
   type MockInstance,
 } from 'vitest';
 
+import { atomLoggerStoreSymbol } from '../src/vanilla/consts/store-symbol.js';
 import { createLoggedStore } from '../src/vanilla/create-logged-store.js';
 import { createLogTransactionsScheduler } from '../src/vanilla/log-transactions-scheduler.js';
 import type { AtomLoggerFormatter } from '../src/vanilla/types/formatter.js';
@@ -72,7 +73,7 @@ describe('logTransactionsScheduler', () => {
 
   it('should schedule with requestIdleCallback if available', () => {
     const store = createLoggedStore(createStore(), { formatter: formatterSpy });
-    const scheduler = createLogTransactionsScheduler(store);
+    const scheduler = createLogTransactionsScheduler(store[atomLoggerStoreSymbol]);
 
     expect(formatterSpy).not.toHaveBeenCalled();
     expect(requestIdleCallbackMockFn).not.toHaveBeenCalled();
@@ -89,7 +90,7 @@ describe('logTransactionsScheduler', () => {
     delete (globalThis as Partial<typeof globalThis>).requestIdleCallback;
 
     const store = createLoggedStore(createStore(), { formatter: formatterSpy });
-    const scheduler = createLogTransactionsScheduler(store);
+    const scheduler = createLogTransactionsScheduler(store[atomLoggerStoreSymbol]);
 
     expect(formatterSpy).not.toHaveBeenCalled();
     expect(setTimeoutSpy).not.toHaveBeenCalled();
@@ -107,7 +108,7 @@ describe('logTransactionsScheduler', () => {
       maxProcessingTimeMs: 0,
     });
 
-    const scheduler = createLogTransactionsScheduler(store);
+    const scheduler = createLogTransactionsScheduler(store[atomLoggerStoreSymbol]);
     scheduler.queue = getFakeTransactions(50);
     scheduler.process();
 
@@ -120,7 +121,7 @@ describe('logTransactionsScheduler', () => {
       maxProcessingTimeMs: 0,
     });
 
-    const scheduler = createLogTransactionsScheduler(store);
+    const scheduler = createLogTransactionsScheduler(store[atomLoggerStoreSymbol]);
     scheduler.queue = getFakeTransactions(20);
     scheduler.process();
 
@@ -133,7 +134,7 @@ describe('logTransactionsScheduler', () => {
       maxProcessingTimeMs: 10,
     });
 
-    const scheduler = createLogTransactionsScheduler(store);
+    const scheduler = createLogTransactionsScheduler(store[atomLoggerStoreSymbol]);
 
     scheduler.queue = getFakeTransactions(5);
     scheduler.process();
@@ -170,7 +171,7 @@ describe('logTransactionsScheduler', () => {
       maxProcessingTimeMs: 10, // Allow processing to continue
     });
 
-    const scheduler = createLogTransactionsScheduler(store);
+    const scheduler = createLogTransactionsScheduler(store[atomLoggerStoreSymbol]);
     scheduler.queue = getFakeTransactions(12);
     scheduler.process();
 
@@ -196,7 +197,7 @@ describe('logTransactionsScheduler', () => {
 
   it('should handle empty queue gracefully', () => {
     const store = createLoggedStore(createStore(), { formatter: formatterSpy });
-    const scheduler = createLogTransactionsScheduler(store);
+    const scheduler = createLogTransactionsScheduler(store[atomLoggerStoreSymbol]);
 
     scheduler.process(); // Process empty queue
 
@@ -209,7 +210,7 @@ describe('logTransactionsScheduler', () => {
 
   it('should prevent concurrent processing', () => {
     const store = createLoggedStore(createStore(), { formatter: formatterSpy });
-    const scheduler = createLogTransactionsScheduler(store);
+    const scheduler = createLogTransactionsScheduler(store[atomLoggerStoreSymbol]);
 
     scheduler.isProcessing = true; // Simulate ongoing processing
     scheduler.queue = getFakeTransactions(5);
@@ -224,7 +225,7 @@ describe('logTransactionsScheduler', () => {
 
   it('should handle null transactions in queue', () => {
     const store = createLoggedStore(createStore(), { formatter: formatterSpy });
-    const scheduler = createLogTransactionsScheduler(store);
+    const scheduler = createLogTransactionsScheduler(store[atomLoggerStoreSymbol]);
 
     // Manually add undefined to queue (edge case)
     // @ts-expect-error: Testing edge case with invalid data
@@ -240,7 +241,7 @@ describe('logTransactionsScheduler', () => {
       formatter: formatterSpy,
       requestIdleCallbackTimeoutMs: 500, // Custom timeout
     });
-    const scheduler = createLogTransactionsScheduler(store);
+    const scheduler = createLogTransactionsScheduler(store[atomLoggerStoreSymbol]);
 
     scheduler.add(getFakeTransaction(1));
 
@@ -253,7 +254,7 @@ describe('logTransactionsScheduler', () => {
       requestIdleCallbackTimeoutMs: -1, // Immediate execution
       maxProcessingTimeMs: -1, // Disable time checks
     });
-    const scheduler = createLogTransactionsScheduler(store);
+    const scheduler = createLogTransactionsScheduler(store[atomLoggerStoreSymbol]);
 
     scheduler.add(getFakeTransaction(1));
 
