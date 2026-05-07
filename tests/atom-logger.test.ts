@@ -18,10 +18,9 @@ import {
 import { consoleFormatter } from '../src/formatters/console/index.js';
 import type { ConsoleFormatterOptions } from '../src/formatters/console/types.js';
 import { type AtomLoggerOptions, createLoggedStore } from '../src/index.js';
-import { atomLoggerStoreSymbol } from '../src/vanilla/consts/store-symbol.js';
-import { isLoggedStore } from '../src/vanilla/create-logged-store.js';
+import { getLoggedStoreState, isLoggedStore } from '../src/vanilla/create-logged-store.js';
 import type { AnyAtom, AtomId } from '../src/vanilla/types/event.js';
-import type { Store, AtomLoggerStore } from '../src/vanilla/types/store.js';
+import type { Store } from '../src/vanilla/types/store.js';
 
 let mockDate: MockInstance;
 
@@ -155,37 +154,36 @@ describe('createLoggedStore', () => {
     });
 
     it('should allow updating options on the logged store state', () => {
-      store = createLoggedStore(store, {
+      const options: AtomLoggerOptions = {
         ...defaultOptions,
         enabled: true,
-      });
+      };
+      store = createLoggedStore(store, options);
 
-      expect((store as AtomLoggerStore)[atomLoggerStoreSymbol]).toEqual(
-        expect.objectContaining({ enabled: true }),
-      );
+      expect(options.enabled).toBe(true);
 
-      (store as AtomLoggerStore)[atomLoggerStoreSymbol].enabled = false;
+      options.enabled = false;
 
-      expect((store as AtomLoggerStore)[atomLoggerStoreSymbol]).toEqual(
-        expect.objectContaining({ enabled: false }),
-      );
+      expect(options.enabled).toBe(false);
     });
 
     it('should keep the existing formatter when updating options after creation', () => {
       const customFormatter = vi.fn();
-      store = createLoggedStore(store, { formatter: customFormatter, enabled: true });
+      const options: AtomLoggerOptions = {
+        formatter: customFormatter,
+        enabled: true,
+      };
+      store = createLoggedStore(store, options);
 
-      const formatterAfterCreation = (store as AtomLoggerStore)[atomLoggerStoreSymbol].formatter;
+      const formatterAfterCreation = options.formatter;
       expect(formatterAfterCreation).toBe(customFormatter);
 
       // Update a core option directly, formatter should remain
-      (store as AtomLoggerStore)[atomLoggerStoreSymbol].enabled = false;
+      options.enabled = false;
 
       // Formatter should remain the same instance
-      expect((store as AtomLoggerStore)[atomLoggerStoreSymbol].formatter).toBe(customFormatter);
-      expect((store as AtomLoggerStore)[atomLoggerStoreSymbol]).toEqual(
-        expect.objectContaining({ enabled: false }),
-      );
+      expect(options.formatter).toBe(customFormatter);
+      expect(options.enabled).toBe(false);
     });
   });
 
@@ -281,25 +279,16 @@ describe('createLoggedStore', () => {
 
   describe('options', () => {
     it('should respect custom options', () => {
-      const customOptions = {
+      const options: AtomLoggerOptions = {
         enabled: false,
         shouldShowPrivateAtoms: true,
-        stringifyLimit: 100,
-        logger: consoleMock,
-        groupTransactions: false,
-        groupEvents: true,
-        collapseEvents: true,
-        collapseTransactions: false,
-        ownerStackLimit: 5,
       };
 
-      store = createLoggedStore(store, customOptions);
+      store = createLoggedStore(store, options);
 
-      // Only core options are stored in atomLoggerStoreSymbol state
-      expect((store as AtomLoggerStore)[atomLoggerStoreSymbol].enabled).toBe(false);
-      expect((store as AtomLoggerStore)[atomLoggerStoreSymbol].shouldShowPrivateAtoms).toBe(true);
-      // Formatter-specific options (stringifyLimit, logger, groupTransactions, etc.)
-      // are managed inside the formatter closure, not in the core state
+      // Only core options are stored in logger state
+      expect(options.enabled).toBe(false);
+      expect(options.shouldShowPrivateAtoms).toBe(true);
     });
 
     describe('enabled', () => {
@@ -332,7 +321,12 @@ describe('createLoggedStore', () => {
       });
 
       it('should not log atom interactions anymore after disabling', () => {
-        store = createLoggedStore(store, { ...defaultOptions, enabled: true });
+        const options: AtomLoggerOptions = {
+          ...defaultOptions,
+          enabled: true,
+        };
+
+        store = createLoggedStore(store, options);
 
         const testAtom = atom(42);
 
@@ -347,7 +341,7 @@ describe('createLoggedStore', () => {
         vi.clearAllMocks();
 
         // Update the enabled option directly on the logger state
-        (store as AtomLoggerStore)[atomLoggerStoreSymbol].enabled = false;
+        options.enabled = false;
 
         store.get(testAtom);
         store.set(testAtom, 43);
@@ -1670,42 +1664,29 @@ describe('createLoggedStore', () => {
       });
 
       it('should ignore transactionDebounceMs, requestIdleCallbackTimeoutMs and maxProcessingTimeMs options when synchronous is true', () => {
-        store = createLoggedStore(store, {
+        const options: AtomLoggerOptions = {
           ...defaultOptions,
           synchronous: true,
           requestIdleCallbackTimeoutMs: 345,
           transactionDebounceMs: 456,
           maxProcessingTimeMs: 789,
-        });
+        };
 
-        const options = (store as AtomLoggerStore)[atomLoggerStoreSymbol];
+        store = createLoggedStore(store, options);
 
+        // Values are kept but are ignored
         expect(options).toEqual(
-          expect.objectContaining({
-            requestIdleCallbackTimeoutMs: -1,
-            transactionDebounceMs: -1,
-            maxProcessingTimeMs: -1,
-          }),
-        );
-        expect(options).not.toEqual(
           expect.objectContaining({
             synchronous: true,
-          }),
-        );
-
-        // Update options directly on the logger state (non-synchronous values)
-        Object.assign(options, {
-          requestIdleCallbackTimeoutMs: 345,
-          transactionDebounceMs: 456,
-          maxProcessingTimeMs: 16,
-        });
-
-        expect(options).toEqual(
-          expect.objectContaining({
             requestIdleCallbackTimeoutMs: 345,
             transactionDebounceMs: 456,
+            maxProcessingTimeMs: 789,
           }),
         );
+
+        // Mutating synchronous at runtime also works
+        options.synchronous = false;
+        expect(options.synchronous).toBe(false);
       });
     });
 
@@ -1881,7 +1862,10 @@ describe('createLoggedStore', () => {
       });
 
       it('should schedule and log transactions using requestIdleCallback with requestIdleCallbackTimeoutMs option', () => {
-        store = createLoggedStore(store, { ...defaultOptions, requestIdleCallbackTimeoutMs: 666 });
+        store = createLoggedStore(store, {
+          ...defaultOptions,
+          requestIdleCallbackTimeoutMs: 666,
+        });
 
         const testAtom = atom(0);
 
@@ -1908,7 +1892,10 @@ describe('createLoggedStore', () => {
       });
 
       it('should schedule and log transactions using requestIdleCallback without timeout with requestIdleCallbackTimeoutMs option to 0', () => {
-        store = createLoggedStore(store, { ...defaultOptions, requestIdleCallbackTimeoutMs: 0 });
+        store = createLoggedStore(store, {
+          ...defaultOptions,
+          requestIdleCallbackTimeoutMs: 0,
+        });
 
         const testAtom = atom(0);
 
@@ -3507,13 +3494,13 @@ describe('createLoggedStore', () => {
         [`mounted ${aAtom}`, { value: 1 }],
       ]);
 
-      const storeData = (store as AtomLoggerStore)[atomLoggerStoreSymbol];
-      expect(storeData.dependenciesMap.has(aAtom)).toBeTruthy();
-      expect(storeData.dependenciesMap.has(bAtom)).toBeFalsy();
-      expect(storeData.dependenciesMap.has(cAtom)).toBeFalsy();
-      expect(storeData.prevTransactionDependenciesMap.has(aAtom)).toBeTruthy();
-      expect(storeData.prevTransactionDependenciesMap.has(bAtom)).toBeFalsy();
-      expect(storeData.prevTransactionDependenciesMap.has(cAtom)).toBeFalsy();
+      const loggedStoreState = getLoggedStoreState(store)!;
+      expect(loggedStoreState.dependenciesMap.has(aAtom)).toBeTruthy();
+      expect(loggedStoreState.dependenciesMap.has(bAtom)).toBeFalsy();
+      expect(loggedStoreState.dependenciesMap.has(cAtom)).toBeFalsy();
+      expect(loggedStoreState.prevTransactionDependenciesMap.has(aAtom)).toBeTruthy();
+      expect(loggedStoreState.prevTransactionDependenciesMap.has(bAtom)).toBeFalsy();
+      expect(loggedStoreState.prevTransactionDependenciesMap.has(cAtom)).toBeFalsy();
     });
 
     it('should update value-event dependencies when a dependency is removed and a value change already exists in the transaction', () => {

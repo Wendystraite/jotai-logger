@@ -3,7 +3,6 @@ import {
   INTERNAL_getBuildingBlocksRev3 as getBuildingBlocks,
   INTERNAL_initializeStoreHooksRev3 as initializeStoreHooks,
   type INTERNAL_AtomStateMap as AtomStateMap,
-  type INTERNAL_BuildingBlocks as BuildingBlocks,
 } from 'jotai/vanilla/internals';
 
 import { consoleFormatter } from '../formatters/console/index.js';
@@ -14,47 +13,69 @@ import { onAtomUnmounted } from './callbacks/on-atom-unmounted.js';
 import { onStoreGet } from './callbacks/on-store-get.js';
 import { onStoreSet } from './callbacks/on-store-set.js';
 import { onStoreSub } from './callbacks/on-store-sub.js';
-import { atomLoggerStoreSymbol } from './consts/store-symbol.js';
+import {
+  DEFAULT_ENABLED,
+  DEFAULT_MAX_PROCESSING_TIME_MS,
+  DEFAULT_REQUEST_IDLE_CALLBACK_TIMEOUT_MS,
+  DEFAULT_SHOULD_SHOW_PRIVATE_ATOMS,
+  DEFAULT_SYNCHRONOUS,
+  DEFAULT_TRANSACTION_DEBOUNCE_MS,
+} from './consts/default-options.js';
 import { createLogTransactionsScheduler } from './log-transactions-scheduler.js';
 import type { AtomId } from './types/event.js';
 import type { AtomLoggerOptions } from './types/options.js';
-import type { Store, AtomLoggerStore, AtomLoggerStoreState } from './types/store.js';
-import { atomLoggerOptionsToState } from './utils/logger-options-to-state.js';
+import type { Store, AtomLoggerStoreState } from './types/store.js';
+
+const loggedStoreStates = new WeakMap<Store, AtomLoggerStoreState>();
 
 /**
  * Create a new Jotai store that shares state with the given parent store but intercepts all `get`, `set` and `sub` calls to log atom transactions.
  *
- * The logged store state can be accessed via the `atomLoggerStoreSymbol` property on the returned store, which includes configuration options, transaction tracking state, and internal methods used by the logging implementation.
- * Theses options can be changed at runtime to enable/disable logging, change the formatter, etc.
- *
  * @param parentStore The parent Jotai store to derive from.
- * @param options Optional configuration for the atom logger.
- * @returns A new store that shares state with the parent but has logging enabled. It can be used in place of the parent store and will log all atom interactions performed through it.
+ * @param options Mutable options object for the atom logger. Defaults are applied in-place.
+ * @returns A new store that shares state with the parent but has logging enabled.
  *
  * @throws If the provided parentStore is not a valid Jotai store.
  *
  * @example
  * ```ts
  * const parentStore = createStore();
- * const loggedStore = createLoggedStore(parentStore, { enabled: true });
+ * const options = { enabled: true };
+ * const loggedStore = createLoggedStore(parentStore, options);
  * loggedStore.get(someAtom); // This call will be logged.
+ * options.enabled = false;   // Disable logging at runtime.
  * ```
  */
-export function createLoggedStore(
-  parentStore: Store,
-  options?: AtomLoggerOptions,
-): AtomLoggerStore {
-  const newStateOptions = atomLoggerOptionsToState(options);
-  const formatter = options?.formatter ?? consoleFormatter();
+export function createLoggedStore(parentStore: Store, options: AtomLoggerOptions = {}): Store {
+  options.enabled ??= DEFAULT_ENABLED;
+  options.shouldShowPrivateAtoms ??= DEFAULT_SHOULD_SHOW_PRIVATE_ATOMS;
+  options.synchronous ??= DEFAULT_SYNCHRONOUS;
+  options.transactionDebounceMs ??= DEFAULT_TRANSACTION_DEBOUNCE_MS;
+  options.requestIdleCallbackTimeoutMs ??= DEFAULT_REQUEST_IDLE_CALLBACK_TIMEOUT_MS;
+  options.maxProcessingTimeMs ??= DEFAULT_MAX_PROCESSING_TIME_MS;
+  options.formatter ??= consoleFormatter();
+
+  const logTransactionsScheduler = createLogTransactionsScheduler(options);
+
+  const atomsFinalizationRegistry = new FinalizationRegistry<string>((atomId: AtomId) => {
+    onAtomGarbageCollected(loggerState, parentBuildingBlocks, atomId);
+  });
+
+  const loggerState: AtomLoggerStoreState = {
+    options,
+    logTransactionsScheduler,
+    transactionNumber: 1,
+    currentTransaction: undefined,
+    isInsideTransaction: false,
+    atomsFinalizationRegistry,
+    promisesResultsMap: new WeakMap(),
+    dependenciesMap: new WeakMap(),
+    prevTransactionDependenciesMap: new WeakMap(),
+    transactionsDebounceTimeoutId: undefined,
+  };
 
   const parentBuildingBlocks = getBuildingBlocks(parentStore);
   const parentAtomStateMap = parentBuildingBlocks[0];
-
-  // Declare buildingBlocks and loggerState early for closure access in callbacks before they are initialized below
-  /* eslint-disable prefer-const */
-  let buildingBlocks!: Readonly<BuildingBlocks>;
-  const loggerState = {} as AtomLoggerStoreState;
-  /* eslint-enable prefer-const */
 
   const atomStateMap: AtomStateMap = {
     get: parentAtomStateMap.get.bind(parentAtomStateMap),
@@ -110,35 +131,24 @@ export function createLoggedStore(
     parentBuildingBlocks[26],
     parentBuildingBlocks[27],
     parentBuildingBlocks[28],
-  ) as AtomLoggerStore;
+  );
 
-  buildingBlocks = getBuildingBlocks(loggedStore);
+  const buildingBlocks = getBuildingBlocks(loggedStore);
 
-  const atomsFinalizationRegistry = new FinalizationRegistry<string>((atomId: AtomId) => {
-    onAtomGarbageCollected(loggerState, parentBuildingBlocks, atomId);
-  });
-
-  const logTransactionsScheduler = createLogTransactionsScheduler(loggerState);
-
-  Object.assign(loggerState, {
-    ...newStateOptions,
-    formatter,
-    logTransactionsScheduler,
-    transactionNumber: 1,
-    currentTransaction: undefined,
-    isInsideTransaction: false,
-    atomsFinalizationRegistry,
-    promisesResultsMap: new WeakMap(),
-    dependenciesMap: new WeakMap(),
-    prevTransactionDependenciesMap: new WeakMap(),
-    transactionsDebounceTimeoutId: undefined,
-  });
-
-  loggedStore[atomLoggerStoreSymbol] = loggerState;
+  loggedStoreStates.set(loggedStore, loggerState);
 
   return loggedStore;
 }
 
-export function isLoggedStore(store: Store): store is AtomLoggerStore {
-  return atomLoggerStoreSymbol in store;
+export function isLoggedStore(store: Store): boolean {
+  return loggedStoreStates.has(store);
+}
+
+export function getLoggedStoreState(store: Store): AtomLoggerStoreState | undefined {
+  return loggedStoreStates.get(store);
+}
+
+export function getLoggedStoreOptions(store: Store): AtomLoggerOptions | undefined {
+  const loggerState = getLoggedStoreState(store);
+  return loggerState?.options;
 }

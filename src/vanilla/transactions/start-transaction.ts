@@ -33,11 +33,11 @@ export function startTransaction(
 
   transaction.startTimestamp = performance.now();
 
-  if (!transaction.componentDisplayName && loggerState.getComponentDisplayName) {
+  if (!transaction.componentDisplayName && loggerState.options.getComponentDisplayName) {
     try {
       // Try to get the component display name.
       // Do it at the start AND the end of the transaction to cover more cases since this can fail.
-      transaction.componentDisplayName = loggerState.getComponentDisplayName();
+      transaction.componentDisplayName = loggerState.options.getComponentDisplayName();
     } catch {
       transaction.componentDisplayName = undefined;
     }

@@ -3,7 +3,7 @@ import type { AnyAtom, AtomId } from '../types/event.js';
 export function convertAtomsToStrings(
   atoms: Set<AnyAtom> | undefined,
   options: {
-    shouldShowPrivateAtoms: boolean;
+    shouldShowPrivateAtoms?: boolean;
   },
 ): Set<AtomId> | undefined {
   if (!atoms) {

@@ -14,9 +14,9 @@ export function endTransaction(
   const transaction = loggerState.currentTransaction!;
 
   // Retrieve the owner stack if there are events to log (for better logging performance)
-  if (transaction.eventsCount > 0 && !transaction.ownerStack && loggerState.getOwnerStack) {
+  if (transaction.eventsCount > 0 && !transaction.ownerStack && loggerState.options.getOwnerStack) {
     try {
-      transaction.ownerStack = loggerState.getOwnerStack();
+      transaction.ownerStack = loggerState.options.getOwnerStack();
     } catch {
       transaction.ownerStack = undefined;
     }
@@ -37,16 +37,21 @@ export function endTransaction(
    *   To compare the previous and next value of the atom, it calls `store.get`.
    *   This store call is done in the component body (inside `useReducer`), so the component display name can be retrieved here.
    */
-  if (!transaction.componentDisplayName && loggerState.getComponentDisplayName) {
+  if (!transaction.componentDisplayName && loggerState.options.getComponentDisplayName) {
     try {
-      transaction.componentDisplayName = loggerState.getComponentDisplayName();
+      transaction.componentDisplayName = loggerState.options.getComponentDisplayName();
     } catch {
       transaction.componentDisplayName = undefined;
     }
   }
 
   // Flush the transaction events immediately (useful when starting a new transaction).
-  if (immediate || loggerState.transactionDebounceMs <= 0) {
+  if (
+    immediate ||
+    loggerState.options.synchronous ||
+    loggerState.options.transactionDebounceMs === undefined ||
+    loggerState.options.transactionDebounceMs <= 0
+  ) {
     stopEndTransactionDebounce(loggerState);
     updateTransactionEndTimestamp(loggerState);
     flushTransactionEvents(loggerState);

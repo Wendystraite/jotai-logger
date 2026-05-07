@@ -80,8 +80,8 @@ describe('AtomLoggerProvider', () => {
 });
 
 describe('createLoggedStore', () => {
-  let store: ReturnType<typeof createStore>;
-  let loggedStore: ReturnType<typeof createLoggedStore>;
+  let store: Store;
+  let loggedStore: Store;
   let consoleMock: {
     log: Mock;
     group: Mock;

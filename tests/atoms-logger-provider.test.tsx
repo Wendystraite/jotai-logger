@@ -8,11 +8,11 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   AtomLoggerProvider,
   createLoggedStore,
+  getLoggedStoreOptions,
   isLoggedStore,
   type AtomLoggerOptions,
 } from '../src/index.js';
-import { atomLoggerStoreSymbol } from '../src/vanilla/consts/store-symbol.js';
-import type { Store, AtomLoggerStore } from '../src/vanilla/types/store.js';
+import type { Store } from '../src/vanilla/types/store.js';
 
 describe('AtomLoggerProvider', () => {
   it('should provide a logged store to children', () => {
@@ -70,7 +70,7 @@ describe('AtomLoggerProvider', () => {
 
     // Store is still a logged store but logging is disabled
     expect(isLoggedStore(childStore!)).toBeTruthy();
-    expect((childStore as AtomLoggerStore)[atomLoggerStoreSymbol].enabled).toBe(false);
+    expect(getLoggedStoreOptions(childStore!)?.enabled).toBe(false);
   });
 
   it('should propagate the parent store from context', () => {
@@ -109,7 +109,7 @@ describe('AtomLoggerProvider', () => {
       </AtomLoggerProvider>,
     );
 
-    expect((childStore as AtomLoggerStore)[atomLoggerStoreSymbol].formatter).toBe(customFormatter);
+    expect(getLoggedStoreOptions(childStore!)?.formatter).toBe(customFormatter);
   });
 
   it('should update logger options when props change', () => {
@@ -142,7 +142,7 @@ describe('AtomLoggerProvider', () => {
 
     render(<Parent />);
 
-    expect((childStore as AtomLoggerStore)[atomLoggerStoreSymbol]).toEqual(
+    expect(getLoggedStoreOptions(childStore!)).toEqual(
       expect.objectContaining({
         shouldShowPrivateAtoms: true,
       }),
@@ -202,14 +202,14 @@ describe('AtomLoggerProvider', () => {
     );
 
     expect(isLoggedStore(childStore!)).toBeTruthy();
-    expect((childStore as AtomLoggerStore)[atomLoggerStoreSymbol]).toEqual(
+    expect(getLoggedStoreOptions(childStore!)).toEqual(
       expect.objectContaining({
         enabled: true,
         shouldShowPrivateAtoms: false,
-        shouldShowAtom: undefined,
         transactionDebounceMs: 250,
         requestIdleCallbackTimeoutMs: 250,
         maxProcessingTimeMs: 16,
+        synchronous: false,
       }),
     );
   });

@@ -1,11 +1,9 @@
 import { Provider, useStore } from 'jotai';
 import type { Store } from 'jotai/vanilla/store';
-import { useMemo, type PropsWithChildren, type ReactNode } from 'react';
+import { useMemo, useRef, type PropsWithChildren, type ReactNode } from 'react';
 
-import { atomLoggerStoreSymbol } from '../vanilla/consts/store-symbol.js';
 import { createLoggedStore } from '../vanilla/create-logged-store.js';
 import type { AtomLoggerOptions } from '../vanilla/types/options.js';
-import { atomLoggerOptionsToState } from '../vanilla/utils/logger-options-to-state.js';
 
 /**
  * Provider that wraps a Jotai store with atom logging.
@@ -35,10 +33,13 @@ export function AtomLoggerProvider({
 }: PropsWithChildren<{ store?: Store }> & AtomLoggerOptions): ReactNode {
   const parentStore = useStore({ store });
 
-  const loggedStore = useMemo(() => createLoggedStore(parentStore, options), [parentStore]);
+  const optionsRef = useRef<AtomLoggerOptions | undefined>(undefined);
+  if (optionsRef.current === undefined) optionsRef.current = { ...options };
+  else Object.assign(optionsRef.current, options);
 
-  Object.assign(loggedStore[atomLoggerStoreSymbol], atomLoggerOptionsToState(options));
-  if (options.formatter) loggedStore[atomLoggerStoreSymbol].formatter = options.formatter;
+  const loggedStore = useMemo(() => {
+    return createLoggedStore(parentStore, optionsRef.current);
+  }, [parentStore]);
 
   return <Provider store={loggedStore}>{children}</Provider>;
 }

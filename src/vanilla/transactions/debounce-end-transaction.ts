@@ -12,5 +12,5 @@ export function debounceEndTransaction(loggerState: AtomLoggerStoreState) {
   loggerState.transactionsDebounceTimeoutId = setTimeout(() => {
     loggerState.transactionsDebounceTimeoutId = undefined;
     flushTransactionEvents(loggerState);
-  }, loggerState.transactionDebounceMs);
+  }, loggerState.options.transactionDebounceMs);
 }

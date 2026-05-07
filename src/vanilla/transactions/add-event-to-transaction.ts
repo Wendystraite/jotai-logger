@@ -59,11 +59,11 @@ function setStateInEvent(
 
   const parentMountedMap = parentBuildingBlocks[1];
   const mountedState = parentMountedMap.get(event.atom);
-  event.dependents = convertAtomsToStrings(mountedState?.t, loggerState);
+  event.dependents = convertAtomsToStrings(mountedState?.t, loggerState.options);
 
   const parentAtomStateMap = parentBuildingBlocks[0];
   const atomState = parentAtomStateMap.get(event.atom);
-  event.pendingPromises = convertAtomsToStrings(atomState?.p, loggerState);
+  event.pendingPromises = convertAtomsToStrings(atomState?.p, loggerState.options);
 }
 
 /**

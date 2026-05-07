@@ -1,9 +1,10 @@
-export { createLoggedStore, isLoggedStore } from './vanilla/create-logged-store.js';
-export type {
-  AtomLoggerStore,
-  AtomLoggerStoreState,
-  AtomLoggerOptionsInStoreState,
-} from './vanilla/types/store.js';
+export {
+  createLoggedStore,
+  isLoggedStore,
+  getLoggedStoreState,
+  getLoggedStoreOptions,
+} from './vanilla/create-logged-store.js';
+export type { AtomLoggerStoreState } from './vanilla/types/store.js';
 export type { AtomLoggerOptions } from './vanilla/types/options.js';
 export type { AtomLoggerFormatter } from './vanilla/types/formatter.js';
 export { AtomTransactionTypes } from './vanilla/types/transaction.js';
@@ -41,4 +42,3 @@ export type {
   AtomEventUnmounted,
   AtomEventDestroyed,
 } from './vanilla/types/event.js';
-export { atomLoggerStoreSymbol } from './vanilla/consts/store-symbol.js';

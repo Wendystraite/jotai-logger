@@ -2,10 +2,8 @@ import { atom } from 'jotai';
 import { createStore } from 'jotai/vanilla';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createLoggedStore } from '../src/index.js';
-import { atomLoggerStoreSymbol } from '../src/vanilla/consts/store-symbol.js';
+import { createLoggedStore, type AtomLoggerOptions } from '../src/index.js';
 import type { AtomLoggerFormatter } from '../src/vanilla/types/formatter.js';
-import type { AtomLoggerStore } from '../src/vanilla/types/store.js';
 import type { AtomTransaction } from '../src/vanilla/types/transaction.js';
 
 describe('custom formatter', () => {
@@ -124,7 +122,12 @@ describe('custom formatter', () => {
     const firstFormatter = vi.fn<AtomLoggerFormatter>();
     const secondFormatter = vi.fn<AtomLoggerFormatter>();
 
-    store = createLoggedStore(store, { formatter: firstFormatter, synchronous: true });
+    const options: AtomLoggerOptions = {
+      formatter: firstFormatter,
+      synchronous: true,
+    };
+
+    store = createLoggedStore(store, options);
 
     const testAtom = atom(0);
     store.get(testAtom);
@@ -133,8 +136,8 @@ describe('custom formatter', () => {
     expect(firstFormatter).toHaveBeenCalledTimes(1);
     expect(secondFormatter).toHaveBeenCalledTimes(0);
 
-    // Replace formatter by updating the logger state directly
-    (store as AtomLoggerStore)[atomLoggerStoreSymbol].formatter = secondFormatter;
+    // Replace formatter by updating the options directly
+    options.formatter = secondFormatter;
 
     store.set(testAtom, 1);
     vi.runAllTimers();
@@ -242,17 +245,16 @@ describe('custom formatter', () => {
     expect(logs[1]).toMatchObject({ level: 'info', transactionNumber: 2 });
   });
 
-  it('should store the formatter in the atomLoggerStoreSymbol state', () => {
+  it('should store the formatter in the loggerState', () => {
     const customFormatter: AtomLoggerFormatter = vi.fn();
-    store = createLoggedStore(store, { formatter: customFormatter });
-
-    expect((store as AtomLoggerStore)[atomLoggerStoreSymbol].formatter).toBe(customFormatter);
+    const options: AtomLoggerOptions = { formatter: customFormatter };
+    store = createLoggedStore(store, options);
+    expect(options.formatter).toBe(customFormatter);
   });
 
   it('should use a default consoleFormatter when no formatter is provided', () => {
-    store = createLoggedStore(store);
-
-    const formatter = (store as AtomLoggerStore)[atomLoggerStoreSymbol].formatter;
-    expect(typeof formatter).toBe('function');
+    const options: AtomLoggerOptions = {};
+    store = createLoggedStore(store, options);
+    expect(typeof options.formatter).toBe('function');
   });
 });
