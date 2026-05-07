@@ -43,13 +43,11 @@ function onStoreUnsubscribe(
   const doStartTransaction = !loggerState.isInsideTransaction;
   try {
     if (doStartTransaction) {
-      {
-        startTransaction(loggerState, {
-          type: AtomTransactionTypes.storeUnsubscribe,
-          atom,
-          listener,
-        });
-      }
+      startTransaction(loggerState, {
+        type: AtomTransactionTypes.storeUnsubscribe,
+        atom,
+        listener,
+      });
     }
     unsubscribe();
   } finally {
