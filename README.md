@@ -134,6 +134,32 @@ type AtomLoggerOptions = {
 </details>
 
 <details>
+<summary>Changing options at runtime</summary>
+
+You can change logger options at runtime by mutating the options object passed to `createLoggedStore` or `AtomLoggerProvider`:
+
+```ts
+const options: AtomLoggerOptions = { enabled: true };
+const store = createLoggedStore(parentStore, options);
+
+// Change options at runtime
+options.enabled = false;
+```
+
+Alternatively, you can access the logger options from the store state:
+
+```ts
+import { getLoggedStoreOptions } from 'jotai-logger/vanilla';
+
+const store = createLoggedStore(parentStore, { enabled: true });
+
+// Change options at runtime
+getLoggedStoreOptions(store)!.enabled = false;
+```
+
+</details>
+
+<details>
 <summary>Component Tracking — <code>getOwnerStack</code> &amp; <code>getComponentDisplayName</code> (Experimental)</summary>
 
 These features are designed for React and may not work in all cases.
@@ -750,10 +776,17 @@ All props of `AtomLoggerProvider` are the same options as `AtomLoggerOptions`.
 + isLoggedStore(store);
 ```
 
-Updating options at runtime (no re-bind; mutate the logger state directly):
+Updating options at runtime (no re-bind; mutate the logger options directly):
 
 ```diff
+  const options: AtomLoggerOptions = { enabled: true };
+
+- bindAtomsLoggerToStore(parentStore, options);
++ const store = createLoggedStore(parentStore, options);
+
+  // Change options at runtime
 - bindAtomsLoggerToStore(store, { enabled: false });
-+ import { atomLoggerStoreSymbol, type AtomLoggerStore } from 'jotai-logger/vanilla';
-+ (store as AtomLoggerStore)[atomLoggerStoreSymbol].enabled = false;
++ options.enabled = false;
++ // or
++ getLoggedStoreOptions(store)!.enabled = false;
 ```
