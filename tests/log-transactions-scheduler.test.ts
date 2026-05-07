@@ -21,7 +21,6 @@ function getFakeTransaction(transactionNumber: number): AtomTransaction {
     atom: `test-${transactionNumber}`,
     endTimestamp: -1,
     events: [],
-    eventsCount: 0,
     ownerStack: undefined,
     componentDisplayName: undefined,
     startTimestamp: -1,

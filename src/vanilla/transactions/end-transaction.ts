@@ -14,7 +14,11 @@ export function endTransaction(
   const transaction = loggerState.currentTransaction!;
 
   // Retrieve the owner stack if there are events to log (for better logging performance)
-  if (transaction.eventsCount > 0 && !transaction.ownerStack && loggerState.options.getOwnerStack) {
+  if (
+    transaction.events.length > 0 &&
+    !transaction.ownerStack &&
+    loggerState.options.getOwnerStack
+  ) {
     try {
       transaction.ownerStack = loggerState.options.getOwnerStack();
     } catch {

@@ -10,7 +10,6 @@ export function startTransaction(
       AtomTransactionMap[K],
       | 'transactionNumber'
       | 'events'
-      | 'eventsCount'
       | 'startTimestamp'
       | 'endTimestamp'
       | 'ownerStack'
@@ -29,7 +28,6 @@ export function startTransaction(
 
   transaction.transactionNumber = loggerState.transactionNumber;
   transaction.events = [];
-  transaction.eventsCount = 0;
 
   transaction.startTimestamp = performance.now();
 

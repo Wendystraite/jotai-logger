@@ -30,9 +30,7 @@ export interface AtomTransactionBase {
   /** Display name of the React component that triggered the transaction (experimental). */
   componentDisplayName?: string | undefined;
   /** Ordered list of events recorded during this transaction. */
-  events: (AtomEvent | undefined)[];
-  /** Number of events in this transaction. */
-  eventsCount: number;
+  events: AtomEvent[];
   /** `performance.now()` timestamp when the transaction started. */
   startTimestamp: ReturnType<typeof performance.now>;
   /** `performance.now()` timestamp when the transaction ended. */

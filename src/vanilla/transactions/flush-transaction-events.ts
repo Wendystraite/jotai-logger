@@ -12,7 +12,7 @@ export function flushTransactionEvents(loggerState: AtomLoggerStoreState): void 
   updatePreviousDependencyChangedEvents(loggerState, transaction);
 
   // If the transaction has no events, we don't need to log it.
-  if (transaction.eventsCount <= 0) {
+  if (transaction.events.length <= 0) {
     return;
   }
 
@@ -28,7 +28,6 @@ function updatePreviousDependencyChangedEvents(
   transaction: AtomTransaction,
 ): void {
   for (const event of transaction.events) {
-    if (!event) continue;
     if (event.type === AtomEventTypes.dependenciesChanged) {
       // Update the previous dependencies with the new dependencies for the next transaction.
       loggerState.prevTransactionDependenciesMap.set(event.atom, event.dependencies);

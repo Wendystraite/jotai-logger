@@ -49,7 +49,6 @@ describe('custom formatter', () => {
             value: 42,
           },
         ],
-        eventsCount: 1,
         startTimestamp: 0,
         endTimestamp: 0,
       },
@@ -69,7 +68,6 @@ describe('custom formatter', () => {
             pendingPromises: new Set(),
           },
         ],
-        eventsCount: 1,
         result: undefined,
         startTimestamp: 0,
         endTimestamp: 0,
@@ -180,7 +178,7 @@ describe('custom formatter', () => {
 
     // Private atom access creates no visible transaction events
     const hasPrivateEvent = received.some((tx) =>
-      tx.events.some((e) => e?.atom === privateAtom.toString()),
+      tx.events.some((e) => e.atom === privateAtom.toString()),
     );
     expect(hasPrivateEvent).toBe(false);
   });
@@ -206,7 +204,7 @@ describe('custom formatter', () => {
 
     // Only transactions for allowedAtom events should appear
     const mentionsIgnored = received.some((tx) =>
-      tx.events.some((e) => e?.atom === ignoredAtom.toString()),
+      tx.events.some((e) => e.atom === ignoredAtom.toString()),
     );
     expect(mentionsIgnored).toBe(false);
     expect(received.length).toBeGreaterThanOrEqual(1);
@@ -227,7 +225,7 @@ describe('custom formatter', () => {
         transactionNumber: transaction.transactionNumber,
         atomId:
           typeof transaction.atom === 'string' ? transaction.atom : transaction.atom?.toString(),
-        eventCount: transaction.eventsCount,
+        eventCount: transaction.events.length,
       });
     };
 

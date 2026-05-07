@@ -2,12 +2,20 @@ import { type AtomEvent } from '../../vanilla/types/event.js';
 import { EventLogPipeline } from './event-log-pipeline.js';
 import type { ConsoleFormatterState } from './types.js';
 
-export function logEvent(event: AtomEvent, options: ConsoleFormatterState): void {
+export function logEvent(
+  event: AtomEvent,
+  options: ConsoleFormatterState,
+  mergedOldValues?: unknown[],
+): void {
   const { collapseEvents, logger } = options;
 
   let { groupEvents } = options;
 
-  const { logs, subLogsArray, subLogsObject } = EventLogPipeline.execute({ event, options });
+  const { logs, subLogsArray, subLogsObject } = EventLogPipeline.execute({
+    event,
+    options,
+    mergedOldValues,
+  });
 
   if (collapseEvents ? !logger.groupCollapsed : !logger.group) {
     groupEvents = false;

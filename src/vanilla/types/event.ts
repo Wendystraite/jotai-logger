@@ -86,8 +86,6 @@ export interface AtomEventChanged extends AtomEventBase {
   atom: AnyAtom;
   /** The previous value of the atom, if known. */
   oldValue?: unknown;
-  /** Previous values when multiple updates were batched. */
-  oldValues?: unknown[];
   /** The new value of the atom. */
   newValue: unknown;
 }

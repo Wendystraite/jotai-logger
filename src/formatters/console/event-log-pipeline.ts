@@ -84,6 +84,7 @@ export const EventLogPipeline = new LogPipeline()
   .withArgs<{
     event: AtomEvent;
     options: ConsoleFormatterState;
+    mergedOldValues?: unknown[];
   }>()
 
   // Initialize base logging context
@@ -108,13 +109,13 @@ export const EventLogPipeline = new LogPipeline()
         | { hasOldValue?: undefined; oldValue?: undefined; isOldValueError?: undefined }
       )
   >(function addOldValuesToEventMeta(context) {
-    const { event } = context;
-    if ('oldValues' in event && event.oldValues !== undefined && event.oldValues.length > 0) {
+    const { event, mergedOldValues } = context;
+    if (mergedOldValues !== undefined && mergedOldValues.length > 0) {
       context.hasOldValues = true;
-      context.oldValues = event.oldValues;
+      context.oldValues = mergedOldValues;
       context.hasOldValue = true;
-      context.oldValue = event.oldValues[0];
-      context.isOldValueError = event.oldValues[0] instanceof Error;
+      context.oldValue = mergedOldValues[0];
+      context.isOldValueError = mergedOldValues[0] instanceof Error;
     } else if ('oldValue' in event) {
       context.hasOldValue = true;
       context.oldValue = event.oldValue;

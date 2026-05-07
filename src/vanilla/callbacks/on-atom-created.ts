@@ -45,7 +45,7 @@ export function onAtomCreated(
     /* v8 ignore next -- atomState.d.set should be called inside a transaction -- @preserve */
     const currentTransactionEvents = loggerState.currentTransaction?.events ?? [];
     for (const event of currentTransactionEvents) {
-      if (event?.type === AtomEventTypes.dependenciesChanged && event.atom === atom) {
+      if (event.type === AtomEventTypes.dependenciesChanged && event.atom === atom) {
         event.dependencies = newDependencies;
         event.removedDependencies.delete(addedDependency);
         event.addedDependencies.add(addedDependency);
@@ -89,7 +89,7 @@ export function onAtomCreated(
     const currentTransactionEvents = loggerState.currentTransaction?.events ?? [];
     let hasUpdatedExistingDepsChangedEvent = false;
     for (const event of currentTransactionEvents) {
-      if (event?.atom === atom) {
+      if (event.atom === atom) {
         // In jotai 2.18+, d.delete() fires AFTER the value is set (in `pruneDependencies`)
         // so retroactively update existing events for this atom with the new dependencies.
         event.dependencies = newDependencies;

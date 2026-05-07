@@ -61,6 +61,7 @@ const addTransactionTypeToLogsMapping: Record<
 export const TransactionLogPipeline = new LogPipeline()
   .withArgs<{
     transaction: AtomTransaction;
+    eventsCount: number;
     options: ConsoleFormatterState;
   }>()
 
@@ -173,7 +174,7 @@ export const TransactionLogPipeline = new LogPipeline()
       logs,
       options,
       options: { autoAlignTransactions, maxWidths },
-      transaction: { eventsCount },
+      eventsCount,
     } = context;
 
     const numberContent = eventsCount.toString();

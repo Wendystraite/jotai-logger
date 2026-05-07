@@ -1,18 +1,57 @@
+import { AtomEventTypes } from '../../vanilla/types/event.js';
+import type { AtomEvent, AtomEventChanged } from '../../vanilla/types/event.js';
 import type { AtomTransaction } from '../../vanilla/types/transaction.js';
 import { logEvent } from './log-event.js';
 import { TransactionLogPipeline } from './transaction-log-pipeline.js';
 import type { ConsoleFormatterState } from './types.js';
+
+interface MergedEvent {
+  event: AtomEvent;
+  oldValues?: unknown[];
+}
+
+/**
+ * Merge multiple "changed" events for the same atom within a transaction into a single entry.
+ */
+function buildMergedEvents(events: AtomEvent[]): MergedEvent[] {
+  const mergedByAtom = new Map<AtomEvent['atom'], MergedEvent>();
+  const result: MergedEvent[] = [];
+
+  for (const event of events) {
+    if (event.type === AtomEventTypes.changed) {
+      const existing = mergedByAtom.get(event.atom);
+      if (existing !== undefined) {
+        if (existing.oldValues !== undefined) {
+          existing.oldValues.push(event.oldValue);
+        } else {
+          existing.oldValues = [(existing.event as AtomEventChanged).oldValue, event.oldValue];
+        }
+        existing.event = event;
+        continue;
+      }
+      const merged: MergedEvent = { event };
+      mergedByAtom.set(event.atom, merged);
+      result.push(merged);
+      continue;
+    }
+    result.push({ event });
+  }
+
+  return result;
+}
 
 export function logTransaction(transaction: AtomTransaction, options: ConsoleFormatterState): void {
   const { logger, collapseTransactions } = options;
 
   let { groupTransactions } = options;
 
-  const {
-    logs,
-    additionalDataToLog,
-    transaction: { events },
-  } = TransactionLogPipeline.execute({ transaction, options });
+  const mergedEvents = buildMergedEvents(transaction.events);
+
+  const { logs, additionalDataToLog } = TransactionLogPipeline.execute({
+    transaction,
+    eventsCount: mergedEvents.length,
+    options,
+  });
 
   if (Object.keys(additionalDataToLog).length > 0) {
     logs.push(additionalDataToLog);
@@ -35,10 +74,8 @@ export function logTransaction(transaction: AtomTransaction, options: ConsoleFor
         logger.group?.(...logs);
       }
     }
-    for (const event of events) {
-      if (event) {
-        logEvent(event, options);
-      }
+    for (const { event, oldValues } of mergedEvents) {
+      logEvent(event, options, oldValues);
     }
   } finally {
     if (logs.length > 0 && groupTransactions) {

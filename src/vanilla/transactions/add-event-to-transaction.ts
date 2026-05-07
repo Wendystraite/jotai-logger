@@ -1,6 +1,6 @@
 import type { INTERNAL_BuildingBlocks as BuildingBlocks } from 'jotai/vanilla/internals';
 
-import { AtomEventTypes, type AtomEvent, type AtomEventMap } from '../types/event.js';
+import { AtomEventTypes, type AtomEvent } from '../types/event.js';
 import type { AtomLoggerStoreState } from '../types/store.js';
 import { AtomTransactionTypes, type AtomTransaction } from '../types/transaction.js';
 import { filterAtoms } from '../utils/filter-atoms.js';
@@ -38,10 +38,8 @@ export function addEventToTransaction(
 
   // Add the event to the current transaction.
   transaction.events.push(event);
-  transaction.eventsCount += 1;
 
-  // Compute/reorder the events in the transaction.
-  mergeChangedEvents(transaction, event);
+  // Reorder the events in the transaction.
   reversePromiseAbortedAndPending(transaction, event);
 }
 
@@ -89,38 +87,6 @@ function reversePromiseAbortedAndPending(transaction: AtomTransaction, event: At
         events[events.length - 2] = event;
         events[events.length - 1] = eventBeforeAbort;
       }
-    }
-  }
-}
-
-/**
- * Merge multiple "changed" events that occurs in the same transaction to prevent spam.
- */
-function mergeChangedEvents(transaction: AtomTransaction, event: AtomEvent): void {
-  if (event.type === AtomEventTypes.changed) {
-    const previousChangedEventIndex = transaction.events.findIndex((previousEvent) => {
-      return (
-        previousEvent !== undefined &&
-        previousEvent !== event &&
-        previousEvent.type === AtomEventTypes.changed &&
-        previousEvent.atom === event.atom
-      );
-    });
-    if (previousChangedEventIndex > -1) {
-      const previousChangedEvent = transaction.events[
-        previousChangedEventIndex
-      ] as AtomEventMap[AtomEventTypes['changed']];
-      let oldValues: unknown[];
-      if (previousChangedEvent.oldValues !== undefined) {
-        oldValues = previousChangedEvent.oldValues;
-        oldValues.push(event.oldValue);
-      } else {
-        oldValues = [previousChangedEvent.oldValue, event.oldValue];
-      }
-      event.oldValues = oldValues;
-      delete event.oldValue;
-      transaction.events[previousChangedEventIndex] = undefined;
-      transaction.eventsCount -= 1;
     }
   }
 }
