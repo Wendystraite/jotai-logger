@@ -84,8 +84,8 @@ export interface AtomEventInitialPromiseAborted extends AtomEventBase {
 export interface AtomEventChanged extends AtomEventBase {
   type: AtomEventTypes['changed'];
   atom: AnyAtom;
-  /** The previous value of the atom, if known. */
-  oldValue?: unknown;
+  /** The previous value of the atom. */
+  oldValue: unknown;
   /** The new value of the atom. */
   newValue: unknown;
 }
