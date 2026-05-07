@@ -38,3 +38,5 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      - run: pnpm exec pkg-pr-new publish --commentWithSha

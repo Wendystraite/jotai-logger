@@ -40,6 +40,7 @@
     "jotai-family": "1.0.1",
     "jotai-loadable": "1.0.0",
     "jsdom": "29.1.1",
+    "pkg-pr-new": "0.0.71",
     "prettier": "3.8.3",
     "publint": "0.3.18",
     "react": "19.2.5",
