@@ -135,14 +135,33 @@ export function createLoggedStore(parentStore: Store, options: AtomLoggerOptions
   return loggedStore;
 }
 
+/**
+ * Check if a given store is a logged store created by `createLoggedStore`.
+ *
+ * @param store The Jotai store to check.
+ * @returns `true` if the store is a logged store created by `createLoggedStore`, `false` otherwise.
+ */
 export function isLoggedStore(store: Store): boolean {
   return loggedStoreStates.has(store);
 }
 
+/**
+ * @internal Exposes the raw internal logger state.
+ */
 export function getLoggedStoreState(store: Store): AtomLoggerStoreState | undefined {
   return loggedStoreStates.get(store);
 }
 
+/**
+ * Get the current logger options for a logged store. Returns `undefined` if the store is not a logged store.
+ *
+ * @remarks
+ * The returned options object is the same mutable object that was passed to `createLoggedStore` (with defaults applied).
+ * Modifying it will affect the behavior of the logger at runtime.
+ *
+ * @param store The Jotai store to get the logger options from.
+ * @returns The current logger options for the logged store, or `undefined` if the store is not a logged store.
+ */
 export function getLoggedStoreOptions(store: Store): AtomLoggerOptions | undefined {
   const loggerState = getLoggedStoreState(store);
   return loggerState?.options;
