@@ -1,7 +1,4 @@
-import type {
-  INTERNAL_AtomState as AtomState,
-  INTERNAL_BuildingBlocks as BuildingBlocks,
-} from 'jotai/vanilla/internals';
+import type { INTERNAL_BuildingBlocks as BuildingBlocks } from 'jotai/vanilla/internals';
 
 import { addEventToTransaction } from '../transactions/add-event-to-transaction.js';
 import { AtomEventTypes, type AnyAtom } from '../types/event.js';
@@ -9,17 +6,17 @@ import type { AtomLoggerStoreState, Store } from '../types/store.js';
 import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { onAtomValueChanged } from './on-atom-value-changed.js';
 
-export function onAtomStateMapSet(
-  parentAtomStateMap: BuildingBlocks[0],
+export function onAtomCreated(
   store: Store,
   buildingBlocks: Readonly<BuildingBlocks>,
   loggerState: AtomLoggerStoreState,
   atom: AnyAtom,
-  atomState: AtomState,
 ): void {
-  // atomStateMap.set is called once for each atom when it's created, so this is the earliest point at which we can track the atom and its dependencies.
-  // We rely on this fact to set up the dependencies tracking before any dependencies are added, which allows us to capture the initial dependencies accurately.
-  // See `ensureAtomState` in `src/vanilla/internals.ts` for reference.
+  const atomStateMap = buildingBlocks[0];
+  const atomState = atomStateMap.get(atom);
+
+  /* v8 ignore next -- .i always fires with the atom just stored in atomStateMap -- @preserve */
+  if (!atomState) return;
 
   let isInitialValue = true;
 
@@ -139,5 +136,5 @@ export function onAtomStateMapSet(
     },
   });
 
-  parentAtomStateMap.set(atom, stateProxy);
+  atomStateMap.set(atom, stateProxy);
 }

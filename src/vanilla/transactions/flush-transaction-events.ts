@@ -37,7 +37,7 @@ function updatePreviousDependencyChangedEvents(
       // prevTransactionDependenciesMap is never set for them. Initialize it here so that
       // future dep additions can be correctly detected.
       const dependencies = loggerState.dependenciesMap.get(event.atom);
-      /* v8 ignore next 3 -- dependenciesMap is always initialized for visible atoms in getOnAtomStateMapSet -- @preserve */
+      /* v8 ignore next 3 -- dependenciesMap is always initialized for visible atoms in onAtomCreated -- @preserve */
       if (dependencies !== undefined) {
         loggerState.prevTransactionDependenciesMap.set(event.atom, dependencies);
       }

@@ -2,13 +2,12 @@ import {
   INTERNAL_buildStoreRev3 as buildStore,
   INTERNAL_getBuildingBlocksRev3 as getBuildingBlocks,
   INTERNAL_initializeStoreHooksRev3 as initializeStoreHooks,
-  type INTERNAL_AtomStateMap as AtomStateMap,
 } from 'jotai/vanilla/internals';
 
 import { consoleFormatter } from '../formatters/console/index.js';
+import { onAtomCreated } from './callbacks/on-atom-created.js';
 import { onAtomGarbageCollected } from './callbacks/on-atom-garbage-collected.js';
 import { onAtomMounted } from './callbacks/on-atom-mounted.js';
-import { onAtomStateMapSet } from './callbacks/on-atom-state-map-set.js';
 import { onAtomUnmounted } from './callbacks/on-atom-unmounted.js';
 import { onStoreGet } from './callbacks/on-store-get.js';
 import { onStoreSet } from './callbacks/on-store-set.js';
@@ -75,22 +74,15 @@ export function createLoggedStore(parentStore: Store, options: AtomLoggerOptions
   };
 
   const parentBuildingBlocks = getBuildingBlocks(parentStore);
-  const parentAtomStateMap = parentBuildingBlocks[0];
   const parentStoreGet = parentBuildingBlocks[21];
   const parentStoreSet = parentBuildingBlocks[22];
   const parentStoreSub = parentBuildingBlocks[23];
 
-  const atomStateMap: AtomStateMap = {
-    get: parentAtomStateMap.get.bind(parentAtomStateMap),
-    delete: parentAtomStateMap.delete.bind(parentAtomStateMap),
-    has: parentAtomStateMap.has.bind(parentAtomStateMap),
-    set(...args) {
-      onAtomStateMapSet(parentAtomStateMap, loggedStore, buildingBlocks, loggerState, ...args);
-    },
-  };
-
   const storeHooks = initializeStoreHooks({});
 
+  storeHooks.i.add(undefined, (atom) => {
+    onAtomCreated(loggedStore, buildingBlocks, loggerState, atom);
+  });
   storeHooks.m.add(undefined, (atom) => {
     onAtomMounted(loggerState, buildingBlocks, atom);
   });
@@ -99,7 +91,7 @@ export function createLoggedStore(parentStore: Store, options: AtomLoggerOptions
   });
 
   const loggedStore = buildStore(
-    atomStateMap,
+    parentBuildingBlocks[0],
     parentBuildingBlocks[1],
     parentBuildingBlocks[2],
     parentBuildingBlocks[3],
