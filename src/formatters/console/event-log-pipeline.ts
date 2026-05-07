@@ -286,25 +286,25 @@ export const EventLogPipeline = new LogPipeline()
     const showDependencies = !isDepsChangedEvent && dependencies && dependencies.size > 0;
 
     if (showPendingPromises) {
-      const pendingPromisesArray = Array.from(pendingPromises);
+      const pendingPromisesArray = Array.from(pendingPromises, (a) => a.toString());
       subLogsArray.push(['pending promises', pendingPromisesArray]);
       subLogsObject.pendingPromises = pendingPromisesArray;
     }
     if (isDepsChangedEvent) {
-      const oldDependenciesArray = Array.from(event.oldDependencies);
-      const newDependenciesArray = Array.from(event.dependencies);
+      const oldDependenciesArray = Array.from(event.oldDependencies, (a) => a.toString());
+      const newDependenciesArray = Array.from(event.dependencies, (a) => a.toString());
       subLogsArray.push(['old dependencies', oldDependenciesArray]);
       subLogsObject.oldDependencies = oldDependenciesArray;
       subLogsArray.push(['new dependencies', newDependenciesArray]);
       subLogsObject.newDependencies = newDependenciesArray;
     }
     if (showDependencies) {
-      const dependenciesArray = Array.from(dependencies);
+      const dependenciesArray = Array.from(dependencies, (a) => a.toString());
       subLogsArray.push(['dependencies', dependenciesArray]);
       subLogsObject.dependencies = dependenciesArray;
     }
     if (showDependents) {
-      const dependentsArray = Array.from(dependents);
+      const dependentsArray = Array.from(dependents, (a) => a.toString());
       subLogsArray.push(['dependents', dependentsArray]);
       subLogsObject.dependents = dependentsArray;
     }

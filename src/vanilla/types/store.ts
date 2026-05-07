@@ -26,9 +26,9 @@ export interface AtomLoggerStoreState {
   /** Map to track the values of promises */
   promisesResultsMap: WeakMap<PromiseLike<unknown>, unknown>;
   /** Map to track the previous dependencies of atoms since last transaction */
-  prevTransactionDependenciesMap: WeakMap<AnyAtom, Set<AtomId>>;
+  prevTransactionDependenciesMap: WeakMap<AnyAtom, Set<AnyAtom>>;
   /** Map to track the dependencies of atoms */
-  dependenciesMap: WeakMap<AnyAtom, Set<AtomId>>;
+  dependenciesMap: WeakMap<AnyAtom, Set<AnyAtom>>;
   /** Timeout id of the current transaction if started independently (not triggered by a store update) */
   transactionsDebounceTimeoutId: ReturnType<typeof setTimeout> | undefined;
   /** Scheduler for logging queued transactions */

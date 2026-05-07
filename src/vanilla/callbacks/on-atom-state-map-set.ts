@@ -4,7 +4,7 @@ import type {
 } from 'jotai/vanilla/internals';
 
 import { addEventToTransaction } from '../transactions/add-event-to-transaction.js';
-import { AtomEventTypes, type AnyAtom, type AtomId } from '../types/event.js';
+import { AtomEventTypes, type AnyAtom } from '../types/event.js';
 import type { AtomLoggerStoreState, Store } from '../types/store.js';
 import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { onAtomValueChanged } from './on-atom-value-changed.js';
@@ -39,11 +39,9 @@ export function onAtomStateMapSet(
     if (!shouldShowAtom(loggerState, atom) || !shouldShowAtom(loggerState, addedDependency))
       return result;
 
-    const addedDepId = addedDependency.toString();
-
     // Update the dependencies map with the new dependency
     const currentDependencies = loggerState.dependenciesMap.get(atom);
-    const newDependencies = new Set(currentDependencies).add(addedDepId);
+    const newDependencies = new Set(currentDependencies).add(addedDependency);
     loggerState.dependenciesMap.set(atom, newDependencies);
 
     // Update the existing dependenciesChanged event incrementally if it exists
@@ -52,8 +50,8 @@ export function onAtomStateMapSet(
     for (const event of currentTransactionEvents) {
       if (event?.type === AtomEventTypes.dependenciesChanged && event.atom === atom) {
         event.dependencies = newDependencies;
-        event.removedDependencies.delete(addedDepId);
-        event.addedDependencies.add(addedDepId);
+        event.removedDependencies.delete(addedDependency);
+        event.addedDependencies.add(addedDependency);
         return result;
       }
     }
@@ -61,14 +59,14 @@ export function onAtomStateMapSet(
     // Create a new dependenciesChanged event if there is no existing one
     // and the dep is genuinely new (not already in the baseline).
     const oldDependencies = loggerState.prevTransactionDependenciesMap.get(atom);
-    if (oldDependencies !== undefined && !oldDependencies.has(addedDepId)) {
+    if (oldDependencies !== undefined && !oldDependencies.has(addedDependency)) {
       addEventToTransaction(loggerState, parentBuildingBlocks, {
         type: AtomEventTypes.dependenciesChanged,
         atom,
         dependencies: newDependencies,
         oldDependencies,
-        addedDependencies: new Set([addedDepId]),
-        removedDependencies: new Set<AtomId>(),
+        addedDependencies: new Set([addedDependency]),
+        removedDependencies: new Set<AnyAtom>(),
       });
     }
 
@@ -83,12 +81,10 @@ export function onAtomStateMapSet(
     if (!shouldShowAtom(loggerState, atom) || !shouldShowAtom(loggerState, removedDependency))
       return result;
 
-    const removedDepId = removedDependency.toString();
-
     // Update the dependencies map with the removed dependency
     const currentDependencies = loggerState.dependenciesMap.get(atom);
     const newDependencies = new Set(currentDependencies);
-    newDependencies.delete(removedDepId);
+    newDependencies.delete(removedDependency);
     loggerState.dependenciesMap.set(atom, newDependencies);
 
     // Update the existing dependenciesChanged event incrementally if it exists
@@ -101,8 +97,8 @@ export function onAtomStateMapSet(
         // so retroactively update existing events for this atom with the new dependencies.
         event.dependencies = newDependencies;
         if (event.type === AtomEventTypes.dependenciesChanged) {
-          event.removedDependencies.add(removedDepId);
-          event.addedDependencies.delete(removedDepId);
+          event.removedDependencies.add(removedDependency);
+          event.addedDependencies.delete(removedDependency);
           hasUpdatedExistingDepsChangedEvent = true;
         }
       }
@@ -112,14 +108,14 @@ export function onAtomStateMapSet(
     // Create a new dependenciesChanged event if there is no existing one
     // and the dep was genuinely in the baseline (not just added in this transaction).
     const oldDependencies = loggerState.prevTransactionDependenciesMap.get(atom);
-    if (oldDependencies?.has(removedDepId)) {
+    if (oldDependencies?.has(removedDependency)) {
       addEventToTransaction(loggerState, parentBuildingBlocks, {
         type: AtomEventTypes.dependenciesChanged,
         atom,
         dependencies: newDependencies,
         oldDependencies,
-        addedDependencies: new Set<AtomId>(),
-        removedDependencies: new Set([removedDepId]),
+        addedDependencies: new Set<AnyAtom>(),
+        removedDependencies: new Set([removedDependency]),
       });
     }
 

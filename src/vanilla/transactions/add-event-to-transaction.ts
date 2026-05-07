@@ -3,7 +3,7 @@ import type { INTERNAL_BuildingBlocks as BuildingBlocks } from 'jotai/vanilla/in
 import { AtomEventTypes, type AtomEvent, type AtomEventMap } from '../types/event.js';
 import type { AtomLoggerStoreState } from '../types/store.js';
 import { AtomTransactionTypes, type AtomTransaction } from '../types/transaction.js';
-import { convertAtomsToStrings } from '../utils/convert-atoms-to-strings.js';
+import { filterAtoms } from '../utils/filter-atoms.js';
 import { shouldSetStateInEvent } from '../utils/should-set-state-in-event.js';
 import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { debounceEndTransaction } from './debounce-end-transaction.js';
@@ -59,11 +59,11 @@ function setStateInEvent(
 
   const parentMountedMap = parentBuildingBlocks[1];
   const mountedState = parentMountedMap.get(event.atom);
-  event.dependents = convertAtomsToStrings(mountedState?.t, loggerState.options);
+  event.dependents = filterAtoms(mountedState?.t, loggerState);
 
   const parentAtomStateMap = parentBuildingBlocks[0];
   const atomState = parentAtomStateMap.get(event.atom);
-  event.pendingPromises = convertAtomsToStrings(atomState?.p, loggerState.options);
+  event.pendingPromises = filterAtoms(atomState?.p, loggerState);
 }
 
 /**

@@ -37,11 +37,11 @@ export type AtomEventType = AtomEventTypes[keyof AtomEventTypes];
  */
 export interface AtomEventBase {
   /** Atoms whose pending promises are blocking this atom at the time of the event. @see {@link AtomState.p} */
-  pendingPromises?: Set<AtomId>;
+  pendingPromises?: Set<AnyAtom>;
   /** The set of atoms this atom depends on at the time of the event. @see {@link AtomState.d} @see {@link Mounted.d} */
-  dependencies?: Set<AtomId>;
+  dependencies?: Set<AnyAtom>;
   /** The set of atoms that depend on this atom at the time of the event. @see {@link Mounted.t} */
-  dependents?: Set<AtomId>;
+  dependents?: Set<AnyAtom>;
 }
 
 /** Event emitted when an atom is initialized with a synchronous value. */
@@ -133,13 +133,13 @@ export interface AtomEventDependenciesChanged extends AtomEventBase {
   type: AtomEventTypes['dependenciesChanged'];
   atom: AnyAtom;
   /** The set of dependencies after this transaction. Overrides base optional field. */
-  dependencies: Set<AtomId>;
+  dependencies: Set<AnyAtom>;
   /** The set of dependencies before this transaction. */
-  oldDependencies: Set<AtomId>;
+  oldDependencies: Set<AnyAtom>;
   /** Dependencies added during this transaction. */
-  addedDependencies: Set<AtomId>;
+  addedDependencies: Set<AnyAtom>;
   /** Dependencies removed during this transaction. */
-  removedDependencies: Set<AtomId>;
+  removedDependencies: Set<AnyAtom>;
 }
 
 /** Event emitted when an atom is mounted (subscribed to). */

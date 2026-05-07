@@ -3874,6 +3874,37 @@ describe('createLoggedStore', () => {
         ],
       ]);
     });
+
+    it('should correctly track two dependencies that have the same name', () => {
+      // Regression test: with Set<AtomId>, two atoms sharing the same debugLabel would be
+      // deduplicated to one entry. With Set<AnyAtom>, both atoms are tracked independently.
+      store = createLoggedStore(store, defaultOptions);
+
+      const dep1 = atom(1);
+      dep1.debugLabel = 'shared';
+      const dep2 = atom(2);
+      dep2.debugLabel = 'shared'; // same toString() as dep1
+
+      const resultAtom = atom((get) => get(dep1) + get(dep2));
+
+      store.sub(resultAtom, vi.fn());
+      vi.runAllTimers();
+
+      // Both deps must appear in the dependencies list, even though they have the same name.
+      // With the old Set<AtomId> implementation only one 'shared' would appear.
+      expect(consoleMock.log.mock.calls).toEqual([
+        [`transaction 1 : subscribed to ${resultAtom}`],
+        [`initialized value of ${dep1} to 1`, { value: 1 }],
+        [`initialized value of ${dep2} to 2`, { value: 2 }],
+        [
+          `initialized value of ${resultAtom} to 3`,
+          { dependencies: [`${dep1}`, `${dep2}`], value: 3 },
+        ],
+        [`mounted ${dep1}`, { value: 1 }],
+        [`mounted ${dep2}`, { value: 2 }],
+        [`mounted ${resultAtom}`, { dependencies: [`${dep1}`, `${dep2}`], value: 3 }],
+      ]);
+    });
   });
 
   describe('dependents', () => {
