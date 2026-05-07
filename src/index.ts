@@ -2,7 +2,6 @@ export { AtomLoggerProvider } from './react/atom-logger-provider.js';
 export {
   createLoggedStore,
   isLoggedStore,
-  getLoggedStoreState,
   getLoggedStoreOptions,
 } from './vanilla/create-logged-store.js';
 export type { AtomLoggerStoreState } from './vanilla/types/store.js';
