@@ -6,10 +6,10 @@ import type { AtomLoggerStoreState } from '../types/store.js';
 
 export function onAtomUnmounted(
   loggerState: AtomLoggerStoreState,
-  parentBuildingBlocks: Readonly<BuildingBlocks>,
+  buildingBlocks: Readonly<BuildingBlocks>,
   atom: AnyAtom,
 ) {
-  addEventToTransaction(loggerState, parentBuildingBlocks, {
+  addEventToTransaction(loggerState, buildingBlocks, {
     type: AtomEventTypes.unmounted,
     atom,
   });

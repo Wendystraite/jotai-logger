@@ -6,10 +6,10 @@ import type { AtomLoggerStoreState } from '../types/store.js';
 
 export function onAtomGarbageCollected(
   loggerState: AtomLoggerStoreState,
-  parentBuildingBlocks: Readonly<BuildingBlocks>,
+  buildingBlocks: Readonly<BuildingBlocks>,
   atom: AtomId,
 ): void {
-  addEventToTransaction(loggerState, parentBuildingBlocks, {
+  addEventToTransaction(loggerState, buildingBlocks, {
     type: AtomEventTypes.destroyed,
     atom,
   });

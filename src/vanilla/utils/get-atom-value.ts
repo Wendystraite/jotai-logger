@@ -6,10 +6,10 @@ import type { AtomLoggerStoreState } from '../types/store.js';
 
 export function getAtomValue(
   loggerState: AtomLoggerStoreState,
-  parentBuildingBlocks: Readonly<BuildingBlocks>,
+  buildingBlocks: Readonly<BuildingBlocks>,
   atom: AnyAtom,
 ): { hasValue: boolean; value?: unknown } {
-  const parentAtomStateMap = parentBuildingBlocks[0];
+  const parentAtomStateMap = buildingBlocks[0];
   const state = parentAtomStateMap.get(atom);
   const value = state?.v;
   if (isPromiseLike(value)) {

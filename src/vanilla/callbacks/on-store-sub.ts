@@ -7,10 +7,10 @@ import type { AtomLoggerStoreState, Store } from '../types/store.js';
 import { AtomTransactionTypes } from '../types/transaction.js';
 
 export function onStoreSub(
+  parentStoreSub: BuildingBlocks[23],
   store: Store,
-  loggerState: AtomLoggerStoreState,
-  parentBuildingBlocks: Readonly<BuildingBlocks>,
   buildingBlocks: Readonly<BuildingBlocks>,
+  loggerState: AtomLoggerStoreState,
   atom: AnyAtom,
   listener: () => void,
 ): () => void {
@@ -23,10 +23,9 @@ export function onStoreSub(
         listener,
       });
     }
-    const parentStoreSub = parentBuildingBlocks[23];
     const unsubscribe = parentStoreSub(buildingBlocks, store, atom, listener);
     return () => {
-      onStoreUnsubscribe(store, loggerState, buildingBlocks, atom, listener, unsubscribe);
+      onStoreUnsubscribe(loggerState, atom, listener, unsubscribe);
     };
   } finally {
     if (doStartTransaction) {
@@ -36,9 +35,7 @@ export function onStoreSub(
 }
 
 function onStoreUnsubscribe(
-  store: Store,
   loggerState: AtomLoggerStoreState,
-  buildingBlocks: Readonly<BuildingBlocks>,
   atom: AnyAtom,
   listener: () => void,
   unsubscribe: () => void,

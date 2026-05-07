@@ -7,18 +7,18 @@ import { getAtomValue } from '../utils/get-atom-value.js';
 
 export function onAtomMounted(
   loggerState: AtomLoggerStoreState,
-  parentBuildingBlocks: Readonly<BuildingBlocks>,
+  buildingBlocks: Readonly<BuildingBlocks>,
   atom: AnyAtom,
 ) {
-  const { hasValue, value } = getAtomValue(loggerState, parentBuildingBlocks, atom);
+  const { hasValue, value } = getAtomValue(loggerState, buildingBlocks, atom);
   if (hasValue) {
-    addEventToTransaction(loggerState, parentBuildingBlocks, {
+    addEventToTransaction(loggerState, buildingBlocks, {
       type: AtomEventTypes.mounted,
       atom,
       value,
     });
   } else {
-    addEventToTransaction(loggerState, parentBuildingBlocks, {
+    addEventToTransaction(loggerState, buildingBlocks, {
       type: AtomEventTypes.mounted,
       atom,
     });

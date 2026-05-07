@@ -12,21 +12,21 @@ import { startTransaction } from './start-transaction.js';
 
 export function addEventToTransaction(
   loggerState: AtomLoggerStoreState,
-  parentBuildingBlocks: Readonly<BuildingBlocks>,
+  buildingBlocks: Readonly<BuildingBlocks>,
   event: AtomEvent,
 ): void {
   if (!shouldShowAtom(loggerState, event.atom)) {
     return;
   }
 
-  setStateInEvent(loggerState, parentBuildingBlocks, event);
+  setStateInEvent(loggerState, buildingBlocks, event);
 
   const transaction = loggerState.currentTransaction;
 
   if (!transaction) {
     // Execute the event in an independent "unknown" transaction if there is no current transaction.
     startTransaction(loggerState, { type: AtomTransactionTypes.unknown, atom: event.atom });
-    addEventToTransaction(loggerState, parentBuildingBlocks, event);
+    addEventToTransaction(loggerState, buildingBlocks, event);
     endTransaction(loggerState);
     return;
   }
@@ -50,18 +50,18 @@ export function addEventToTransaction(
  */
 function setStateInEvent(
   loggerState: AtomLoggerStoreState,
-  parentBuildingBlocks: Readonly<BuildingBlocks>,
+  buildingBlocks: Readonly<BuildingBlocks>,
   event: AtomEvent,
 ): void {
   if (typeof event.atom === 'string' || !shouldSetStateInEvent(event)) return;
 
   event.dependencies = loggerState.dependenciesMap.get(event.atom);
 
-  const parentMountedMap = parentBuildingBlocks[1];
+  const parentMountedMap = buildingBlocks[1];
   const mountedState = parentMountedMap.get(event.atom);
   event.dependents = filterAtoms(mountedState?.t, loggerState);
 
-  const parentAtomStateMap = parentBuildingBlocks[0];
+  const parentAtomStateMap = buildingBlocks[0];
   const atomState = parentAtomStateMap.get(event.atom);
   event.pendingPromises = filterAtoms(atomState?.p, loggerState);
 }

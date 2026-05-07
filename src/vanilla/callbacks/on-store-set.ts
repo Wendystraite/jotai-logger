@@ -7,10 +7,10 @@ import type { AtomLoggerStoreState, Store } from '../types/store.js';
 import { AtomTransactionTypes } from '../types/transaction.js';
 
 export function onStoreSet<TValue, TArgs extends unknown[], TResult>(
+  parentStoreSet: BuildingBlocks[22],
   store: Store,
-  loggerState: AtomLoggerStoreState,
-  parentBuildingBlocks: Readonly<BuildingBlocks>,
   buildingBlocks: Readonly<BuildingBlocks>,
+  loggerState: AtomLoggerStoreState,
   atom: WritableAtom<TValue, TArgs, TResult>,
   ...args: TArgs
 ) {
@@ -25,7 +25,6 @@ export function onStoreSet<TValue, TArgs extends unknown[], TResult>(
     if (doStartTransaction) {
       startTransaction(loggerState, transaction);
     }
-    const parentStoreSet = parentBuildingBlocks[22];
     const result = parentStoreSet(buildingBlocks, store, atom, ...args);
     transaction.result = result;
     return result;

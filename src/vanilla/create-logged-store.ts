@@ -58,7 +58,7 @@ export function createLoggedStore(parentStore: Store, options: AtomLoggerOptions
   const logTransactionsScheduler = createLogTransactionsScheduler(options);
 
   const atomsFinalizationRegistry = new FinalizationRegistry<string>((atomId: AtomId) => {
-    onAtomGarbageCollected(loggerState, parentBuildingBlocks, atomId);
+    onAtomGarbageCollected(loggerState, buildingBlocks, atomId);
   });
 
   const loggerState: AtomLoggerStoreState = {
@@ -76,23 +76,26 @@ export function createLoggedStore(parentStore: Store, options: AtomLoggerOptions
 
   const parentBuildingBlocks = getBuildingBlocks(parentStore);
   const parentAtomStateMap = parentBuildingBlocks[0];
+  const parentStoreGet = parentBuildingBlocks[21];
+  const parentStoreSet = parentBuildingBlocks[22];
+  const parentStoreSub = parentBuildingBlocks[23];
 
   const atomStateMap: AtomStateMap = {
     get: parentAtomStateMap.get.bind(parentAtomStateMap),
     delete: parentAtomStateMap.delete.bind(parentAtomStateMap),
     has: parentAtomStateMap.has.bind(parentAtomStateMap),
     set(...args) {
-      onAtomStateMapSet(loggedStore, loggerState, parentBuildingBlocks, buildingBlocks, ...args);
+      onAtomStateMapSet(parentAtomStateMap, loggedStore, buildingBlocks, loggerState, ...args);
     },
   };
 
   const storeHooks = initializeStoreHooks({});
 
   storeHooks.m.add(undefined, (atom) => {
-    onAtomMounted(loggerState, parentBuildingBlocks, atom);
+    onAtomMounted(loggerState, buildingBlocks, atom);
   });
   storeHooks.u.add(undefined, (atom) => {
-    onAtomUnmounted(loggerState, parentBuildingBlocks, atom);
+    onAtomUnmounted(loggerState, buildingBlocks, atom);
   });
 
   const loggedStore = buildStore(
@@ -118,13 +121,13 @@ export function createLoggedStore(parentStore: Store, options: AtomLoggerOptions
     parentBuildingBlocks[19],
     parentBuildingBlocks[20],
     (buildingBlocks, store, ...args) => {
-      return onStoreGet(store, loggerState, parentBuildingBlocks, buildingBlocks, ...args);
+      return onStoreGet(parentStoreGet, store, buildingBlocks, loggerState, ...args);
     },
     (buildingBlocks, store, ...args) => {
-      return onStoreSet(store, loggerState, parentBuildingBlocks, buildingBlocks, ...args);
+      return onStoreSet(parentStoreSet, store, buildingBlocks, loggerState, ...args);
     },
     (buildingBlocks, store, ...args) => {
-      return onStoreSub(store, loggerState, parentBuildingBlocks, buildingBlocks, ...args);
+      return onStoreSub(parentStoreSub, store, buildingBlocks, loggerState, ...args);
     },
     parentBuildingBlocks[24],
     parentBuildingBlocks[25],

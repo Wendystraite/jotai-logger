@@ -7,10 +7,10 @@ import type { AtomLoggerStoreState, Store } from '../types/store.js';
 import { AtomTransactionTypes } from '../types/transaction.js';
 
 export function onStoreGet<TValue>(
+  parentStoreGet: BuildingBlocks[21],
   store: Store,
-  loggerState: AtomLoggerStoreState,
-  parentBuildingBlocks: Readonly<BuildingBlocks>,
   buildingBlocks: Readonly<BuildingBlocks>,
+  loggerState: AtomLoggerStoreState,
   atom: Atom<TValue>,
 ): TValue {
   const doStartTransaction = !loggerState.isInsideTransaction;
@@ -18,7 +18,6 @@ export function onStoreGet<TValue>(
     if (doStartTransaction) {
       startTransaction(loggerState, { type: AtomTransactionTypes.storeGet, atom });
     }
-    const parentStoreGet = parentBuildingBlocks[21];
     return parentStoreGet(buildingBlocks, store, atom);
   } finally {
     if (doStartTransaction) {

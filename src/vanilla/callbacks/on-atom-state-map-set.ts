@@ -10,10 +10,10 @@ import { shouldShowAtom } from '../utils/should-show-atom.js';
 import { onAtomValueChanged } from './on-atom-value-changed.js';
 
 export function onAtomStateMapSet(
+  parentAtomStateMap: BuildingBlocks[0],
   store: Store,
-  loggerState: AtomLoggerStoreState,
-  parentBuildingBlocks: Readonly<BuildingBlocks>,
   buildingBlocks: Readonly<BuildingBlocks>,
+  loggerState: AtomLoggerStoreState,
   atom: AnyAtom,
   atomState: AtomState,
 ): void {
@@ -60,7 +60,7 @@ export function onAtomStateMapSet(
     // and the dep is genuinely new (not already in the baseline).
     const oldDependencies = loggerState.prevTransactionDependenciesMap.get(atom);
     if (oldDependencies !== undefined && !oldDependencies.has(addedDependency)) {
-      addEventToTransaction(loggerState, parentBuildingBlocks, {
+      addEventToTransaction(loggerState, buildingBlocks, {
         type: AtomEventTypes.dependenciesChanged,
         atom,
         dependencies: newDependencies,
@@ -109,7 +109,7 @@ export function onAtomStateMapSet(
     // and the dep was genuinely in the baseline (not just added in this transaction).
     const oldDependencies = loggerState.prevTransactionDependenciesMap.get(atom);
     if (oldDependencies?.has(removedDependency)) {
-      addEventToTransaction(loggerState, parentBuildingBlocks, {
+      addEventToTransaction(loggerState, buildingBlocks, {
         type: AtomEventTypes.dependenciesChanged,
         atom,
         dependencies: newDependencies,
@@ -128,7 +128,7 @@ export function onAtomStateMapSet(
       const prop = _prop as keyof typeof target;
       if (prop === 'v') {
         const oldValue = Reflect.get(target, prop, receiver);
-        onAtomValueChanged(store, loggerState, parentBuildingBlocks, buildingBlocks, atom, {
+        onAtomValueChanged(store, loggerState, buildingBlocks, atom, {
           isInitialValue,
           oldValue,
           newValue,
@@ -139,6 +139,5 @@ export function onAtomStateMapSet(
     },
   });
 
-  const parentAtomStateMap = parentBuildingBlocks[0];
   parentAtomStateMap.set(atom, stateProxy);
 }
