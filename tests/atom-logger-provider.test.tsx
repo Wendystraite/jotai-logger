@@ -1,13 +1,11 @@
 // @vitest-environment jsdom
 import { render } from '@testing-library/react';
 import { Provider, createStore, useStore } from 'jotai';
-import React from 'react';
 import { useEffect, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
   AtomLoggerProvider,
-  createLoggedStore,
   getLoggedStoreOptions,
   isLoggedStore,
   type AtomLoggerOptions,
@@ -227,50 +225,6 @@ describe('AtomLoggerProvider', () => {
         </AtomLoggerProvider>
       </Provider>,
     );
-
-    expect(parentStore.get).toBe(originalGet);
-    expect(parentStore.set).toBe(originalSet);
-    expect(parentStore.sub).toBe(originalSub);
-    expect(isLoggedStore(parentStore)).toBeFalsy();
-  });
-});
-
-describe('createLoggedStore', () => {
-  it('should throw when given a store without jotai internals', () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const fakeStore: Store = {
-      get() {
-        throw new Error('Function not implemented.');
-      },
-      set() {
-        throw new Error('Function not implemented.');
-      },
-      sub() {
-        throw new Error('Function not implemented.');
-      },
-    };
-    expect(() => createLoggedStore(fakeStore)).toThrow(
-      'Store must be created by buildStore to read its building blocks',
-    );
-    consoleErrorSpy.mockRestore();
-  });
-
-  it('should return a new store with different get/set/sub methods', () => {
-    const parentStore = createStore();
-    const loggedStore = createLoggedStore(parentStore);
-
-    expect(loggedStore.get).not.toBe(parentStore.get);
-    expect(loggedStore.set).not.toBe(parentStore.set);
-    expect(loggedStore.sub).not.toBe(parentStore.sub);
-  });
-
-  it('should leave the parent store unmodified', () => {
-    const parentStore = createStore();
-    const originalGet = parentStore.get;
-    const originalSet = parentStore.set;
-    const originalSub = parentStore.sub;
-
-    createLoggedStore(parentStore);
 
     expect(parentStore.get).toBe(originalGet);
     expect(parentStore.set).toBe(originalSet);

@@ -47,7 +47,7 @@ function getReact19ComponentDisplayName(): string | undefined {
   return component?.displayName ?? component?.name;
 }
 
-describe('stack traces', () => {
+describe('react stack traces', () => {
   let consoleMock: {
     log: Mock;
     group: Mock;

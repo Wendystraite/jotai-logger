@@ -3,7 +3,6 @@ import { render } from '@testing-library/react';
 import { atom, createStore, useStore } from 'jotai';
 import { useAtomsDevtools } from 'jotai-devtools';
 import type { Store } from 'jotai/vanilla/store';
-import React from 'react';
 import {
   type Mock,
   type MockInstance,
@@ -79,7 +78,7 @@ describe('AtomLoggerProvider', () => {
   });
 });
 
-describe('createLoggedStore', () => {
+describe('jotai-devtools compatibility', () => {
   let store: Store;
   let loggedStore: Store;
   let consoleMock: {
