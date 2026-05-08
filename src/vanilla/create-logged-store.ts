@@ -25,6 +25,9 @@ import type { AtomId } from './types/event.js';
 import type { AtomLoggerOptions } from './types/options.js';
 import type { Store, AtomLoggerStoreState } from './types/store.js';
 
+/**
+ * Internal WeakMap to track which stores are logged stores created by {@link createLoggedStore}, and to access their logger state.
+ */
 const loggedStoreStates = new WeakMap<Store, AtomLoggerStoreState>();
 
 /**

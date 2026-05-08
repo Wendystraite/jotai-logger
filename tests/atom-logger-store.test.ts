@@ -1,6 +1,12 @@
 import { atom } from 'jotai';
 import { createStore } from 'jotai/vanilla';
 import {
+  INTERNAL_buildStoreRev3 as buildStore,
+  INTERNAL_getBuildingBlocksRev3 as getBuildingBlocks,
+  INTERNAL_initializeStoreHooksRev3 as initializeStoreHooks,
+  type INTERNAL_BuildingBlocks as BuildingBlocks,
+} from 'jotai/vanilla/internals';
+import {
   type Mock,
   type MockInstance,
   afterEach,
@@ -13,7 +19,12 @@ import {
 
 import { consoleFormatter } from '../src/formatters/console/index.js';
 import type { ConsoleFormatterOptions } from '../src/formatters/console/types.js';
-import { type AtomLoggerOptions, createLoggedStore } from '../src/index.js';
+import {
+  AtomEventTypes,
+  type AtomLoggerOptions,
+  AtomTransactionTypes,
+  createLoggedStore,
+} from '../src/index.js';
 import { isLoggedStore } from '../src/vanilla/create-logged-store.js';
 import type { Store } from '../src/vanilla/types/store.js';
 
@@ -220,5 +231,173 @@ describe('store', () => {
     expect(parentStore.set).toBe(originalSet);
     expect(parentStore.sub).toBe(originalSub);
     expect(isLoggedStore(parentStore)).toBeFalsy();
+  });
+
+  it('should share internal store hooks with child stores but not with the parent store', () => {
+    const parentStore = createStore();
+    const loggedStore = createLoggedStore(parentStore);
+
+    const loggedStoreBuildingBlocks = getBuildingBlocks(loggedStore);
+    const childStoreStoreHooks = initializeStoreHooks(loggedStoreBuildingBlocks[6]);
+    const childStoreBuildingBlocks: BuildingBlocks = [...loggedStoreBuildingBlocks];
+    childStoreBuildingBlocks[6] = childStoreStoreHooks;
+    const childStore = buildStore(...childStoreBuildingBlocks);
+
+    expect(isLoggedStore(parentStore)).toBeFalsy();
+    expect(isLoggedStore(loggedStore)).toBeTruthy();
+    expect(isLoggedStore(childStore)).toBeFalsy();
+
+    // The logged store and its child share the same hooks, so operations on both trigger the logger's callbacks.
+    expect(getBuildingBlocks(childStore)[6]).toBe(childStoreStoreHooks);
+    expect(getBuildingBlocks(loggedStore)[6]).toBe(childStoreStoreHooks);
+
+    // The parent store keeps its own separate hooks so its operations never trigger logger callbacks.
+    expect(getBuildingBlocks(parentStore)[6]).not.toBe(childStoreStoreHooks);
+  });
+
+  it('should not log transactions performed through the parent store', () => {
+    const transactions: unknown[] = [];
+    const formatter = vi.fn((transaction) => transactions.push(transaction));
+
+    const parentStore = createStore();
+    createLoggedStore(parentStore, { formatter, synchronous: true });
+
+    const testAtom = atom(0);
+    parentStore.set(testAtom, 1);
+
+    expect(transactions).toEqual([]);
+  });
+
+  it('should not log transactions performed through a sibling logged store', () => {
+    const transactions1: unknown[] = [];
+    const formatter1 = vi.fn((transaction) => transactions1.push(transaction));
+    const transactions2: unknown[] = [];
+    const formatter2 = vi.fn((transaction) => transactions2.push(transaction));
+
+    const parentStore = createStore();
+    const loggedStore1 = createLoggedStore(parentStore, {
+      formatter: formatter1,
+      synchronous: true,
+    });
+    createLoggedStore(parentStore, {
+      formatter: formatter2,
+      synchronous: true,
+    });
+
+    const testAtom = atom(0);
+    loggedStore1.set(testAtom, 1);
+
+    expect(transactions1).toEqual([
+      expect.objectContaining({
+        type: AtomTransactionTypes.storeSet,
+        atom: testAtom,
+        events: [
+          {
+            type: AtomEventTypes.initialized,
+            atom: testAtom,
+            value: 1,
+          },
+        ],
+      }),
+    ]);
+
+    expect(transactions2).toEqual([]);
+  });
+
+  it('should log transactions performed through a child store', () => {
+    const transactions: unknown[] = [];
+    const formatter = vi.fn((transaction) => transactions.push(transaction));
+
+    const parentStore = createStore();
+    const loggedStore = createLoggedStore(parentStore, { formatter, synchronous: true });
+    const childStore = buildStore(...getBuildingBlocks(loggedStore));
+
+    const testAtom = atom(0);
+    childStore.set(testAtom, 1);
+
+    expect(transactions.length).toBe(1);
+    expect(transactions).toEqual([
+      expect.objectContaining({
+        type: AtomTransactionTypes.storeSet,
+        atom: testAtom,
+        events: [
+          {
+            type: AtomEventTypes.initialized,
+            atom: testAtom,
+            value: 1,
+          },
+        ],
+      }),
+    ]);
+  });
+
+  it('should log transactions performed through logged store but not through its parent logged store', () => {
+    const parentTransactions1: unknown[] = [];
+    const parentFormatter = vi.fn((transaction) => parentTransactions1.push(transaction));
+    const childTransactions: unknown[] = [];
+    const childFormatter = vi.fn((transaction) => childTransactions.push(transaction));
+
+    const parentStore = createStore();
+    const parentLoggedStore = createLoggedStore(parentStore, {
+      formatter: parentFormatter,
+      synchronous: true,
+    });
+    const childLoggedStore = createLoggedStore(parentLoggedStore, {
+      formatter: childFormatter,
+      synchronous: true,
+    });
+
+    const testAtom = atom(0);
+    childLoggedStore.set(testAtom, 1);
+
+    expect(parentTransactions1).toEqual([]);
+    expect(childTransactions).toEqual([
+      expect.objectContaining({
+        type: AtomTransactionTypes.storeSet,
+        atom: testAtom,
+        events: [
+          {
+            type: AtomEventTypes.initialized,
+            atom: testAtom,
+            value: 1,
+          },
+        ],
+      }),
+    ]);
+  });
+
+  it('should log transactions performed through a logged store but not through its child logged store', () => {
+    const parentTransactions: unknown[] = [];
+    const parentFormatter = vi.fn((transaction) => parentTransactions.push(transaction));
+    const childTransactions: unknown[] = [];
+    const childFormatter = vi.fn((transaction) => childTransactions.push(transaction));
+
+    const parentStore = createStore();
+    const parentLoggedStore = createLoggedStore(parentStore, {
+      formatter: parentFormatter,
+      synchronous: true,
+    });
+    createLoggedStore(parentLoggedStore, {
+      formatter: childFormatter,
+      synchronous: true,
+    });
+
+    const testAtom = atom(0);
+    parentLoggedStore.set(testAtom, 1);
+
+    expect(parentTransactions).toEqual([
+      expect.objectContaining({
+        type: AtomTransactionTypes.storeSet,
+        atom: testAtom,
+        events: [
+          {
+            type: AtomEventTypes.initialized,
+            atom: testAtom,
+            value: 1,
+          },
+        ],
+      }),
+    ]);
+    expect(childTransactions).toEqual([]);
   });
 });
