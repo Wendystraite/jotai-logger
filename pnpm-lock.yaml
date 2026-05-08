@@ -51,8 +51,8 @@ importers:
         specifier: 2.20.0
         version: 2.20.0(@babel/template@7.28.6)(@types/react@19.2.14)(react@19.2.5)
       jotai-devtools:
-        specifier: https://pkg.csb.dev/jotaijs/jotai-devtools/commit/bcc378f0/jotai-devtools
-        version: https://pkg.csb.dev/jotaijs/jotai-devtools/commit/bcc378f0/jotai-devtools(@types/react@19.2.14)(jotai@2.20.0(@babel/template@7.28.6)(@types/react@19.2.14)(react@19.2.5))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(redux@5.0.1)
+        specifier: 0.14.0
+        version: 0.14.0(@types/react@19.2.14)(jotai@2.20.0(@babel/template@7.28.6)(@types/react@19.2.14)(react@19.2.5))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(redux@5.0.1)
       jotai-family:
         specifier: 1.0.1
         version: 1.0.1(jotai@2.20.0(@babel/template@7.28.6)(@types/react@19.2.14)(react@19.2.5))
@@ -1472,12 +1472,11 @@ packages:
     resolution: {integrity: sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==}
     hasBin: true
 
-  jotai-devtools@https://pkg.csb.dev/jotaijs/jotai-devtools/commit/bcc378f0/jotai-devtools:
-    resolution: {tarball: https://pkg.csb.dev/jotaijs/jotai-devtools/commit/bcc378f0/jotai-devtools}
-    version: 0.13.1
+  jotai-devtools@0.14.0:
+    resolution: {integrity: sha512-vtUE3hlcZJeBpaziPMu07jB0kWu5MWUsGAsYBUUFBbTcE8Tzumb2+ZV6lPrIgEAJmVg5ZD1vf73URDzdgoKZaw==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
-      jotai: '>=2.14.0'
+      jotai: '>=2.20.0'
       react: '>=17.0.0'
 
   jotai-family@1.0.1:
@@ -1556,7 +1555,6 @@ packages:
     resolution: {integrity: sha512-Quz3MvAwHxVYNXsOByL7xI5EB2WYOeFswqaHIA3qOK3isRWTxiplBEocmmru6XmxDB2L7jDNYtYA4FyimoAFEw==}
     engines: {node: '>=8.17.0'}
     hasBin: true
-    bundledDependencies: []
 
   jsonfile@4.0.0:
     resolution: {integrity: sha512-m6F1R3z8jjlf2imQHS2Qez5sjKWQzbuuhuJ/FKYFRZvPE3PuHcSMVZzfsLhGVOkfd20obL5SWEBew5ShlquNxg==}
@@ -3785,7 +3783,7 @@ snapshots:
 
   jiti@2.6.1: {}
 
-  jotai-devtools@https://pkg.csb.dev/jotaijs/jotai-devtools/commit/bcc378f0/jotai-devtools(@types/react@19.2.14)(jotai@2.20.0(@babel/template@7.28.6)(@types/react@19.2.14)(react@19.2.5))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(redux@5.0.1):
+  jotai-devtools@0.14.0(@types/react@19.2.14)(jotai@2.20.0(@babel/template@7.28.6)(@types/react@19.2.14)(react@19.2.5))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(redux@5.0.1):
     dependencies:
       '@mantine/code-highlight': 7.17.4(@mantine/core@7.17.4(@mantine/hooks@7.17.4(react@19.2.5))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@mantine/hooks@7.17.4(react@19.2.5))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@mantine/core': 7.17.4(@mantine/hooks@7.17.4(react@19.2.5))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)

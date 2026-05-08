@@ -36,7 +36,7 @@
     "eslint": "10.2.1",
     "jiti": "2.6.1",
     "jotai": "2.20.0",
-    "jotai-devtools": "https://pkg.csb.dev/jotaijs/jotai-devtools/commit/bcc378f0/jotai-devtools",
+    "jotai-devtools": "0.14.0",
     "jotai-family": "1.0.1",
     "jotai-loadable": "1.0.0",
     "jsdom": "29.1.1",
@@ -112,7 +112,7 @@
   "peerDependencies": {
     "@types/react": ">=17.0.0",
     "jotai": ">=2.20.0",
-    "jotai-devtools": ">=0.13.0",
+    "jotai-devtools": ">=0.14.0",
     "react": ">=17.0.0"
   },
   "peerDependenciesMeta": {
