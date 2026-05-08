@@ -47,8 +47,13 @@ export function onAtomCreated(
     for (const event of currentTransactionEvents) {
       if (event.type === AtomEventTypes.dependenciesChanged && event.atom === atom) {
         event.dependencies = newDependencies;
-        event.removedDependencies.delete(addedDependency);
+        event.addedDependencies ??= new Set();
         event.addedDependencies.add(addedDependency);
+        /* v8 ignore next 4 -- requires d.set to fire after d.delete for the same atom in the same transaction, which cannot happen in normal Jotai flow -- @preserve */
+        if (event.removedDependencies) {
+          event.removedDependencies.delete(addedDependency);
+          if (!event.removedDependencies.size) delete event.removedDependencies;
+        }
         return result;
       }
     }
@@ -61,9 +66,8 @@ export function onAtomCreated(
         type: AtomEventTypes.dependenciesChanged,
         atom,
         dependencies: newDependencies,
-        oldDependencies,
+        ...(oldDependencies.size ? { oldDependencies } : {}),
         addedDependencies: new Set([addedDependency]),
-        removedDependencies: new Set<AnyAtom>(),
       });
     }
 
@@ -92,10 +96,16 @@ export function onAtomCreated(
       if (event.atom === atom) {
         // In jotai 2.18+, d.delete() fires AFTER the value is set (in `pruneDependencies`)
         // so retroactively update existing events for this atom with the new dependencies.
-        event.dependencies = newDependencies;
+        if (newDependencies.size) event.dependencies = newDependencies;
+        else delete event.dependencies;
         if (event.type === AtomEventTypes.dependenciesChanged) {
+          event.removedDependencies ??= new Set();
           event.removedDependencies.add(removedDependency);
-          event.addedDependencies.delete(removedDependency);
+          if (event.addedDependencies) {
+            event.addedDependencies.delete(removedDependency);
+            /* v8 ignore next -- dep added then pruned in same transaction: impossible in normal Jotai flow -- @preserve */
+            if (!event.addedDependencies.size) delete event.addedDependencies;
+          }
           hasUpdatedExistingDepsChangedEvent = true;
         }
       }
@@ -109,9 +119,8 @@ export function onAtomCreated(
       addEventToTransaction(loggerState, buildingBlocks, {
         type: AtomEventTypes.dependenciesChanged,
         atom,
-        dependencies: newDependencies,
+        ...(newDependencies.size ? { dependencies: newDependencies } : {}),
         oldDependencies,
-        addedDependencies: new Set<AnyAtom>(),
         removedDependencies: new Set([removedDependency]),
       });
     }

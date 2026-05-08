@@ -3,6 +3,7 @@ import { createStore } from 'jotai/vanilla';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createLoggedStore, type AtomLoggerOptions } from '../src/index.js';
+import { AtomEventTypes } from '../src/vanilla/types/event.js';
 import type { AtomLoggerFormatter } from '../src/vanilla/types/formatter.js';
 import type { AtomTransaction } from '../src/vanilla/types/transaction.js';
 
@@ -21,9 +22,7 @@ describe('custom formatter', () => {
 
   it('should call the custom formatter with each completed transaction', () => {
     const transactions: AtomTransaction[] = [];
-    const customFormatter: AtomLoggerFormatter = (transaction) => {
-      transactions.push(transaction);
-    };
+    const customFormatter: AtomLoggerFormatter = (transaction) => transactions.push(transaction);
 
     store = createLoggedStore(store, { formatter: customFormatter, synchronous: true });
 
@@ -42,9 +41,6 @@ describe('custom formatter', () => {
         events: [
           {
             atom: testAtom,
-            dependencies: new Set(),
-            dependents: undefined,
-            pendingPromises: new Set(),
             type: 1,
             value: 42,
           },
@@ -61,11 +57,8 @@ describe('custom formatter', () => {
           {
             type: 6,
             atom: testAtom,
-            dependencies: new Set(),
-            dependents: undefined,
             newValue: 43,
             oldValue: 42,
-            pendingPromises: new Set(),
           },
         ],
         result: undefined,
@@ -73,6 +66,154 @@ describe('custom formatter', () => {
         endTimestamp: 0,
       },
     ]);
+  });
+
+  it('should not set empty dependencies on dependenciesChanged events', () => {
+    const transactions: AtomTransaction[] = [];
+    const customFormatter: AtomLoggerFormatter = (transaction) => transactions.push(transaction);
+
+    const toggleAtom = atom(false);
+    toggleAtom.debugPrivate = true;
+    const depAtom = atom(1);
+    // testAtom has no deps when toggleAtom is false, gains depAtom when true
+    const testAtom = atom((get) => {
+      if (get(toggleAtom)) get(depAtom);
+    });
+
+    store = createLoggedStore(store, { formatter: customFormatter, synchronous: true });
+
+    store.sub(testAtom, vi.fn()); // mount with no deps
+    vi.runAllTimers();
+    transactions.length = 0; // only care about dep-change transactions below
+
+    // Add depAtom as a dependency
+    store.set(toggleAtom, true);
+    vi.runAllTimers();
+
+    const addDepEvent = transactions
+      .flatMap((tx) => tx.events)
+      .find((e) => e.type === AtomEventTypes.dependenciesChanged)!;
+    expect(addDepEvent).toBeDefined();
+    expect(addDepEvent).toHaveProperty('addedDependencies'); // depAtom was added
+    expect(addDepEvent).toHaveProperty('dependencies'); // now depends on depAtom
+    expect(addDepEvent).not.toHaveProperty('oldDependencies'); // was empty — absent
+    expect(addDepEvent).not.toHaveProperty('removedDependencies'); // none removed — absent
+
+    transactions.length = 0;
+
+    // Remove depAtom as a dependency
+    store.set(toggleAtom, false);
+    vi.runAllTimers();
+
+    const removeDepEvent = transactions
+      .flatMap((tx) => tx.events)
+      .find((e) => e.type === AtomEventTypes.dependenciesChanged)!;
+    expect(removeDepEvent).toBeDefined();
+    expect(removeDepEvent).toHaveProperty('removedDependencies'); // depAtom was removed
+    expect(removeDepEvent).toHaveProperty('oldDependencies'); // had depAtom before
+    expect(removeDepEvent).not.toHaveProperty('addedDependencies'); // none added — absent
+    expect(removeDepEvent).not.toHaveProperty('dependencies'); // now empty — absent
+  });
+
+  it('should not set dependents on events when atom has no dependents', () => {
+    const transactions: AtomTransaction[] = [];
+    const customFormatter: AtomLoggerFormatter = (transaction) => transactions.push(transaction);
+
+    store = createLoggedStore(store, { formatter: customFormatter, synchronous: true });
+
+    const aAtom = atom(42);
+    const bAtom = atom((get) => get(aAtom) * 2);
+
+    // Absent: store.get does not mount atoms
+    store.get(aAtom);
+    vi.runAllTimers();
+
+    const initEvent = transactions
+      .flatMap((tx) => tx.events)
+      .find((e) => e.atom === aAtom && e.type === AtomEventTypes.initialized)!;
+    expect(initEvent).not.toHaveProperty('dependents');
+    transactions.length = 0;
+
+    // Present: sub bAtom mounts both
+    store.sub(bAtom, vi.fn());
+    transactions.length = 0;
+    store.set(aAtom, 43);
+    vi.runAllTimers();
+
+    const changedEvent = transactions
+      .flatMap((tx) => tx.events)
+      .find((e) => e.atom === aAtom && e.type === AtomEventTypes.changed)!;
+    expect(changedEvent).toHaveProperty('dependents');
+    expect(changedEvent.dependents).toEqual(new Set([bAtom]));
+  });
+
+  it('should not set pendingPromises on events when atom has no pending promises', () => {
+    const transactions: AtomTransaction[] = [];
+    const customFormatter: AtomLoggerFormatter = (transaction) => transactions.push(transaction);
+
+    store = createLoggedStore(store, { formatter: customFormatter, synchronous: true });
+
+    // Absent: plain sync atom has no pending promise dependents
+    const syncAtom = atom(42);
+    store.get(syncAtom);
+    vi.runAllTimers();
+
+    const syncEvent = transactions.flatMap((tx) => tx.events).find((e) => e.atom === syncAtom)!;
+    expect(syncEvent).not.toHaveProperty('pendingPromises');
+    transactions.length = 0;
+
+    // Present: async promiseAtom depends on dependencyAtom and stays pending
+    const dependencyAtom = atom(0);
+    const promiseAtom = atom(async (get) => {
+      get(dependencyAtom);
+      await new Promise<never>(() => {}); // never resolves during this test
+    });
+    store.sub(promiseAtom, vi.fn());
+    vi.runAllTimers();
+
+    const mountedEvent = transactions
+      .flatMap((tx) => tx.events)
+      .find((e) => e.atom === dependencyAtom && e.type === AtomEventTypes.mounted)!;
+    expect(mountedEvent).toHaveProperty('pendingPromises');
+    expect(mountedEvent.pendingPromises).toEqual(new Set([promiseAtom]));
+  });
+
+  it('should not set dependencies on events when atom has no dependencies', () => {
+    const transactions: AtomTransaction[] = [];
+    const customFormatter: AtomLoggerFormatter = (transaction) => transactions.push(transaction);
+
+    store = createLoggedStore(store, { formatter: customFormatter, synchronous: true });
+
+    // Absent: primitive atom
+    const primitiveAtom = atom(0);
+    store.get(primitiveAtom);
+    vi.runAllTimers();
+
+    const initEvent = transactions
+      .flatMap((tx) => tx.events)
+      .find((e) => e.type === AtomEventTypes.initialized && e.atom === primitiveAtom)!;
+    expect(initEvent).not.toHaveProperty('dependencies');
+
+    transactions.length = 0;
+    store.set(primitiveAtom, 1);
+    vi.runAllTimers();
+
+    const changedEvent = transactions
+      .flatMap((tx) => tx.events)
+      .find((e) => e.type === AtomEventTypes.changed && e.atom === primitiveAtom)!;
+    expect(changedEvent).not.toHaveProperty('dependencies');
+    transactions.length = 0;
+
+    // Present: derived atom reads primitiveAtom
+    const derivedAtom = atom((get) => get(primitiveAtom) * 2);
+    store.get(derivedAtom);
+    vi.runAllTimers();
+
+    const derivedInitEvent = transactions
+      .flatMap((tx) => tx.events)
+      .find((e) => e.type === AtomEventTypes.initialized && e.atom === derivedAtom)!;
+    expect(derivedInitEvent).toHaveProperty('dependencies');
+    expect(derivedInitEvent.dependencies).toEqual(new Set([primitiveAtom]));
   });
 
   it('should call the custom formatter for every transaction', () => {
@@ -99,8 +240,8 @@ describe('custom formatter', () => {
   });
 
   it('should provide correct transaction data to the custom formatter', () => {
-    const received: AtomTransaction[] = [];
-    const customFormatter: AtomLoggerFormatter = (t) => received.push(t);
+    const transactions: AtomTransaction[] = [];
+    const customFormatter: AtomLoggerFormatter = (transaction) => transactions.push(transaction);
 
     store = createLoggedStore(store, { formatter: customFormatter, synchronous: true });
 
@@ -108,8 +249,8 @@ describe('custom formatter', () => {
     store.set(counterAtom, 99);
     vi.runAllTimers();
 
-    expect(received).toHaveLength(1);
-    const tx = received[0]!;
+    expect(transactions).toHaveLength(1);
+    const tx = transactions[0]!;
     expect(tx.events.length).toBeGreaterThan(0);
     expect(tx.transactionNumber).toBe(1);
     expect(tx.startTimestamp).toBeGreaterThanOrEqual(0);
@@ -161,8 +302,8 @@ describe('custom formatter', () => {
   });
 
   it('should not call the formatter for private atoms when shouldShowPrivateAtoms is false', () => {
-    const received: AtomTransaction[] = [];
-    const customFormatter: AtomLoggerFormatter = (t) => received.push(t);
+    const transactions: AtomTransaction[] = [];
+    const customFormatter: AtomLoggerFormatter = (transaction) => transactions.push(transaction);
 
     store = createLoggedStore(store, {
       formatter: customFormatter,
@@ -177,15 +318,15 @@ describe('custom formatter', () => {
     vi.runAllTimers();
 
     // Private atom access creates no visible transaction events
-    const hasPrivateEvent = received.some((tx) =>
+    const hasPrivateEvent = transactions.some((tx) =>
       tx.events.some((e) => e.atom === privateAtom.toString()),
     );
     expect(hasPrivateEvent).toBe(false);
   });
 
   it('should allow shouldShowAtom to filter which atoms reach the formatter', () => {
-    const received: AtomTransaction[] = [];
-    const customFormatter: AtomLoggerFormatter = (t) => received.push(t);
+    const transactions: AtomTransaction[] = [];
+    const customFormatter: AtomLoggerFormatter = (transaction) => transactions.push(transaction);
 
     const allowedAtom = atom(1);
     const ignoredAtom = atom(2);
@@ -203,11 +344,11 @@ describe('custom formatter', () => {
     vi.runAllTimers();
 
     // Only transactions for allowedAtom events should appear
-    const mentionsIgnored = received.some((tx) =>
+    const mentionsIgnored = transactions.some((tx) =>
       tx.events.some((e) => e.atom === ignoredAtom.toString()),
     );
     expect(mentionsIgnored).toBe(false);
-    expect(received.length).toBeGreaterThanOrEqual(1);
+    expect(transactions.length).toBeGreaterThanOrEqual(1);
   });
 
   it('should work with a formatter that implements structured logging', () => {

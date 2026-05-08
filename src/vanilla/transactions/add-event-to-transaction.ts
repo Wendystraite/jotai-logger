@@ -53,15 +53,18 @@ function setStateInEvent(
 ): void {
   if (typeof event.atom === 'string' || !shouldSetStateInEvent(event)) return;
 
-  event.dependencies = loggerState.dependenciesMap.get(event.atom);
+  const dependencies = loggerState.dependenciesMap.get(event.atom);
+  if (dependencies?.size) event.dependencies = dependencies;
 
   const parentMountedMap = buildingBlocks[1];
   const mountedState = parentMountedMap.get(event.atom);
-  event.dependents = filterAtoms(mountedState?.t, loggerState);
+  const dependents = filterAtoms(mountedState?.t, loggerState);
+  if (dependents?.size) event.dependents = dependents;
 
   const parentAtomStateMap = buildingBlocks[0];
   const atomState = parentAtomStateMap.get(event.atom);
-  event.pendingPromises = filterAtoms(atomState?.p, loggerState);
+  const pendingPromises = filterAtoms(atomState?.p, loggerState);
+  if (pendingPromises?.size) event.pendingPromises = pendingPromises;
 }
 
 /**

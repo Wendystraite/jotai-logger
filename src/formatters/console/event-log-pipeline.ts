@@ -292,8 +292,8 @@ export const EventLogPipeline = new LogPipeline()
       subLogsObject.pendingPromises = pendingPromisesArray;
     }
     if (isDepsChangedEvent) {
-      const oldDependenciesArray = Array.from(event.oldDependencies, (a) => a.toString());
-      const newDependenciesArray = Array.from(event.dependencies, (a) => a.toString());
+      const oldDependenciesArray = Array.from(event.oldDependencies ?? [], (a) => a.toString());
+      const newDependenciesArray = Array.from(event.dependencies ?? [], (a) => a.toString());
       subLogsArray.push(['old dependencies', oldDependenciesArray]);
       subLogsObject.oldDependencies = oldDependenciesArray;
       subLogsArray.push(['new dependencies', newDependenciesArray]);

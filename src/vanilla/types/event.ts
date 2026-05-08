@@ -130,14 +130,12 @@ export interface AtomEventChangedPromiseAborted extends AtomEventBase {
 export interface AtomEventDependenciesChanged extends AtomEventBase {
   type: AtomEventTypes['dependenciesChanged'];
   atom: AnyAtom;
-  /** The set of dependencies after this transaction. Overrides base optional field. */
-  dependencies: Set<AnyAtom>;
-  /** The set of dependencies before this transaction. */
-  oldDependencies: Set<AnyAtom>;
-  /** Dependencies added during this transaction. */
-  addedDependencies: Set<AnyAtom>;
-  /** Dependencies removed during this transaction. */
-  removedDependencies: Set<AnyAtom>;
+  /** The set of dependencies before this transaction. Absent when previously empty. */
+  oldDependencies?: Set<AnyAtom>;
+  /** Dependencies added during this transaction. Absent when none were added. */
+  addedDependencies?: Set<AnyAtom>;
+  /** Dependencies removed during this transaction. Absent when none were removed. */
+  removedDependencies?: Set<AnyAtom>;
 }
 
 /** Event emitted when an atom is mounted (subscribed to). */

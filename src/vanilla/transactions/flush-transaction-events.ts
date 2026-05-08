@@ -30,7 +30,7 @@ function updatePreviousDependencyChangedEvents(
   for (const event of transaction.events) {
     if (event.type === AtomEventTypes.dependenciesChanged) {
       // Update the previous dependencies with the new dependencies for the next transaction.
-      loggerState.prevTransactionDependenciesMap.set(event.atom, event.dependencies);
+      loggerState.prevTransactionDependenciesMap.set(event.atom, event.dependencies ?? new Set());
     } else if (event.type === AtomEventTypes.initialized) {
       // Atoms initialized with only private deps produce no dependenciesChanged events, so
       // prevTransactionDependenciesMap is never set for them. Initialize it here so that
