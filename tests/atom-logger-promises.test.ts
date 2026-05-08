@@ -254,7 +254,7 @@ describe('promises', () => {
     expect(consoleMock.log.mock.calls).toEqual([
       // All pending
       [`transaction 1 : retrieved value of ${prom('1')}`],
-      [`pending initial promise of ${dep}`],
+      [`pending initial promise of ${dep}`, { pendingPromises: [`${prom('1')}`] }],
       [`pending initial promise of ${prom('1')}`, { dependencies: [`${dep}`] }],
       [`transaction 2 : retrieved value of ${prom('2')}`],
       [`pending initial promise of ${prom('2')}`, { dependencies: [`${dep}`] }],
@@ -314,7 +314,10 @@ describe('promises', () => {
 
     expect(consoleMock.log.mock.calls).toEqual([
       [`transaction 1 : retrieved value of ${promiseAtom}`],
-      [`initialized value of ${dependencyAtom} to "first"`, { value: 'first' }],
+      [
+        `initialized value of ${dependencyAtom} to "first"`,
+        { pendingPromises: [`${promiseAtom}`], value: 'first' },
+      ],
       [`pending initial promise of ${promiseAtom}`, { dependencies: [`${dependencyAtom}`] }],
 
       [`transaction 2 : set value of ${dependencyAtom} to "second"`, { value: 'second' }],
@@ -955,28 +958,65 @@ describe('promises', () => {
 
     expect(consoleMock.log.mock.calls).toEqual([
       [`transaction 1 : subscribed to ${promiseAtom}`],
-      [`initialized value of ${dependencyAtom} to 0`, { value: 0 }],
-      [`pending initial promise of ${promiseAtom}`, { dependencies: [`${dependencyAtom}`] }],
-      [`mounted ${dependencyAtom}`, { pendingPromises: [`${promiseAtom}`], value: 0 }],
-      [`mounted ${promiseAtom}`, { dependencies: [`${dependencyAtom}`] }],
+      [
+        `initialized value of ${dependencyAtom} to 0`,
+        {
+          value: 0,
+          dependents: [`${promiseAtom}`],
+          pendingPromises: [`${promiseAtom}`],
+        },
+      ],
+      [
+        `pending initial promise of ${promiseAtom}`,
+        {
+          dependencies: [`${dependencyAtom}`],
+        },
+      ],
+      [
+        `mounted ${dependencyAtom}`,
+        {
+          value: 0,
+          dependents: [`${promiseAtom}`],
+          pendingPromises: [`${promiseAtom}`],
+        },
+      ],
+      [
+        `mounted ${promiseAtom}`,
+        {
+          dependencies: [`${dependencyAtom}`],
+        },
+      ],
 
       [`transaction 2 : set value of ${dependencyAtom} to 1`, { value: 1 }],
       [
         `changed value of ${dependencyAtom} from 0 to 1`,
         {
-          dependents: [`${promiseAtom}`],
           newValue: 1,
           oldValue: 0,
+          dependents: [`${promiseAtom}`],
           pendingPromises: [`${promiseAtom}`],
         },
       ],
-      [`aborted initial promise of ${promiseAtom}`, { dependencies: [`${dependencyAtom}`] }],
-      [`pending initial promise of ${promiseAtom}`, { dependencies: [`${dependencyAtom}`] }],
+      [
+        `aborted initial promise of ${promiseAtom}`,
+        {
+          dependencies: [`${dependencyAtom}`],
+        },
+      ],
+      [
+        `pending initial promise of ${promiseAtom}`,
+        {
+          dependencies: [`${dependencyAtom}`],
+        },
+      ],
 
       [`transaction 3 : resolved promise of ${promiseAtom}`],
       [
         `resolved initial promise of ${promiseAtom} to 42`,
-        { dependencies: [`${dependencyAtom}`], value: 42 },
+        {
+          value: 42,
+          dependencies: [`${dependencyAtom}`],
+        },
       ],
     ]);
   });

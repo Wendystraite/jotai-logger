@@ -104,11 +104,29 @@ describe('complex graphs', () => {
       [`transaction 1 : subscribed to ${resultAtom}`],
 
       // result <-- second
-      [`initialized value of ${secondAtom} to "second"`, { value: 'second' }],
+      [
+        `initialized value of ${secondAtom} to "second"`,
+        {
+          value: 'second',
+          dependents: [`${resultAtom}`],
+        },
+      ],
       // result <-- loadable(thirdAsync) <-- thirdAsync <-- first
-      [`initialized value of ${firstAtom} to "first"`, { value: 'first' }],
+      [
+        `initialized value of ${firstAtom} to "first"`,
+        {
+          value: 'first',
+          dependents: [`${thirdAsyncAtom}`],
+          pendingPromises: [`${thirdAsyncAtom}`],
+        },
+      ],
       // result <-- loadable(thirdAsync) <-- thirdAsync
-      [`pending initial promise of ${thirdAsyncAtom}`, { dependencies: [`${firstAtom}`] }],
+      [
+        `pending initial promise of ${thirdAsyncAtom}`,
+        {
+          dependencies: [`${firstAtom}`],
+        },
+      ],
       // result <-- loadable(thirdAsync)
       [
         expect.stringMatching(
@@ -116,44 +134,70 @@ describe('complex graphs', () => {
             `initialized value of ${unwrappedThirdAsyncAtomDebugLabelRegex.source} to {"state":"loading"}`,
           ),
         ),
-        { value: { state: 'loading' } },
+        {
+          value: { state: 'loading' },
+          dependents: [`${loadable(thirdAsyncAtom)}`],
+        },
       ],
       [
         `initialized value of ${loadable(thirdAsyncAtom)} to {"state":"loading"}`,
         {
-          dependencies: [expect.stringMatching(unwrappedThirdAsyncAtomDebugLabelRegex)],
           value: { state: 'loading' },
+          dependencies: [expect.stringMatching(unwrappedThirdAsyncAtomDebugLabelRegex)],
+          dependents: [`${resultAtom}`],
         },
       ],
       // result
       [
         `initialized value of ${resultAtom} to "second loading"`,
         {
-          dependencies: [`${secondAtom}`, `${loadable(thirdAsyncAtom)}`],
           value: 'second loading',
+          dependencies: [`${secondAtom}`, `${loadable(thirdAsyncAtom)}`],
         },
       ],
-      [`mounted ${secondAtom}`, { value: 'second' }],
-      [`mounted ${firstAtom}`, { pendingPromises: [`${thirdAsyncAtom}`], value: 'first' }],
-      [`mounted ${thirdAsyncAtom}`, { dependencies: [`${firstAtom}`] }],
+      [
+        `mounted ${secondAtom}`,
+        {
+          value: 'second',
+          dependents: [`${resultAtom}`],
+        },
+      ],
+      [
+        `mounted ${firstAtom}`,
+        {
+          value: 'first',
+          dependents: [`${thirdAsyncAtom}`],
+          pendingPromises: [`${thirdAsyncAtom}`],
+        },
+      ],
+      [
+        `mounted ${thirdAsyncAtom}`,
+        {
+          dependencies: [`${firstAtom}`],
+        },
+      ],
       [
         expect.stringMatching(
           new RegExp(`mounted ${unwrappedThirdAsyncAtomDebugLabelRegex.source}`),
         ),
-        { value: { state: 'loading' } },
+        {
+          value: { state: 'loading' },
+          dependents: [`${loadable(thirdAsyncAtom)}`],
+        },
       ],
       [
         `mounted ${loadable(thirdAsyncAtom)}`,
         {
-          dependencies: [expect.stringMatching(unwrappedThirdAsyncAtomDebugLabelRegex)],
           value: { state: 'loading' },
+          dependencies: [expect.stringMatching(unwrappedThirdAsyncAtomDebugLabelRegex)],
+          dependents: [`${resultAtom}`],
         },
       ],
       [
         `mounted ${resultAtom}`,
         {
-          dependencies: [`${secondAtom}`, `${loadable(thirdAsyncAtom)}`],
           value: 'second loading',
+          dependencies: [`${secondAtom}`, `${loadable(thirdAsyncAtom)}`],
         },
       ],
 
@@ -161,7 +205,10 @@ describe('complex graphs', () => {
       // result <-- loadable(thirdAsync) <-- thirdAsync <-- promise resolved
       [
         `resolved initial promise of ${thirdAsyncAtom} to "first third"`,
-        { dependencies: [`${firstAtom}`], value: 'first third' },
+        {
+          value: 'first third',
+          dependencies: [`${firstAtom}`],
+        },
       ],
       ['transaction 3'],
       [
@@ -171,28 +218,28 @@ describe('complex graphs', () => {
           ),
         ),
         {
-          dependents: [`${loadable(thirdAsyncAtom)}`],
-          oldValue: { state: 'loading' },
           newValue: 'first third',
+          oldValue: { state: 'loading' },
+          dependents: [`${loadable(thirdAsyncAtom)}`],
         },
       ],
       // result <-- loadable(thirdAsync)
       [
         `changed value of ${loadable(thirdAsyncAtom)} from {"state":"loading"} to {"state":"hasData","data":"first third"}`,
         {
-          dependencies: [expect.stringMatching(unwrappedThirdAsyncAtomDebugLabelRegex)],
-          dependents: [`${resultAtom}`],
           newValue: { data: 'first third', state: 'hasData' },
           oldValue: { state: 'loading' },
+          dependencies: [expect.stringMatching(unwrappedThirdAsyncAtomDebugLabelRegex)],
+          dependents: [`${resultAtom}`],
         },
       ],
       // result
       [
         `changed value of ${resultAtom} from "second loading" to "second first third"`,
         {
-          dependencies: [`${secondAtom}`, `${loadable(thirdAsyncAtom)}`],
           newValue: 'second first third',
           oldValue: 'second loading',
+          dependencies: [`${secondAtom}`, `${loadable(thirdAsyncAtom)}`],
         },
       ],
     ]);

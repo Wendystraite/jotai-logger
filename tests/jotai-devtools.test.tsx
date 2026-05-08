@@ -164,9 +164,9 @@ describe('jotai-devtools compatibility', () => {
 
     expect(consoleMock.log.mock.calls).toEqual([
       [`transaction 1 - 4 events : subscribed to ${bAtom}`],
-      [`initialized value of ${aAtom} to 1`, { value: 1 }],
+      [`initialized value of ${aAtom} to 1`, { value: 1, dependents: [`${bAtom}`] }],
       [`initialized value of ${bAtom} to 2`, { value: 2, dependencies: [`${aAtom}`] }],
-      [`mounted ${aAtom}`, { value: 1 }],
+      [`mounted ${aAtom}`, { value: 1, dependents: [`${bAtom}`] }],
       [`mounted ${bAtom}`, { value: 2, dependencies: [`${aAtom}`] }],
 
       [`transaction 2 - 2 events : set value of ${aAtom} to 2`, { value: 2 }],

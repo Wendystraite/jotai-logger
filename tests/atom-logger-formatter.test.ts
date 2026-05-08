@@ -134,7 +134,12 @@ describe('custom formatter', () => {
             value: 44,
             dependencies: new Set([testAtom]),
           },
-          { type: AtomEventTypes.mounted, atom: testAtom, value: 43 },
+          {
+            type: AtomEventTypes.mounted,
+            atom: testAtom,
+            value: 43,
+            dependents: new Set([derivedAtom]),
+          },
           {
             type: AtomEventTypes.mounted,
             atom: derivedAtom,
@@ -400,6 +405,20 @@ describe('custom formatter', () => {
 
     const syncEvent = transactions.flatMap((tx) => tx.events).find((e) => e.atom === syncAtom)!;
     expect(syncEvent).not.toHaveProperty('pendingPromises');
+    expect(syncEvent).not.toHaveProperty('dependents');
+
+    expect(transactions).toEqual([
+      expect.objectContaining({
+        events: [
+          {
+            type: AtomEventTypes.initialized,
+            atom: syncAtom,
+            value: 42,
+          },
+        ],
+      }),
+    ]);
+
     transactions.length = 0;
 
     // Present: async promiseAtom depends on dependencyAtom and stays pending
@@ -416,6 +435,47 @@ describe('custom formatter', () => {
       .find((e) => e.atom === dependencyAtom && e.type === AtomEventTypes.mounted)!;
     expect(mountedEvent).toHaveProperty('pendingPromises');
     expect(mountedEvent.pendingPromises).toEqual(new Set([promiseAtom]));
+    expect(mountedEvent).toHaveProperty('dependents');
+    expect(mountedEvent.dependents).toEqual(new Set([promiseAtom]));
+
+    // initialized fires before atomState.p is populated → needs retroactive update too
+    const initEvent = transactions
+      .flatMap((tx) => tx.events)
+      .find((e) => e.atom === dependencyAtom && e.type === AtomEventTypes.initialized)!;
+    expect(initEvent).toBeDefined();
+    expect(initEvent).toHaveProperty('pendingPromises');
+    expect(initEvent.pendingPromises).toEqual(new Set([promiseAtom]));
+
+    expect(transactions).toEqual([
+      expect.objectContaining({
+        events: [
+          {
+            type: AtomEventTypes.initialized,
+            atom: dependencyAtom,
+            value: 0,
+            dependents: new Set([promiseAtom]),
+            pendingPromises: new Set([promiseAtom]),
+          },
+          {
+            type: AtomEventTypes.initialPromisePending,
+            atom: promiseAtom,
+            dependencies: new Set([dependencyAtom]),
+          },
+          {
+            type: AtomEventTypes.mounted,
+            atom: dependencyAtom,
+            value: 0,
+            dependents: new Set([promiseAtom]),
+            pendingPromises: new Set([promiseAtom]),
+          },
+          {
+            type: AtomEventTypes.mounted,
+            atom: promiseAtom,
+            dependencies: new Set([dependencyAtom]),
+          },
+        ],
+      }),
+    ]);
   });
 
   it('should not set dependencies on events when atom has no dependencies', () => {
@@ -434,6 +494,18 @@ describe('custom formatter', () => {
       .find((e) => e.type === AtomEventTypes.initialized && e.atom === primitiveAtom)!;
     expect(initEvent).not.toHaveProperty('dependencies');
 
+    expect(transactions).toEqual([
+      expect.objectContaining({
+        events: [
+          {
+            type: AtomEventTypes.initialized,
+            atom: primitiveAtom,
+            value: 0,
+          },
+        ],
+      }),
+    ]);
+
     transactions.length = 0;
     store.set(primitiveAtom, 1);
     vi.runAllTimers();
@@ -442,9 +514,22 @@ describe('custom formatter', () => {
       .flatMap((tx) => tx.events)
       .find((e) => e.type === AtomEventTypes.changed && e.atom === primitiveAtom)!;
     expect(changedEvent).not.toHaveProperty('dependencies');
-    transactions.length = 0;
+
+    expect(transactions).toEqual([
+      expect.objectContaining({
+        events: [
+          {
+            type: AtomEventTypes.changed,
+            atom: primitiveAtom,
+            newValue: 1,
+            oldValue: 0,
+          },
+        ],
+      }),
+    ]);
 
     // Present: derived atom reads primitiveAtom
+    transactions.length = 0;
     const derivedAtom = atom((get) => get(primitiveAtom) * 2);
     store.get(derivedAtom);
     vi.runAllTimers();
@@ -454,6 +539,19 @@ describe('custom formatter', () => {
       .find((e) => e.type === AtomEventTypes.initialized && e.atom === derivedAtom)!;
     expect(derivedInitEvent).toHaveProperty('dependencies');
     expect(derivedInitEvent.dependencies).toEqual(new Set([primitiveAtom]));
+
+    expect(transactions).toEqual([
+      expect.objectContaining({
+        events: [
+          {
+            type: AtomEventTypes.initialized,
+            atom: derivedAtom,
+            value: 2,
+            dependencies: new Set([primitiveAtom]),
+          },
+        ],
+      }),
+    ]);
   });
 
   it('should call the custom formatter for every transaction', () => {

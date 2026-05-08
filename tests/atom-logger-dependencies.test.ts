@@ -83,23 +83,69 @@ describe('dependencies', () => {
     vi.runAllTimers();
     expect(consoleMock.log.mock.calls).toEqual([
       [`transaction 1 : subscribed to ${resultAtom}`],
-      [`initialized value of ${valueAtom} to 1`, { value: 1 }],
-      [`initialized value of ${multiplyAtom} to 2`, { value: 2 }],
+      [
+        `initialized value of ${valueAtom} to 1`,
+        {
+          value: 1,
+          dependents: [`${resultAtom}`],
+        },
+      ],
+      [
+        `initialized value of ${multiplyAtom} to 2`,
+        {
+          value: 2,
+          dependents: [`${resultAtom}`],
+        },
+      ],
       [
         `initialized value of ${resultAtom} to 2`,
-        { dependencies: [`${valueAtom}`, `${multiplyAtom}`], value: 2 },
+        {
+          value: 2,
+          dependencies: [`${valueAtom}`, `${multiplyAtom}`],
+        },
       ],
-      [`mounted ${valueAtom}`, { value: 1 }],
-      [`mounted ${multiplyAtom}`, { value: 2 }],
-      [`mounted ${resultAtom}`, { dependencies: [`${valueAtom}`, `${multiplyAtom}`], value: 2 }],
-      [`transaction 2 : set value of ${valueAtom} to 2`, { value: 2 }],
+      [
+        `mounted ${valueAtom}`,
+        {
+          value: 1,
+          dependents: [`${resultAtom}`],
+        },
+      ],
+      [
+        `mounted ${multiplyAtom}`,
+        {
+          value: 2,
+          dependents: [`${resultAtom}`],
+        },
+      ],
+      [
+        `mounted ${resultAtom}`,
+        {
+          value: 2,
+          dependencies: [`${valueAtom}`, `${multiplyAtom}`],
+        },
+      ],
+      [
+        `transaction 2 : set value of ${valueAtom} to 2`,
+        {
+          value: 2,
+        },
+      ],
       [
         `changed value of ${valueAtom} from 1 to 2`,
-        { dependents: [`${resultAtom}`], newValue: 2, oldValue: 1 },
+        {
+          newValue: 2,
+          oldValue: 1,
+          dependents: [`${resultAtom}`],
+        },
       ],
       [
         `changed value of ${resultAtom} from 2 to 4`,
-        { dependencies: [`${valueAtom}`, `${multiplyAtom}`], newValue: 4, oldValue: 2 },
+        {
+          newValue: 4,
+          oldValue: 2,
+          dependencies: [`${valueAtom}`, `${multiplyAtom}`],
+        },
       ],
     ]);
   });
@@ -138,14 +184,41 @@ describe('dependencies', () => {
 
     expect(consoleMock.log.mock.calls).toEqual([
       [`transaction 1 : subscribed to ${testAtom}`],
-      [`initialized value of ${toggleAtom} to false`, { value: false }],
-      [`initialized value of ${aAtom} to 1`, { value: 1 }],
+      [
+        `initialized value of ${toggleAtom} to false`,
+        {
+          value: false,
+          dependents: [`${testAtom}`],
+        },
+      ],
+      [
+        `initialized value of ${aAtom} to 1`,
+        {
+          value: 1,
+          dependents: [`${testAtom}`],
+        },
+      ],
       [
         `initialized value of ${testAtom} to 1`,
-        { dependencies: [`${toggleAtom}`, `${aAtom}`], value: 1 },
+        {
+          value: 1,
+          dependencies: [`${toggleAtom}`, `${aAtom}`],
+        },
       ],
-      [`mounted ${toggleAtom}`, { value: false }],
-      [`mounted ${aAtom}`, { value: 1 }],
+      [
+        `mounted ${toggleAtom}`,
+        {
+          value: false,
+          dependents: [`${testAtom}`],
+        },
+      ],
+      [
+        `mounted ${aAtom}`,
+        {
+          value: 1,
+          dependents: [`${testAtom}`],
+        },
+      ],
       [
         `mounted ${testAtom}`,
         {
@@ -157,9 +230,19 @@ describe('dependencies', () => {
       [`transaction 2 : set value of ${toggleAtom}`],
       [
         `changed value of ${toggleAtom} from false to true`,
-        { dependents: [`${testAtom}`], newValue: true, oldValue: false },
+        {
+          newValue: true,
+          oldValue: false,
+          dependents: [`${testAtom}`],
+        },
       ],
-      [`initialized value of ${bAtom} to 2`, { value: 2 }],
+      [
+        `initialized value of ${bAtom} to 2`,
+        {
+          value: 2,
+          dependents: [`${testAtom}`],
+        },
+      ],
       [
         `changed dependencies of ${testAtom}`,
         {
@@ -175,7 +258,13 @@ describe('dependencies', () => {
           oldValue: 1,
         },
       ],
-      [`mounted ${bAtom}`, { value: 2 }],
+      [
+        `mounted ${bAtom}`,
+        {
+          value: 2,
+          dependents: [`${testAtom}`],
+        },
+      ],
       [`unmounted ${aAtom}`],
     ]);
   });
@@ -297,20 +386,56 @@ describe('dependencies', () => {
 
     expect(consoleMock.log.mock.calls).toEqual([
       [`transaction 1 : subscribed to ${testAtom}`],
-      [`initialized value of ${aAtom} to 1`, { value: 1 }],
-      [`initialized value of ${bAtom} to 2`, { value: 2 }],
+      [
+        `initialized value of ${aAtom} to 1`,
+        {
+          value: 1,
+          dependents: [`${testAtom}`],
+        },
+      ],
+      [
+        `initialized value of ${bAtom} to 2`,
+        {
+          value: 2,
+          dependents: [`${testAtom}`],
+        },
+      ],
       [
         `initialized value of ${testAtom} to undefined`,
-        { dependencies: [`${aAtom}`, `${bAtom}`], value: undefined },
+        {
+          value: undefined,
+          dependencies: [`${aAtom}`, `${bAtom}`],
+        },
       ],
-      [`mounted ${aAtom}`, { value: 1 }],
-      [`mounted ${bAtom}`, { value: 2 }],
-      [`mounted ${testAtom}`, { dependencies: [`${aAtom}`, `${bAtom}`], value: undefined }],
+      [
+        `mounted ${aAtom}`,
+        {
+          value: 1,
+          dependents: [`${testAtom}`],
+        },
+      ],
+      [
+        `mounted ${bAtom}`,
+        {
+          value: 2,
+          dependents: [`${testAtom}`],
+        },
+      ],
+      [
+        `mounted ${testAtom}`,
+        {
+          value: undefined,
+          dependencies: [`${aAtom}`, `${bAtom}`],
+        },
+      ],
 
       [`transaction 2`],
       [
         `changed dependencies of ${testAtom}`,
-        { oldDependencies: [`${aAtom}`, `${bAtom}`], newDependencies: [] },
+        {
+          oldDependencies: [`${aAtom}`, `${bAtom}`],
+          newDependencies: [],
+        },
       ],
       [`unmounted ${aAtom}`],
       [`unmounted ${bAtom}`],
@@ -340,18 +465,55 @@ describe('dependencies', () => {
 
     expect(consoleMock.log.mock.calls).toEqual([
       [`transaction 1 : subscribed to ${testAtom}`],
-      [`initialized value of ${testAtom} to undefined`, { value: undefined }],
-      [`mounted ${testAtom}`, { value: undefined }],
+      [
+        `initialized value of ${testAtom} to undefined`,
+        {
+          value: undefined,
+        },
+      ],
+      [
+        `mounted ${testAtom}`,
+        {
+          value: undefined,
+        },
+      ],
 
       [`transaction 2`],
-      [`initialized value of ${aAtom} to 1`, { value: 1 }],
+      [
+        `initialized value of ${aAtom} to 1`,
+        {
+          value: 1,
+          dependents: [`${testAtom}`],
+        },
+      ],
       [
         `changed dependencies of ${testAtom}`,
-        { oldDependencies: [], newDependencies: [`${aAtom}`, `${bAtom}`] },
+        {
+          oldDependencies: [],
+          newDependencies: [`${aAtom}`, `${bAtom}`],
+        },
       ],
-      [`initialized value of ${bAtom} to 2`, { value: 2 }],
-      [`mounted ${aAtom}`, { value: 1 }],
-      [`mounted ${bAtom}`, { value: 2 }],
+      [
+        `initialized value of ${bAtom} to 2`,
+        {
+          value: 2,
+          dependents: [`${testAtom}`],
+        },
+      ],
+      [
+        `mounted ${aAtom}`,
+        {
+          value: 1,
+          dependents: [`${testAtom}`],
+        },
+      ],
+      [
+        `mounted ${bAtom}`,
+        {
+          value: 2,
+          dependents: [`${testAtom}`],
+        },
+      ],
     ]);
   });
 
@@ -379,13 +541,34 @@ describe('dependencies', () => {
 
     expect(consoleMock.log.mock.calls).toEqual([
       [`transaction 1 : subscribed to ${testAtom}`],
-      [`initialized value of ${aAtom} to 1`, { value: 1 }],
+      [
+        `initialized value of ${aAtom} to 1`,
+        {
+          value: 1,
+          dependents: [`${testAtom}`],
+        },
+      ],
       [
         `initialized value of ${testAtom} to undefined`,
-        { dependencies: [`${aAtom}`], value: undefined },
+        {
+          value: undefined,
+          dependencies: [`${aAtom}`],
+        },
       ],
-      [`mounted ${aAtom}`, { value: 1 }],
-      [`mounted ${testAtom}`, { dependencies: [`${aAtom}`], value: undefined }],
+      [
+        `mounted ${aAtom}`,
+        {
+          value: 1,
+          dependents: [`${testAtom}`],
+        },
+      ],
+      [
+        `mounted ${testAtom}`,
+        {
+          value: undefined,
+          dependencies: [`${aAtom}`],
+        },
+      ],
     ]);
   });
 
@@ -414,13 +597,34 @@ describe('dependencies', () => {
     // Visible deps stay the same ([aAtom]) – only the private dep was removed → no dep change logged
     expect(consoleMock.log.mock.calls).toEqual([
       [`transaction 1 : subscribed to ${testAtom}`],
-      [`initialized value of ${aAtom} to 1`, { value: 1 }],
+      [
+        `initialized value of ${aAtom} to 1`,
+        {
+          value: 1,
+          dependents: [`${testAtom}`],
+        },
+      ],
       [
         `initialized value of ${testAtom} to undefined`,
-        { dependencies: [`${aAtom}`], value: undefined },
+        {
+          value: undefined,
+          dependencies: [`${aAtom}`],
+        },
       ],
-      [`mounted ${aAtom}`, { value: 1 }],
-      [`mounted ${testAtom}`, { dependencies: [`${aAtom}`], value: undefined }],
+      [
+        `mounted ${aAtom}`,
+        {
+          value: 1,
+          dependents: [`${testAtom}`],
+        },
+      ],
+      [
+        `mounted ${testAtom}`,
+        {
+          value: undefined,
+          dependencies: [`${aAtom}`],
+        },
+      ],
     ]);
   });
 
@@ -451,21 +655,57 @@ describe('dependencies', () => {
 
     expect(consoleMock.log.mock.calls).toEqual([
       [`transaction 1 : subscribed to ${testAtom}`],
-      [`initialized value of ${aAtom} to 1`, { value: 1 }],
+      [
+        `initialized value of ${aAtom} to 1`,
+        {
+          value: 1,
+          dependents: [`${testAtom}`],
+        },
+      ],
       [
         `initialized value of ${testAtom} to undefined`,
-        { dependencies: [`${aAtom}`], value: undefined },
+        {
+          value: undefined,
+          dependencies: [`${aAtom}`],
+        },
       ],
-      [`mounted ${aAtom}`, { value: 1 }],
-      [`mounted ${testAtom}`, { dependencies: [`${aAtom}`], value: undefined }],
+      [
+        `mounted ${aAtom}`,
+        {
+          value: 1,
+          dependents: [`${testAtom}`],
+        },
+      ],
+      [
+        `mounted ${testAtom}`,
+        {
+          value: undefined,
+          dependencies: [`${aAtom}`],
+        },
+      ],
 
       [`transaction 2`],
-      [`initialized value of ${bAtom} to 2`, { value: 2 }],
+      [
+        `initialized value of ${bAtom} to 2`,
+        {
+          value: 2,
+          dependents: [`${testAtom}`],
+        },
+      ],
       [
         `changed dependencies of ${testAtom}`,
-        { oldDependencies: [`${aAtom}`], newDependencies: [`${aAtom}`, `${bAtom}`] },
+        {
+          oldDependencies: [`${aAtom}`],
+          newDependencies: [`${aAtom}`, `${bAtom}`],
+        },
       ],
-      [`mounted ${bAtom}`, { value: 2 }],
+      [
+        `mounted ${bAtom}`,
+        {
+          value: 2,
+          dependents: [`${testAtom}`],
+        },
+      ],
     ]);
   });
 
@@ -518,7 +758,10 @@ describe('dependencies', () => {
         `color: default; font-weight: normal;`, // 1
         `color: #757575; font-weight: normal;`, // to
         `color: default; font-weight: normal;`, // 1
-        { value: 1 },
+        {
+          value: 1,
+          dependents: [`atom${testAtomNumber}`],
+        },
       ],
       [
         `%cinitialized value %cof %catom%c${testAtomNumber} %cto %cundefined`,
@@ -528,21 +771,30 @@ describe('dependencies', () => {
         `color: default; font-weight: normal;`, // 4
         `color: #757575; font-weight: normal;`, // to
         `color: default; font-weight: normal;`, // undefined
-        { dependencies: [`atom${aAtomNumber}`], value: undefined },
+        {
+          value: undefined,
+          dependencies: [`atom${aAtomNumber}`],
+        },
       ],
       [
         `%cmounted %catom%c${aAtomNumber}`,
         `color: #009E73; font-weight: bold;`, // mounted
         `color: #757575; font-weight: normal;`, // atom
         `color: default; font-weight: normal;`, // 1
-        { value: 1 },
+        {
+          value: 1,
+          dependents: [`atom${testAtomNumber}`],
+        },
       ],
       [
         `%cmounted %catom%c${testAtomNumber}`,
         `color: #009E73; font-weight: bold;`, // mounted
         `color: #757575; font-weight: normal;`, // atom
         `color: default; font-weight: normal;`, // 4
-        { dependencies: [`atom${aAtomNumber}`], value: undefined },
+        {
+          value: undefined,
+          dependencies: [`atom${aAtomNumber}`],
+        },
       ],
       [
         `%ctransaction %c2`,
@@ -557,7 +809,10 @@ describe('dependencies', () => {
         `color: default; font-weight: normal;`, // 2
         `color: #757575; font-weight: normal;`, // to
         `color: default; font-weight: normal;`, // 2
-        { value: 2 },
+        {
+          value: 2,
+          dependents: [`atom${testAtomNumber}`],
+        },
       ],
       [
         `%cchanged dependencies %cof %catom%c${testAtomNumber}`,
@@ -565,14 +820,20 @@ describe('dependencies', () => {
         `color: #757575; font-weight: normal;`, // of
         `color: #757575; font-weight: normal;`, // atom
         `color: default; font-weight: normal;`, // 4
-        { newDependencies: [`atom${bAtomNumber}`], oldDependencies: [`atom${aAtomNumber}`] },
+        {
+          newDependencies: [`atom${bAtomNumber}`],
+          oldDependencies: [`atom${aAtomNumber}`],
+        },
       ],
       [
         `%cmounted %catom%c${bAtomNumber}`,
         `color: #009E73; font-weight: bold;`, // mounted
         `color: #757575; font-weight: normal;`, // atom
         `color: default; font-weight: normal;`, // 2
-        { value: 2 },
+        {
+          value: 2,
+          dependents: [`atom${testAtomNumber}`],
+        },
       ],
       [
         `%cunmounted %catom%c${aAtomNumber}`,
@@ -602,15 +863,48 @@ describe('dependencies', () => {
     // With the old Set<AtomId> implementation only one 'shared' would appear.
     expect(consoleMock.log.mock.calls).toEqual([
       [`transaction 1 : subscribed to ${resultAtom}`],
-      [`initialized value of ${dep1} to 1`, { value: 1 }],
-      [`initialized value of ${dep2} to 2`, { value: 2 }],
+      [
+        `initialized value of ${dep1} to 1`,
+        {
+          value: 1,
+          dependents: [`${resultAtom}`],
+        },
+      ],
+      [
+        `initialized value of ${dep2} to 2`,
+        {
+          value: 2,
+          dependents: [`${resultAtom}`],
+        },
+      ],
       [
         `initialized value of ${resultAtom} to 3`,
-        { dependencies: [`${dep1}`, `${dep2}`], value: 3 },
+        {
+          value: 3,
+          dependencies: [`${dep1}`, `${dep2}`],
+        },
       ],
-      [`mounted ${dep1}`, { value: 1 }],
-      [`mounted ${dep2}`, { value: 2 }],
-      [`mounted ${resultAtom}`, { dependencies: [`${dep1}`, `${dep2}`], value: 3 }],
+      [
+        `mounted ${dep1}`,
+        {
+          value: 1,
+          dependents: [`${resultAtom}`],
+        },
+      ],
+      [
+        `mounted ${dep2}`,
+        {
+          value: 2,
+          dependents: [`${resultAtom}`],
+        },
+      ],
+      [
+        `mounted ${resultAtom}`,
+        {
+          value: 3,
+          dependencies: [`${dep1}`, `${dep2}`],
+        },
+      ],
     ]);
   });
 });

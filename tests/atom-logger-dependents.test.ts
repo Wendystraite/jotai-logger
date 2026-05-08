@@ -101,10 +101,34 @@ describe('dependents', () => {
 
     expect(consoleMock.log.mock.calls).toEqual([
       [`transaction 1 : subscribed to ${bAtom}`],
-      [`initialized value of ${aAtom} to 1`, { value: 1 }],
-      [`initialized value of ${bAtom} to 2`, { value: 2, dependencies: [`${aAtom}`] }],
-      [`mounted ${aAtom}`, { value: 1 }],
-      [`mounted ${bAtom}`, { value: 2, dependencies: [`${aAtom}`] }],
+      [
+        `initialized value of ${aAtom} to 1`,
+        {
+          value: 1,
+          dependents: [`${bAtom}`],
+        },
+      ],
+      [
+        `initialized value of ${bAtom} to 2`,
+        {
+          value: 2,
+          dependencies: [`${aAtom}`],
+        },
+      ],
+      [
+        `mounted ${aAtom}`,
+        {
+          value: 1,
+          dependents: [`${bAtom}`],
+        },
+      ],
+      [
+        `mounted ${bAtom}`,
+        {
+          value: 2,
+          dependencies: [`${aAtom}`],
+        },
+      ],
     ]);
   });
 
@@ -128,39 +152,71 @@ describe('dependents', () => {
 
     expect(consoleMock.log.mock.calls).toEqual([
       [`transaction 1 : retrieved value of ${secondAtom}`],
-      [`initialized value of ${secondAtom} to "second"`, { value: 'second' }],
+      [
+        `initialized value of ${secondAtom} to "second"`,
+        {
+          value: 'second',
+          // no dependents here since resultAtom is not mounted yet
+        },
+      ],
 
       [`transaction 2 : subscribed to ${resultAtom}`],
-      [`initialized value of ${firstAtom} to "first"`, { value: 'first' }],
+      [
+        `initialized value of ${firstAtom} to "first"`,
+        {
+          value: 'first',
+          dependents: [`${resultAtom}`],
+        },
+      ],
       [
         `initialized value of ${resultAtom} to "first second"`,
         {
-          dependencies: [`${firstAtom}`, `${secondAtom}`],
           value: 'first second',
+          dependencies: [`${firstAtom}`, `${secondAtom}`],
         },
       ],
-      [`mounted ${firstAtom}`, { value: 'first' }],
-      [`mounted ${secondAtom}`, { value: 'second' }],
+      [
+        `mounted ${firstAtom}`,
+        {
+          value: 'first',
+          dependents: [`${resultAtom}`],
+        },
+      ],
+      [
+        `mounted ${secondAtom}`,
+        {
+          value: 'second',
+          dependents: [`${resultAtom}`],
+        },
+      ],
       [
         `mounted ${resultAtom}`,
-        { dependencies: [`${firstAtom}`, `${secondAtom}`], value: 'first second' },
+        {
+          value: 'first second',
+          dependencies: [`${firstAtom}`, `${secondAtom}`],
+        },
       ],
 
-      [`transaction 3 : set value of ${secondAtom} to "2nd"`, { value: '2nd' }],
+      [
+        `transaction 3 : set value of ${secondAtom} to "2nd"`,
+        {
+          value: '2nd',
+        },
+      ],
       [
         `changed value of ${secondAtom} from "second" to "2nd"`,
         {
-          dependents: [`${resultAtom}`], // here he is
           newValue: '2nd',
           oldValue: 'second',
+          dependents: [`${resultAtom}`], // here he is
         },
       ],
       [
         `changed value of ${resultAtom} from "first second" to "first 2nd"`,
         {
-          dependencies: [`${firstAtom}`, `${secondAtom}`],
           newValue: 'first 2nd',
           oldValue: 'first second',
+          dependencies: [`${firstAtom}`, `${secondAtom}`],
         },
       ],
     ]);
