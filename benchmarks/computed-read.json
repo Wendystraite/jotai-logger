@@ -1,0 +1,87 @@
+{
+  "name": "computed-read",
+  "date": "2026-05-08T23:04:02.111Z",
+  "version": null,
+  "results": [
+    {
+      "name": "read chain depth=1",
+      "ops": 127442,
+      "margin": 2.49,
+      "percentSlower": 0
+    },
+    {
+      "name": "read chain depth=1 [with logger]",
+      "ops": 41509,
+      "margin": 1.64,
+      "percentSlower": 67.43
+    },
+    {
+      "name": "read chain depth=1 [with console formatter]",
+      "ops": 30547,
+      "margin": 1.29,
+      "percentSlower": 76.03
+    },
+    {
+      "name": "read chain depth=5",
+      "ops": 49502,
+      "margin": 1.4,
+      "percentSlower": 61.16
+    },
+    {
+      "name": "read chain depth=5 [with logger]",
+      "ops": 21893,
+      "margin": 2.64,
+      "percentSlower": 82.82
+    },
+    {
+      "name": "read chain depth=5 [with console formatter]",
+      "ops": 16903,
+      "margin": 0.95,
+      "percentSlower": 86.74
+    },
+    {
+      "name": "read chain depth=10",
+      "ops": 33804,
+      "margin": 1.33,
+      "percentSlower": 73.47
+    },
+    {
+      "name": "read chain depth=10 [with logger]",
+      "ops": 15588,
+      "margin": 1.41,
+      "percentSlower": 87.77
+    },
+    {
+      "name": "read chain depth=10 [with console formatter]",
+      "ops": 9694,
+      "margin": 2.67,
+      "percentSlower": 92.39
+    },
+    {
+      "name": "read chain depth=50",
+      "ops": 8263,
+      "margin": 1.13,
+      "percentSlower": 93.52
+    },
+    {
+      "name": "read chain depth=50 [with logger]",
+      "ops": 3969,
+      "margin": 1.16,
+      "percentSlower": 96.89
+    },
+    {
+      "name": "read chain depth=50 [with console formatter]",
+      "ops": 2558,
+      "margin": 1.29,
+      "percentSlower": 97.99
+    }
+  ],
+  "fastest": {
+    "name": "read chain depth=1",
+    "index": 0
+  },
+  "slowest": {
+    "name": "read chain depth=50 [with console formatter]",
+    "index": 11
+  }
+}

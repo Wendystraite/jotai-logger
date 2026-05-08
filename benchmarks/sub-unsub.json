@@ -1,0 +1,69 @@
+{
+  "name": "sub-unsub",
+  "date": "2026-05-08T23:08:01.084Z",
+  "version": null,
+  "results": [
+    {
+      "name": "sub/unsub 100 atoms",
+      "ops": 4256,
+      "margin": 4.89,
+      "percentSlower": 0
+    },
+    {
+      "name": "sub/unsub 100 atoms [with logger]",
+      "ops": 1691,
+      "margin": 2.09,
+      "percentSlower": 60.27
+    },
+    {
+      "name": "sub/unsub 100 atoms [with console formatter]",
+      "ops": 890,
+      "margin": 1.26,
+      "percentSlower": 79.09
+    },
+    {
+      "name": "sub/unsub 500 atoms",
+      "ops": 959,
+      "margin": 0.92,
+      "percentSlower": 77.47
+    },
+    {
+      "name": "sub/unsub 500 atoms [with logger]",
+      "ops": 374,
+      "margin": 0.88,
+      "percentSlower": 91.21
+    },
+    {
+      "name": "sub/unsub 500 atoms [with console formatter]",
+      "ops": 180,
+      "margin": 1.29,
+      "percentSlower": 95.77
+    },
+    {
+      "name": "sub/unsub 1000 atoms",
+      "ops": 485,
+      "margin": 0.91,
+      "percentSlower": 88.6
+    },
+    {
+      "name": "sub/unsub 1000 atoms [with logger]",
+      "ops": 186,
+      "margin": 1.12,
+      "percentSlower": 95.63
+    },
+    {
+      "name": "sub/unsub 1000 atoms [with console formatter]",
+      "ops": 91,
+      "margin": 1.28,
+      "percentSlower": 97.86
+    }
+  ],
+  "fastest": {
+    "name": "sub/unsub 100 atoms",
+    "index": 0
+  },
+  "slowest": {
+    "name": "sub/unsub 1000 atoms [with console formatter]",
+    "index": 8
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "name": "atom-creation",
+  "date": "2026-05-08T23:02:55.585Z",
+  "version": null,
+  "results": [
+    {
+      "name": "create 10k primitive atoms",
+      "ops": 5220,
+      "margin": 3.38,
+      "percentSlower": 4.81
+    },
+    {
+      "name": "create 10k derived atoms",
+      "ops": 5484,
+      "margin": 0.58,
+      "percentSlower": 0
+    },
+    {
+      "name": "set 10k atoms in store",
+      "ops": 75,
+      "margin": 0.91,
+      "percentSlower": 98.63
+    },
+    {
+      "name": "set 10k atoms in store [with logger]",
+      "ops": 23,
+      "margin": 2.28,
+      "percentSlower": 99.58
+    },
+    {
+      "name": "set 10k atoms in store [with console formatter]",
+      "ops": 14,
+      "margin": 1.91,
+      "percentSlower": 99.74
+    }
+  ],
+  "fastest": {
+    "name": "create 10k derived atoms",
+    "index": 1
+  },
+  "slowest": {
+    "name": "set 10k atoms in store [with console formatter]",
+    "index": 4
+  }
+}

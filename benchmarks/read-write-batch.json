@@ -1,0 +1,51 @@
+{
+  "name": "read-write-batch",
+  "date": "2026-05-08T23:17:59.511Z",
+  "version": null,
+  "results": [
+    {
+      "name": "write 10k",
+      "ops": 267589,
+      "margin": 1.68,
+      "percentSlower": 0
+    },
+    {
+      "name": "write 10k [with logger]",
+      "ops": 76657,
+      "margin": 1.33,
+      "percentSlower": 71.35
+    },
+    {
+      "name": "write 10k [with console formatter]",
+      "ops": 63085,
+      "margin": 1.62,
+      "percentSlower": 76.42
+    },
+    {
+      "name": "read 10k",
+      "ops": 258311,
+      "margin": 0.94,
+      "percentSlower": 3.47
+    },
+    {
+      "name": "read 10k [with logger]",
+      "ops": 77806,
+      "margin": 1.15,
+      "percentSlower": 70.92
+    },
+    {
+      "name": "read 10k [with console formatter]",
+      "ops": 60416,
+      "margin": 1.35,
+      "percentSlower": 77.42
+    }
+  ],
+  "fastest": {
+    "name": "write 10k",
+    "index": 0
+  },
+  "slowest": {
+    "name": "read 10k [with console formatter]",
+    "index": 5
+  }
+}
