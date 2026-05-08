@@ -1,5 +1,5 @@
 /**
- * Parse a trace from [captureOwnerStack](https://react.dev/reference/react/captureOwnerStack) (React 19.1+) or any other source.
+ * Parse a trace from {@link https://react.dev/reference/react/captureOwnerStack | captureOwnerStack} (React 19.1+) or any other source.
  *
  * Example of a trace from `captureOwnerStack` that would return `['MiddleWrapper', 'ParentContainer', 'App']`:
  * ```

@@ -192,6 +192,22 @@ createLoggedStore(parentStore, {
 });
 ```
 
+Internal utility function that parses a stack trace from `captureOwnerStack` or any other source:
+
+```ts
+/**
+ * Parse a trace from {@link https://react.dev/reference/react/captureOwnerStack | captureOwnerStack} (React 19.1+) or any other source.
+ * @see {@link https://github.com/Wendystraite/jotai-logger#owner-stack-tracking-getownerstack | Jotai Logger Owner Stack Tracking}
+ * @see {@link https://github.com/Wendystraite/jotai-logger/blob/main/src/utils/parse-owner-stack.ts | Jotai Logger parseOwnerStack utility function}
+ */
+function parseOwnerStack(stack: string | null | undefined): string[] {
+  return (stack ?? '')
+    .split('\n')
+    .map((line) => /^\s*at\s+([^\s]+)\s+/.exec(line)?.[1])
+    .filter((c) => typeof c === 'string');
+}
+```
+
 ### Component Display Name (`getComponentDisplayName`)
 
 Shows the current component's display name in transaction logs.
@@ -319,6 +335,191 @@ const myFormatter: AtomLoggerFormatter = (transaction: AtomTransaction) => {
 };
 
 const store = createLoggedStore(parentStore, { formatter: myFormatter });
+```
+
+</details>
+
+<details>
+<summary>Full featured custom formatter with logtape and ansis</summary>
+
+Here's an example of a custom formatter that integrates with [logtape](https://github.com/dahlia/logtape) and uses [ansis](https://github.com/webdiscus/ansis) for color formatting in the console.
+
+```tsx
+import { getLogger } from '@logtape/logtape';
+import ansis from 'ansis';
+import {
+  AtomEventTypes,
+  AtomLoggerProvider,
+  AtomTransactionTypes,
+  type AtomEvent,
+  type AtomLoggerFormatter,
+  type AtomTransaction,
+} from 'jotai-logger';
+import React, { captureOwnerStack, type PropsWithChildren } from 'react';
+
+// Create a logTape logger instance for jotai
+const jotaiLogger = getLogger('jotai');
+
+// Provider component to wrap your app and enable logging with logTape
+export function LogTapeJotaiLoggerProvider({ children }: PropsWithChildren) {
+  return (
+    <AtomLoggerProvider
+      enabled={jotaiLogger.isEnabledFor('debug')}
+      getOwnerStack={captureOwnerStack}
+      getComponentDisplayName={getReact19ComponentDisplayName}
+      formatter={logTapeJotaiFormatter}
+    >
+      {children}
+    </AtomLoggerProvider>
+  );
+}
+
+// Custom formatter that logs transactions and events to logTape with colors and structured properties
+const logTapeJotaiFormatter: AtomLoggerFormatter = (transaction) => {
+  // Calculate elapsed time in milliseconds with 2 decimal places
+  const elapsed = (
+    Math.round((transaction.endTimestamp - transaction.startTimestamp) * 100) / 100
+  ).toFixed(2);
+
+  // Parse the owner stack to get the top 2 components for context
+  const ownerStack = parseOwnerStack(transaction.ownerStack).splice(0, 2).join('.');
+
+  // Get the component display name if available
+  const componentName = transaction.componentDisplayName ?? '';
+
+  // Map transaction types to human-readable names with colors
+  const transactionName = {
+    [AtomTransactionTypes.unknown]: ansis.bold('unknown'),
+    [AtomTransactionTypes.storeGet]: ansis.bold.hex(Colors.blue)('store.get'),
+    [AtomTransactionTypes.storeSet]: ansis.bold.hex(Colors.yellow)('store.set'),
+    [AtomTransactionTypes.storeSubscribe]: ansis.bold.hex(Colors.green)('store.sub'),
+    [AtomTransactionTypes.storeUnsubscribe]: ansis.bold.hex(Colors.red)('store.unsubscribe'),
+    [AtomTransactionTypes.promiseResolved]: ansis.bold.hex(Colors.green)('promise.resolved'),
+    [AtomTransactionTypes.promiseRejected]: ansis.bold.hex(Colors.red)('promise.rejected'),
+  }[transaction.type];
+
+  // Prepare log properties without already logged fields
+  const logProperties: Record<string, unknown> = { ...transaction };
+  const keysToDelete: (keyof AtomTransaction)[] = [
+    'atom',
+    'type',
+    'transactionNumber',
+    'ownerStack',
+    'componentDisplayName',
+    'events',
+    'startTimestamp',
+    'endTimestamp',
+  ];
+  for (const key of keysToDelete) delete logProperties[key];
+
+  // Create the log message for the transaction
+  let log = '';
+  log += `transaction ${transaction.transactionNumber} - `;
+  log += transactionName;
+  log += `(${transaction.atom?.toString() ?? '<?>'})`;
+  log += ` - ${transaction.events.length} event${transaction.events.length > 1 ? 's' : ''}`;
+  log += ` - ${elapsed}ms`;
+  if (ownerStack) log += ` - [${ansis.reset(ownerStack)}]`;
+  if (componentName) log += ` ${ansis.reset(componentName)}`;
+  if (Object.keys(logProperties).length > 0) log += ` : {*}`;
+  log = ansis.hex(Colors.grey)(log);
+
+  // Log the transaction with logTape, using a child logger for this transaction number and passing structured properties
+  const transactionLogger = jotaiLogger.getChild(`${transaction.transactionNumber}`);
+  transactionLogger.debug(log, logProperties);
+
+  // Log each event in the transaction with its own child logger
+  for (const [eventIndex, event] of transaction.events.entries()) {
+    // Map event types to human-readable names with colors
+    const eventName = {
+      [AtomEventTypes.initialized]: ansis.bold.hex(Colors.blue)('initialized'),
+      [AtomEventTypes.initialPromisePending]: ansis.bold.hex(Colors.pink)('initialPromisePending'),
+      [AtomEventTypes.initialPromiseResolved]: ansis.bold.hex(Colors.green)(
+        'initialPromiseResolved',
+      ),
+      [AtomEventTypes.initialPromiseRejected]: ansis.bold.hex(Colors.red)('initialPromiseRejected'),
+      [AtomEventTypes.initialPromiseAborted]: ansis.bold.hex(Colors.red)('initialPromiseAborted'),
+      [AtomEventTypes.changed]: ansis.bold.hex(Colors.lightBlue)('changed'),
+      [AtomEventTypes.changedPromisePending]: ansis.bold.hex(Colors.pink)('changedPromisePending'),
+      [AtomEventTypes.changedPromiseResolved]: ansis.bold.hex(Colors.green)(
+        'changedPromiseResolved',
+      ),
+      [AtomEventTypes.changedPromiseRejected]: ansis.bold.hex(Colors.red)('changedPromiseRejected'),
+      [AtomEventTypes.changedPromiseAborted]: ansis.bold.hex(Colors.red)('changedPromiseAborted'),
+      [AtomEventTypes.dependenciesChanged]: ansis.bold.hex(Colors.yellow)('dependenciesChanged'),
+      [AtomEventTypes.mounted]: ansis.bold.hex(Colors.green)('mounted'),
+      [AtomEventTypes.unmounted]: ansis.bold.hex(Colors.red)('unmounted'),
+      [AtomEventTypes.destroyed]: ansis.bold.hex(Colors.red)('destroyed'),
+    }[event.type];
+
+    // Prepare log properties without already logged fields
+    const logProperties: Record<string, unknown> = { ...event };
+    const keysToDelete = ['type', 'atom'] satisfies (keyof AtomEvent)[];
+    for (const key of keysToDelete) delete logProperties[key];
+    for (const [key, value] of Object.entries(event)) {
+      // Convert Sets to arrays of strings for better logging
+      if (value instanceof Set) logProperties[key] = Array.from(value, (atom) => atom.toString());
+    }
+
+    // Create the log message for this event
+    let log = '';
+    log += eventName;
+    log += ` ${ansis.reset(event.atom.toString())}`;
+    if (Object.keys(logProperties).length > 0) log += ` : {*}`;
+    log = ansis.hex(Colors.grey)(log);
+
+    // Log the event with logTape, using a child logger for this event index and passing structured properties
+    const eventLogger = transactionLogger.getChild(`${eventIndex}`);
+    eventLogger.debug(log, logProperties);
+  }
+};
+
+/**
+ * Okabe-Ito colorblind-friendly palette.
+ * @see {@link https://siegal.bio.nyu.edu/color-palette/ | Okabe-Ito color palette}
+ * @see {@link https://github.com/Wendystraite/jotai-logger#colors | Jotai Logger Colors}
+ */
+const Colors = {
+  grey: '#757575',
+  yellow: '#E69F00',
+  lightBlue: '#56B4E9',
+  green: '#009E73',
+  blue: '#0072B2',
+  red: '#D55E00',
+  pink: '#CC79A7',
+};
+
+/**
+ * Parse a trace from {@link https://react.dev/reference/react/captureOwnerStack | captureOwnerStack} (React 19.1+) or any other source.
+ * @see {@link https://github.com/Wendystraite/jotai-logger#owner-stack-tracking-getownerstack | Jotai Logger Owner Stack Tracking}
+ * @see {@link https://github.com/Wendystraite/jotai-logger/blob/main/src/utils/parse-owner-stack.ts | Jotai Logger parseOwnerStack utility function}
+ */
+function parseOwnerStack(stack: string | null | undefined): string[] {
+  return (stack ?? '')
+    .split('\n')
+    .map((line) => /^\s*at\s+([^\s]+)\s+/.exec(line)?.[1])
+    .filter((c) => typeof c === 'string');
+}
+
+/**
+ * Get the currently rendering React component's display name using React 19's internal APIs.
+ * @see {@link https://github.com/Wendystraite/jotai-logger#component-display-name-getcomponentdisplayname | Jotai Logger Component Display Name}
+ */
+function getReact19ComponentDisplayName(): string | undefined {
+  const React19 = React as {
+    __CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE?: {
+      A?: { getOwner?: () => { type?: { displayName?: string; name?: string } } };
+    };
+    __SERVER_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE?: {
+      A?: { getOwner?: () => { type?: { displayName?: string; name?: string } } };
+    };
+  };
+  const component = (
+    React19.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE ??
+    React19.__SERVER_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE
+  )?.A?.getOwner?.().type;
+  return component?.displayName ?? component?.name;
+}
 ```
 
 </details>
