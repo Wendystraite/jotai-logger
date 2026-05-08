@@ -1,63 +1,87 @@
 {
   "name": "simple-write",
-  "date": "2025-06-02T12:11:52.181Z",
+  "date": "2026-05-08T22:50:28.591Z",
   "version": null,
   "results": [
     {
       "name": "atoms=100",
-      "ops": 1017907,
-      "margin": 2.72,
-      "percentSlower": 3.29
-    },
-    {
-      "name": "atoms=100 [with logger]",
-      "ops": 95127,
-      "margin": 1.24,
-      "percentSlower": 90.96
-    },
-    {
-      "name": "atoms=1000",
-      "ops": 963012,
-      "margin": 4.32,
-      "percentSlower": 8.51
-    },
-    {
-      "name": "atoms=1000 [with logger]",
-      "ops": 94162,
-      "margin": 1.25,
-      "percentSlower": 91.05
-    },
-    {
-      "name": "atoms=10000",
-      "ops": 1006271,
-      "margin": 3.35,
-      "percentSlower": 4.4
-    },
-    {
-      "name": "atoms=10000 [with logger]",
-      "ops": 95347,
-      "margin": 1.24,
-      "percentSlower": 90.94
-    },
-    {
-      "name": "atoms=100000",
-      "ops": 1052558,
-      "margin": 3.08,
+      "ops": 1017112,
+      "margin": 2.64,
       "percentSlower": 0
     },
     {
+      "name": "atoms=100 [with logger]",
+      "ops": 490423,
+      "margin": 2.13,
+      "percentSlower": 51.78
+    },
+    {
+      "name": "atoms=100 [with console formatter]",
+      "ops": 187600,
+      "margin": 1.95,
+      "percentSlower": 81.56
+    },
+    {
+      "name": "atoms=1000",
+      "ops": 980868,
+      "margin": 3.05,
+      "percentSlower": 3.56
+    },
+    {
+      "name": "atoms=1000 [with logger]",
+      "ops": 476700,
+      "margin": 2.09,
+      "percentSlower": 53.13
+    },
+    {
+      "name": "atoms=1000 [with console formatter]",
+      "ops": 189397,
+      "margin": 1.82,
+      "percentSlower": 81.38
+    },
+    {
+      "name": "atoms=10000",
+      "ops": 983712,
+      "margin": 2.63,
+      "percentSlower": 3.28
+    },
+    {
+      "name": "atoms=10000 [with logger]",
+      "ops": 476091,
+      "margin": 2.08,
+      "percentSlower": 53.19
+    },
+    {
+      "name": "atoms=10000 [with console formatter]",
+      "ops": 189598,
+      "margin": 1.93,
+      "percentSlower": 81.36
+    },
+    {
+      "name": "atoms=100000",
+      "ops": 922691,
+      "margin": 4.52,
+      "percentSlower": 9.28
+    },
+    {
       "name": "atoms=100000 [with logger]",
-      "ops": 95509,
-      "margin": 1.11,
-      "percentSlower": 90.93
+      "ops": 471437,
+      "margin": 2.87,
+      "percentSlower": 53.65
+    },
+    {
+      "name": "atoms=100000 [with console formatter]",
+      "ops": 188543,
+      "margin": 1.48,
+      "percentSlower": 81.46
     }
   ],
   "fastest": {
-    "name": "atoms=100000",
-    "index": 6
+    "name": "atoms=100",
+    "index": 0
   },
   "slowest": {
-    "name": "atoms=1000 [with logger]",
-    "index": 3
+    "name": "atoms=100 [with console formatter]",
+    "index": 2
   }
 }

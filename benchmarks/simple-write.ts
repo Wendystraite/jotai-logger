@@ -1,19 +1,31 @@
 import { add, complete, cycle, save, suite } from 'benny';
 import { type PrimitiveAtom, atom, createStore } from 'jotai';
 
+import { consoleFormatter } from '../dist/formatters/console.js';
 import { createLoggedStore } from '../dist/vanilla/create-logged-store.js';
 
 /**
  * Taken from Jotai benchmarks : [simple-write.ts](https://github.com/pmndrs/jotai/blob/main/benchmarks/simple-write.ts).
  */
 
-const createStateWithAtoms = (n: number, { withLogger }: { withLogger: boolean }) => {
+const silentLogger = {
+  log: () => {},
+  group: () => {},
+  groupCollapsed: () => {},
+  groupEnd: () => {},
+  warn: () => {},
+};
+
+const createStateWithAtoms = (
+  n: number,
+  { withLogger, withConsoleFormatter }: { withLogger: boolean; withConsoleFormatter?: boolean },
+) => {
   let targetAtom: PrimitiveAtom<number> | undefined;
   let store = createStore();
   if (withLogger) {
     store = createLoggedStore(store, {
       synchronous: true,
-      formatter: () => {},
+      formatter: withConsoleFormatter ? consoleFormatter({ logger: silentLogger }) : () => {},
     });
   }
   for (let i = 0; i < n; ++i) {
@@ -40,6 +52,15 @@ const main = async () => {
         }),
         add(`atoms=${10 ** n} [with logger]`, () => {
           const [store, targetAtom] = createStateWithAtoms(10 ** n, { withLogger: true });
+          return () => {
+            store.set(targetAtom, (c) => c + 1);
+          };
+        }),
+        add(`atoms=${10 ** n} [with console formatter]`, () => {
+          const [store, targetAtom] = createStateWithAtoms(10 ** n, {
+            withLogger: true,
+            withConsoleFormatter: true,
+          });
           return () => {
             store.set(targetAtom, (c) => c + 1);
           };
