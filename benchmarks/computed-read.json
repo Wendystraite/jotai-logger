@@ -1,79 +1,79 @@
 {
   "name": "computed-read",
-  "date": "2026-05-08T23:04:02.111Z",
+  "date": "2026-05-09T18:07:38.049Z",
   "version": null,
   "results": [
     {
       "name": "read chain depth=1",
-      "ops": 127442,
-      "margin": 2.49,
+      "ops": 145904,
+      "margin": 1.9,
       "percentSlower": 0
     },
     {
       "name": "read chain depth=1 [with logger]",
-      "ops": 41509,
-      "margin": 1.64,
-      "percentSlower": 67.43
+      "ops": 46829,
+      "margin": 1.99,
+      "percentSlower": 67.9
     },
     {
       "name": "read chain depth=1 [with console formatter]",
-      "ops": 30547,
-      "margin": 1.29,
-      "percentSlower": 76.03
+      "ops": 39080,
+      "margin": 0.79,
+      "percentSlower": 73.22
     },
     {
       "name": "read chain depth=5",
-      "ops": 49502,
-      "margin": 1.4,
-      "percentSlower": 61.16
+      "ops": 60654,
+      "margin": 0.96,
+      "percentSlower": 58.43
     },
     {
       "name": "read chain depth=5 [with logger]",
-      "ops": 21893,
-      "margin": 2.64,
-      "percentSlower": 82.82
+      "ops": 27458,
+      "margin": 1.69,
+      "percentSlower": 81.18
     },
     {
       "name": "read chain depth=5 [with console formatter]",
-      "ops": 16903,
-      "margin": 0.95,
-      "percentSlower": 86.74
+      "ops": 19857,
+      "margin": 0.93,
+      "percentSlower": 86.39
     },
     {
       "name": "read chain depth=10",
-      "ops": 33804,
-      "margin": 1.33,
-      "percentSlower": 73.47
+      "ops": 36147,
+      "margin": 1.17,
+      "percentSlower": 75.23
     },
     {
       "name": "read chain depth=10 [with logger]",
-      "ops": 15588,
-      "margin": 1.41,
-      "percentSlower": 87.77
+      "ops": 19078,
+      "margin": 1.21,
+      "percentSlower": 86.92
     },
     {
       "name": "read chain depth=10 [with console formatter]",
-      "ops": 9694,
-      "margin": 2.67,
-      "percentSlower": 92.39
+      "ops": 13349,
+      "margin": 1.15,
+      "percentSlower": 90.85
     },
     {
       "name": "read chain depth=50",
-      "ops": 8263,
-      "margin": 1.13,
-      "percentSlower": 93.52
+      "ops": 9111,
+      "margin": 1.21,
+      "percentSlower": 93.76
     },
     {
       "name": "read chain depth=50 [with logger]",
-      "ops": 3969,
-      "margin": 1.16,
-      "percentSlower": 96.89
+      "ops": 4859,
+      "margin": 1.84,
+      "percentSlower": 96.67
     },
     {
       "name": "read chain depth=50 [with console formatter]",
-      "ops": 2558,
-      "margin": 1.29,
-      "percentSlower": 97.99
+      "ops": 3174,
+      "margin": 3.65,
+      "percentSlower": 97.82
     }
   ],
   "fastest": {

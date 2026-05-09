@@ -1,43 +1,43 @@
 {
   "name": "select-atom",
-  "date": "2026-05-08T23:20:52.534Z",
+  "date": "2026-05-09T18:15:44.117Z",
   "version": null,
   "results": [
     {
       "name": "selectAtom 10k writes (relevant key)",
-      "ops": 138312,
-      "margin": 1.45,
+      "ops": 134577,
+      "margin": 3.83,
       "percentSlower": 0
     },
     {
       "name": "selectAtom 10k writes (relevant key) [with logger]",
-      "ops": 43918,
-      "margin": 2.1,
-      "percentSlower": 68.25
+      "ops": 44855,
+      "margin": 2.47,
+      "percentSlower": 66.67
     },
     {
       "name": "selectAtom 10k writes (relevant key) [with console formatter]",
-      "ops": 30291,
-      "margin": 2.42,
-      "percentSlower": 78.1
+      "ops": 33893,
+      "margin": 1.81,
+      "percentSlower": 74.82
     },
     {
       "name": "selectAtom 10k writes (irrelevant key)",
-      "ops": 120818,
-      "margin": 1.4,
-      "percentSlower": 12.65
+      "ops": 121182,
+      "margin": 1.54,
+      "percentSlower": 9.95
     },
     {
       "name": "selectAtom 10k writes (irrelevant key) [with logger]",
-      "ops": 45740,
-      "margin": 1.23,
-      "percentSlower": 66.93
+      "ops": 46035,
+      "margin": 1.69,
+      "percentSlower": 65.79
     },
     {
       "name": "selectAtom 10k writes (irrelevant key) [with console formatter]",
-      "ops": 32131,
-      "margin": 1.36,
-      "percentSlower": 76.77
+      "ops": 34201,
+      "margin": 1.72,
+      "percentSlower": 74.59
     }
   ],
   "fastest": {

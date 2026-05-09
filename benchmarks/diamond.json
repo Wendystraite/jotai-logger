@@ -1,79 +1,79 @@
 {
   "name": "diamond",
-  "date": "2026-05-08T23:06:19.919Z",
+  "date": "2026-05-09T18:09:49.960Z",
   "version": null,
   "results": [
     {
       "name": "base→10 mid→leaf",
-      "ops": 16281,
-      "margin": 2.12,
+      "ops": 17113,
+      "margin": 1.7,
       "percentSlower": 0
     },
     {
       "name": "base→10 mid→leaf [with logger]",
-      "ops": 7206,
-      "margin": 1.08,
-      "percentSlower": 55.74
+      "ops": 10956,
+      "margin": 1.04,
+      "percentSlower": 35.98
     },
     {
       "name": "base→10 mid→leaf [with console formatter]",
-      "ops": 4630,
-      "margin": 1.33,
-      "percentSlower": 71.56
+      "ops": 7084,
+      "margin": 1.18,
+      "percentSlower": 58.6
     },
     {
       "name": "base→50 mid→leaf",
-      "ops": 3729,
-      "margin": 0.9,
-      "percentSlower": 77.1
+      "ops": 4237,
+      "margin": 1.21,
+      "percentSlower": 75.24
     },
     {
       "name": "base→50 mid→leaf [with logger]",
-      "ops": 1289,
-      "margin": 1.42,
-      "percentSlower": 92.08
+      "ops": 2463,
+      "margin": 1.24,
+      "percentSlower": 85.61
     },
     {
       "name": "base→50 mid→leaf [with console formatter]",
-      "ops": 948,
-      "margin": 1.11,
-      "percentSlower": 94.18
+      "ops": 1684,
+      "margin": 1.12,
+      "percentSlower": 90.16
     },
     {
       "name": "base→100 mid→leaf",
-      "ops": 1312,
-      "margin": 5.47,
-      "percentSlower": 91.94
+      "ops": 2113,
+      "margin": 1.23,
+      "percentSlower": 87.65
     },
     {
       "name": "base→100 mid→leaf [with logger]",
-      "ops": 305,
-      "margin": 3.33,
-      "percentSlower": 98.13
+      "ops": 1135,
+      "margin": 0.91,
+      "percentSlower": 93.37
     },
     {
       "name": "base→100 mid→leaf [with console formatter]",
-      "ops": 229,
-      "margin": 3.52,
-      "percentSlower": 98.59
+      "ops": 773,
+      "margin": 0.98,
+      "percentSlower": 95.48
     },
     {
       "name": "base→200 mid→leaf",
-      "ops": 607,
-      "margin": 3.96,
-      "percentSlower": 96.27
+      "ops": 1118,
+      "margin": 1.42,
+      "percentSlower": 93.47
     },
     {
       "name": "base→200 mid→leaf [with logger]",
-      "ops": 111,
-      "margin": 3.22,
-      "percentSlower": 99.32
+      "ops": 454,
+      "margin": 0.72,
+      "percentSlower": 97.35
     },
     {
       "name": "base→200 mid→leaf [with console formatter]",
-      "ops": 89,
-      "margin": 4.32,
-      "percentSlower": 99.45
+      "ops": 332,
+      "margin": 1.89,
+      "percentSlower": 98.06
     }
   ],
   "fastest": {

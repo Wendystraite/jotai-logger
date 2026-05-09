@@ -1,60 +1,60 @@
 {
   "name": "sub-unsub",
-  "date": "2026-05-08T23:08:01.084Z",
+  "date": "2026-05-09T18:11:29.633Z",
   "version": null,
   "results": [
     {
       "name": "sub/unsub 100 atoms",
-      "ops": 4256,
-      "margin": 4.89,
+      "ops": 5038,
+      "margin": 0.89,
       "percentSlower": 0
     },
     {
       "name": "sub/unsub 100 atoms [with logger]",
-      "ops": 1691,
-      "margin": 2.09,
-      "percentSlower": 60.27
+      "ops": 2306,
+      "margin": 1.43,
+      "percentSlower": 54.23
     },
     {
       "name": "sub/unsub 100 atoms [with console formatter]",
-      "ops": 890,
-      "margin": 1.26,
-      "percentSlower": 79.09
+      "ops": 1039,
+      "margin": 1.01,
+      "percentSlower": 79.38
     },
     {
       "name": "sub/unsub 500 atoms",
-      "ops": 959,
-      "margin": 0.92,
-      "percentSlower": 77.47
+      "ops": 997,
+      "margin": 0.86,
+      "percentSlower": 80.21
     },
     {
       "name": "sub/unsub 500 atoms [with logger]",
-      "ops": 374,
-      "margin": 0.88,
-      "percentSlower": 91.21
+      "ops": 482,
+      "margin": 1.04,
+      "percentSlower": 90.43
     },
     {
       "name": "sub/unsub 500 atoms [with console formatter]",
-      "ops": 180,
-      "margin": 1.29,
-      "percentSlower": 95.77
+      "ops": 210,
+      "margin": 1.2,
+      "percentSlower": 95.83
     },
     {
       "name": "sub/unsub 1000 atoms",
-      "ops": 485,
-      "margin": 0.91,
-      "percentSlower": 88.6
+      "ops": 497,
+      "margin": 1.03,
+      "percentSlower": 90.13
     },
     {
       "name": "sub/unsub 1000 atoms [with logger]",
-      "ops": 186,
-      "margin": 1.12,
-      "percentSlower": 95.63
+      "ops": 234,
+      "margin": 1.11,
+      "percentSlower": 95.36
     },
     {
       "name": "sub/unsub 1000 atoms [with console formatter]",
-      "ops": 91,
-      "margin": 1.28,
+      "ops": 108,
+      "margin": 1.2,
       "percentSlower": 97.86
     }
   ],
