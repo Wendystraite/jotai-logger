@@ -96,6 +96,8 @@ These control event collection and transaction scheduling only.
 <details>
 <summary><code>AtomLoggerOptions</code> reference</summary>
 
+### AtomLoggerOptions reference
+
 ```ts
 import type { AtomLoggerOptions } from 'jotai-logger/vanilla';
 
@@ -137,6 +139,8 @@ type AtomLoggerOptions = {
 <details>
 <summary>Changing options at runtime</summary>
 
+### Changing options at runtime
+
 You can change logger options at runtime by mutating the options object passed to `createLoggedStore` or `AtomLoggerProvider`:
 
 ```ts
@@ -163,9 +167,11 @@ getLoggedStoreOptions(store)!.enabled = false;
 <details>
 <summary>Component Tracking — <code>getOwnerStack</code> &amp; <code>getComponentDisplayName</code> (Experimental)</summary>
 
+### Component Tracking (Experimental)
+
 These features are designed for React and may not work in all cases.
 
-### Owner Stack (`getOwnerStack`)
+#### Owner Stack (`getOwnerStack`)
 
 Displays the React component hierarchy that triggered a transaction.
 Accepts React 19.1+'s [`captureOwnerStack`](https://react.dev/reference/react/captureOwnerStack).
@@ -197,7 +203,7 @@ Internal utility function that parses a stack trace from `captureOwnerStack` or 
 ```ts
 /**
  * Parse a trace from {@link https://react.dev/reference/react/captureOwnerStack | captureOwnerStack} (React 19.1+) or any other source.
- * @see {@link https://github.com/Wendystraite/jotai-logger#owner-stack-tracking-getownerstack | Jotai Logger Owner Stack Tracking}
+ * @see {@link https://github.com/Wendystraite/jotai-logger#owner-stack-getownerstack | Jotai Logger Owner Stack Tracking}
  * @see {@link https://github.com/Wendystraite/jotai-logger/blob/main/src/utils/parse-owner-stack.ts | Jotai Logger parseOwnerStack utility function}
  */
 function parseOwnerStack(stack: string | null | undefined): string[] {
@@ -208,7 +214,7 @@ function parseOwnerStack(stack: string | null | undefined): string[] {
 }
 ```
 
-### Component Display Name (`getComponentDisplayName`)
+#### Component Display Name (`getComponentDisplayName`)
 
 Shows the current component's display name in transaction logs.
 If it is already shown at the end of the owner stack, it won't be duplicated.
@@ -227,6 +233,10 @@ createLoggedStore(parentStore, {
 ```tsx
 import React from 'react';
 
+/**
+ * Get the currently rendering React component's display name using React 19's internal APIs.
+ * @see {@link https://github.com/Wendystraite/jotai-logger#component-display-name-getcomponentdisplayname | Jotai Logger Component Display Name}
+ */
 function getReact19ComponentDisplayName(): string | undefined {
   const React19 = React as {
     __CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE?: {
@@ -251,9 +261,11 @@ function getReact19ComponentDisplayName(): string | undefined {
 <details>
 <summary>Synchronous vs. Asynchronous Logging</summary>
 
+### Synchronous vs. Asynchronous Logging
+
 By default the logger uses asynchronous logging to minimise performance impact.
 
-### Synchronous
+#### Synchronous
 
 ```tsx
 createLoggedStore(parentStore, { synchronous: true });
@@ -262,7 +274,7 @@ createLoggedStore(parentStore, { synchronous: true });
 Useful for debugging, testing, or deterministic log ordering.
 Has a performance cost with frequent atom changes.
 
-### Asynchronous pipeline
+#### Asynchronous pipeline
 
 Three parameters control the async pipeline:
 
@@ -304,6 +316,8 @@ createLoggedStore(parentStore, {
 <details>
 <summary>Logging Performances</summary>
 
+### Logging Performances
+
 The logger logs all transactions asynchronously to avoid blocking the main thread.
 
 Internally, the logger uses a multi-stage approach:
@@ -320,8 +334,12 @@ spreading the work across multiple idle periods.
 
 </details>
 
+## Custom Formatters
+
 <details>
 <summary>Custom Formatter</summary>
+
+### Formatter Option
 
 The `formatter` option accepts any function with the signature `(transaction: AtomTransaction) => void`,
 letting you send atom events to any logging backend.
@@ -340,9 +358,11 @@ const store = createLoggedStore(parentStore, { formatter: myFormatter });
 </details>
 
 <details>
-<summary>Full featured custom formatter with logtape and ansis</summary>
+<summary>Formatter example with logTape and ansis</summary>
 
-Here's an example of a custom formatter that integrates with [logtape](https://github.com/dahlia/logtape) and uses [ansis](https://github.com/webdiscus/ansis) for color formatting in the console.
+### Formatter example with logTape and ansis
+
+Here's an example of a custom formatter that integrates with [logTape](https://github.com/dahlia/logtape) and uses [ansis](https://github.com/webdiscus/ansis) for color formatting in the console.
 
 ```tsx
 import { getLogger } from '@logtape/logtape';
@@ -491,7 +511,7 @@ const Colors = {
 
 /**
  * Parse a trace from {@link https://react.dev/reference/react/captureOwnerStack | captureOwnerStack} (React 19.1+) or any other source.
- * @see {@link https://github.com/Wendystraite/jotai-logger#owner-stack-tracking-getownerstack | Jotai Logger Owner Stack Tracking}
+ * @see {@link https://github.com/Wendystraite/jotai-logger#owner-stack-getownerstack | Jotai Logger Owner Stack Tracking}
  * @see {@link https://github.com/Wendystraite/jotai-logger/blob/main/src/utils/parse-owner-stack.ts | Jotai Logger parseOwnerStack utility function}
  */
 function parseOwnerStack(stack: string | null | undefined): string[] {
@@ -531,6 +551,8 @@ the browser or Node.js console with colors, grouping, and timing information.
 
 <details>
 <summary><code>ConsoleFormatterOptions</code> reference</summary>
+
+### ConsoleFormatterOptions reference
 
 ```ts
 import { consoleFormatter } from 'jotai-logger/formatters/console';
@@ -598,6 +620,8 @@ type ConsoleFormatterOptions = {
 <details>
 <summary>Colors</summary>
 
+### Colors
+
 The default color scheme uses colors easy to read in both light and dark mode, based on the colorblind-friendly
 [Okabe-Ito palette](https://siegal.bio.nyu.edu/color-palette/).
 
@@ -633,6 +657,8 @@ createLoggedStore(parentStore, {
 <details>
 <summary>Stringification</summary>
 
+### Stringification
+
 By default atom values are converted to strings using `toString()` and `JSON.stringify`.
 
 - `stringifyValues`: enable/disable conversion (default: `true`)
@@ -660,6 +686,8 @@ createLoggedStore(parentStore, {
 
 <details>
 <summary>Example Logs</summary>
+
+### Example Logs
 
 <details>
 <summary>Basic Transaction</summary>
@@ -823,6 +851,8 @@ conditional and tree-shake it out to avoid accidental production usage.
 <details>
 <summary>Using with Vite.js</summary>
 
+### Using with Vite.js
+
 ```tsx
 import { AtomLoggerProvider } from 'jotai-logger';
 
@@ -845,6 +875,8 @@ function App() {
 
 <details>
 <summary>Using with Next.js</summary>
+
+### Using with Next.js
 
 ```tsx
 // App.tsx
@@ -924,7 +956,7 @@ to track when atoms are destroyed.
 The v5 API no longer mutates the store. Instead of patching `store.get/set/sub` in place, it
 creates a **new derived store** that shares all internal state with the parent.
 
-#### React API
+**React API** :
 
 `useAtomsLogger` is replaced by `AtomLoggerProvider`, a Provider-like component that
 automatically picks up the nearest Jotai store from context and wraps children in a new logged store:
@@ -953,7 +985,7 @@ automatically picks up the nearest Jotai store from context and wraps children i
 
 All props of `AtomLoggerProvider` are the same options as `AtomLoggerOptions`.
 
-### Vanilla API
+**Vanilla API** :
 
 `bindAtomsLoggerToStore` is replaced by `createLoggedStore` that creates and return a new store:
 
