@@ -5,10 +5,7 @@ import {
 } from 'jotai/vanilla/internals';
 
 import { consoleFormatter } from '../formatters/console/index.js';
-import { onAtomCreated } from './callbacks/on-atom-created.js';
 import { onAtomGarbageCollected } from './callbacks/on-atom-garbage-collected.js';
-import { onAtomMounted } from './callbacks/on-atom-mounted.js';
-import { onAtomUnmounted } from './callbacks/on-atom-unmounted.js';
 import { onStoreGet } from './callbacks/on-store-get.js';
 import { onStoreSet } from './callbacks/on-store-set.js';
 import { onStoreSub } from './callbacks/on-store-sub.js';
@@ -20,6 +17,12 @@ import {
   DEFAULT_SYNCHRONOUS,
   DEFAULT_TRANSACTION_DEBOUNCE_MS,
 } from './consts/default-options.js';
+import { trackDependencies } from './hooks/track-dependencies.js';
+import { trackDestroyed } from './hooks/track-destroyed.js';
+import { trackMounted } from './hooks/track-mounted.js';
+import { trackPendingPromises } from './hooks/track-pending-promises.js';
+import { trackUnmounted } from './hooks/track-unmounted.js';
+import { trackValueChanges } from './hooks/track-value-changes.js';
 import { createLogTransactionsScheduler } from './log-transactions-scheduler.js';
 import type { AtomId } from './types/event.js';
 import type { AtomLoggerOptions } from './types/options.js';
@@ -72,7 +75,6 @@ export function createLoggedStore(parentStore: Store, options: AtomLoggerOptions
     atomsFinalizationRegistry,
     promisesResultsMap: new WeakMap(),
     dependenciesMap: new WeakMap(),
-    prevTransactionDependenciesMap: new WeakMap(),
     transactionsDebounceTimeoutId: undefined,
   };
 
@@ -82,16 +84,6 @@ export function createLoggedStore(parentStore: Store, options: AtomLoggerOptions
   const parentStoreSub = parentBuildingBlocks[23];
 
   const storeHooks = initializeStoreHooks({});
-
-  storeHooks.i.add(undefined, (atom) => {
-    onAtomCreated(loggedStore, buildingBlocks, loggerState, atom);
-  });
-  storeHooks.m.add(undefined, (atom) => {
-    onAtomMounted(loggerState, buildingBlocks, atom);
-  });
-  storeHooks.u.add(undefined, (atom) => {
-    onAtomUnmounted(loggerState, buildingBlocks, atom);
-  });
 
   const loggedStore = buildStore(
     parentBuildingBlocks[0],
@@ -132,6 +124,13 @@ export function createLoggedStore(parentStore: Store, options: AtomLoggerOptions
   );
 
   const buildingBlocks = getBuildingBlocks(loggedStore);
+
+  trackMounted(storeHooks, loggerState, buildingBlocks);
+  trackUnmounted(storeHooks, loggerState, buildingBlocks);
+  trackDestroyed(storeHooks, loggerState);
+  trackDependencies(storeHooks, loggerState, buildingBlocks);
+  trackValueChanges(storeHooks, loggedStore, loggerState, buildingBlocks);
+  trackPendingPromises(storeHooks, loggerState, buildingBlocks);
 
   loggedStoreStates.set(loggedStore, loggerState);
 

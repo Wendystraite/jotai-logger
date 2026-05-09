@@ -158,13 +158,13 @@ describe('custom formatter', () => {
         args: [true],
         result: undefined,
         events: [
-          { type: AtomEventTypes.changed, atom: derivedAtom, newValue: 0, oldValue: 44 },
           {
             type: AtomEventTypes.dependenciesChanged,
             atom: derivedAtom,
             oldDependencies: new Set([testAtom]),
             removedDependencies: new Set([testAtom]),
           },
+          { type: AtomEventTypes.changed, atom: derivedAtom, newValue: 0, oldValue: 44 },
           { type: AtomEventTypes.unmounted, atom: testAtom },
         ],
         startTimestamp: 0,

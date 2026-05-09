@@ -1,48 +1,48 @@
 {
   "name": "read-write-batch",
-  "date": "2026-05-08T23:17:59.511Z",
+  "date": "2026-05-09T18:12:53.474Z",
   "version": null,
   "results": [
     {
       "name": "write 10k",
-      "ops": 267589,
-      "margin": 1.68,
-      "percentSlower": 0
+      "ops": 205169,
+      "margin": 4.65,
+      "percentSlower": 12.32
     },
     {
       "name": "write 10k [with logger]",
-      "ops": 76657,
-      "margin": 1.33,
-      "percentSlower": 71.35
+      "ops": 68107,
+      "margin": 2.21,
+      "percentSlower": 70.89
     },
     {
       "name": "write 10k [with console formatter]",
-      "ops": 63085,
-      "margin": 1.62,
-      "percentSlower": 76.42
+      "ops": 56639,
+      "margin": 1.24,
+      "percentSlower": 75.79
     },
     {
       "name": "read 10k",
-      "ops": 258311,
-      "margin": 0.94,
-      "percentSlower": 3.47
+      "ops": 233991,
+      "margin": 2.14,
+      "percentSlower": 0
     },
     {
       "name": "read 10k [with logger]",
-      "ops": 77806,
-      "margin": 1.15,
-      "percentSlower": 70.92
+      "ops": 66416,
+      "margin": 1.49,
+      "percentSlower": 71.62
     },
     {
       "name": "read 10k [with console formatter]",
-      "ops": 60416,
-      "margin": 1.35,
-      "percentSlower": 77.42
+      "ops": 53523,
+      "margin": 1.58,
+      "percentSlower": 77.13
     }
   ],
   "fastest": {
-    "name": "write 10k",
-    "index": 0
+    "name": "read 10k",
+    "index": 3
   },
   "slowest": {
     "name": "read 10k [with console formatter]",

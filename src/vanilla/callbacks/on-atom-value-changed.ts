@@ -27,7 +27,7 @@ export function onAtomValueChanged(
         atom,
         value: newValue,
       });
-    } else if (oldValue !== newValueOrPromise) {
+    } else {
       addEventToTransaction(loggerState, buildingBlocks, {
         type: AtomEventTypes.changed,
         atom,

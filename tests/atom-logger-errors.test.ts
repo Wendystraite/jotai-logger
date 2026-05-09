@@ -154,4 +154,42 @@ describe('errors', () => {
       ],
     ]);
   });
+
+  it('should not emit a changed event when a derived atom transitions to a synchronous error', () => {
+    let shouldThrow = false;
+    const depAtom = atom(0);
+    const derivedAtom = atom((get) => {
+      get(depAtom);
+      if (shouldThrow) throw new Error('sync error');
+      return 42;
+    });
+
+    // initialize derivedAtom to 42
+    store = createLoggedStore(store, defaultOptions);
+    store.sub(derivedAtom, vi.fn());
+    vi.runAllTimers();
+
+    expect(consoleMock.log.mock.calls).toEqual([
+      [`transaction 1 : subscribed to ${derivedAtom}`],
+      [`initialized value of ${depAtom} to 0`, { dependents: [`${derivedAtom}`], value: 0 }],
+      [`initialized value of ${derivedAtom} to 42`, { dependencies: [`${depAtom}`], value: 42 }],
+      [`mounted ${depAtom}`, { dependents: [`${derivedAtom}`], value: 0 }],
+      [`mounted ${derivedAtom}`, { dependencies: [`${depAtom}`], value: 42 }],
+    ]);
+    consoleMock.log.mockClear();
+
+    // update depAtom to trigger derivedAtom to throw.
+    // no changed event should be emitted for derivedAtom since its value never changed to the error
+    shouldThrow = true;
+    store.set(depAtom, 1);
+    vi.runAllTimers();
+
+    expect(consoleMock.log.mock.calls).toEqual([
+      [`transaction 2 : set value of ${depAtom} to 1`, { value: 1 }],
+      [
+        `changed value of ${depAtom} from 0 to 1`,
+        { dependents: [`${derivedAtom}`], newValue: 1, oldValue: 0 },
+      ],
+    ]);
+  });
 });

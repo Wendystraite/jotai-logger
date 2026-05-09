@@ -1,79 +1,79 @@
 {
   "name": "derived-chain",
-  "date": "2026-05-08T23:05:08.200Z",
+  "date": "2026-05-09T18:08:43.955Z",
   "version": null,
   "results": [
     {
       "name": "depth=10",
-      "ops": 21394,
-      "margin": 1.19,
+      "ops": 23507,
+      "margin": 1.03,
       "percentSlower": 0
     },
     {
       "name": "depth=10 [with logger]",
-      "ops": 10590,
-      "margin": 0.9,
-      "percentSlower": 50.5
+      "ops": 14405,
+      "margin": 1.45,
+      "percentSlower": 38.72
     },
     {
       "name": "depth=10 [with console formatter]",
-      "ops": 6062,
-      "margin": 2.37,
-      "percentSlower": 71.66
+      "ops": 8681,
+      "margin": 1.33,
+      "percentSlower": 63.07
     },
     {
       "name": "depth=50",
-      "ops": 4669,
-      "margin": 1.14,
-      "percentSlower": 78.18
+      "ops": 5256,
+      "margin": 1.16,
+      "percentSlower": 77.64
     },
     {
       "name": "depth=50 [with logger]",
-      "ops": 2325,
-      "margin": 1.09,
-      "percentSlower": 89.13
+      "ops": 3498,
+      "margin": 1.03,
+      "percentSlower": 85.12
     },
     {
       "name": "depth=50 [with console formatter]",
-      "ops": 1426,
-      "margin": 1.16,
-      "percentSlower": 93.33
+      "ops": 2156,
+      "margin": 0.97,
+      "percentSlower": 90.83
     },
     {
       "name": "depth=100",
-      "ops": 2428,
-      "margin": 1.16,
-      "percentSlower": 88.65
+      "ops": 2664,
+      "margin": 1.18,
+      "percentSlower": 88.67
     },
     {
       "name": "depth=100 [with logger]",
-      "ops": 1149,
-      "margin": 1.02,
-      "percentSlower": 94.63
+      "ops": 1685,
+      "margin": 1.64,
+      "percentSlower": 92.83
     },
     {
       "name": "depth=100 [with console formatter]",
-      "ops": 712,
-      "margin": 1.24,
-      "percentSlower": 96.67
+      "ops": 1054,
+      "margin": 1.2,
+      "percentSlower": 95.52
     },
     {
       "name": "depth=200",
-      "ops": 1186,
-      "margin": 1.26,
-      "percentSlower": 94.46
+      "ops": 1362,
+      "margin": 1.01,
+      "percentSlower": 94.21
     },
     {
       "name": "depth=200 [with logger]",
-      "ops": 502,
-      "margin": 1.31,
-      "percentSlower": 97.65
+      "ops": 775,
+      "margin": 0.95,
+      "percentSlower": 96.7
     },
     {
       "name": "depth=200 [with console formatter]",
-      "ops": 330,
-      "margin": 1.25,
-      "percentSlower": 98.46
+      "ops": 508,
+      "margin": 1.13,
+      "percentSlower": 97.84
     }
   ],
   "fastest": {

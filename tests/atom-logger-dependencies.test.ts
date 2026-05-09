@@ -295,9 +295,6 @@ describe('dependencies', () => {
     expect(loggedStoreState.dependenciesMap.has(aAtom)).toBeTruthy();
     expect(loggedStoreState.dependenciesMap.has(bAtom)).toBeFalsy();
     expect(loggedStoreState.dependenciesMap.has(cAtom)).toBeFalsy();
-    expect(loggedStoreState.prevTransactionDependenciesMap.has(aAtom)).toBeTruthy();
-    expect(loggedStoreState.prevTransactionDependenciesMap.has(bAtom)).toBeFalsy();
-    expect(loggedStoreState.prevTransactionDependenciesMap.has(cAtom)).toBeFalsy();
   });
 
   it('should update value-event dependencies when a dependency is removed and a value change already exists in the transaction', () => {
@@ -487,17 +484,17 @@ describe('dependencies', () => {
         },
       ],
       [
-        `changed dependencies of ${testAtom}`,
-        {
-          oldDependencies: [],
-          newDependencies: [`${aAtom}`, `${bAtom}`],
-        },
-      ],
-      [
         `initialized value of ${bAtom} to 2`,
         {
           value: 2,
           dependents: [`${testAtom}`],
+        },
+      ],
+      [
+        `changed dependencies of ${testAtom}`,
+        {
+          oldDependencies: [],
+          newDependencies: [`${aAtom}`, `${bAtom}`],
         },
       ],
       [
