@@ -3,7 +3,6 @@ export {
   isLoggedStore,
   getLoggedStoreOptions,
 } from './vanilla/create-logged-store.js';
-export type { AtomLoggerStoreState } from './vanilla/types/store.js';
 export type { AtomLoggerOptions } from './vanilla/types/options.js';
 export type { AtomLoggerFormatter } from './vanilla/types/formatter.js';
 export { AtomTransactionTypes } from './vanilla/types/transaction.js';
