@@ -1,55 +1,61 @@
 {
   "name": "subscribe-write",
-  "date": "2025-06-02T12:12:48.783Z",
+  "date": "2026-05-08T23:08:51.007Z",
   "version": null,
   "results": [
     {
       "name": "atoms=100",
-      "ops": 1037720,
-      "margin": 6.79,
+      "ops": 3980,
+      "margin": 1.28,
       "percentSlower": 0
     },
     {
       "name": "atoms=100 [with logger]",
-      "ops": 88471,
-      "margin": 1.35,
-      "percentSlower": 91.47
+      "ops": 1771,
+      "margin": 1.07,
+      "percentSlower": 55.5
+    },
+    {
+      "name": "atoms=100 [with console formatter]",
+      "ops": 901,
+      "margin": 2.19,
+      "percentSlower": 77.36
     },
     {
       "name": "atoms=1000",
-      "ops": 988627,
-      "margin": 5.84,
-      "percentSlower": 4.73
+      "ops": 402,
+      "margin": 1.47,
+      "percentSlower": 89.9
     },
     {
       "name": "atoms=1000 [with logger]",
-      "ops": 89388,
-      "margin": 1.2,
-      "percentSlower": 91.39
+      "ops": 174,
+      "margin": 1.28,
+      "percentSlower": 95.63
+    },
+    {
+      "name": "atoms=1000 [with console formatter]",
+      "ops": 92,
+      "margin": 1.5,
+      "percentSlower": 97.69
     },
     {
       "name": "atoms=10000",
-      "ops": 975355,
-      "margin": 4.71,
-      "percentSlower": 6.01
+      "ops": 38,
+      "margin": 1.11,
+      "percentSlower": 99.05
     },
     {
       "name": "atoms=10000 [with logger]",
-      "ops": 92841,
-      "margin": 0.76,
-      "percentSlower": 91.05
+      "ops": 16,
+      "margin": 3.47,
+      "percentSlower": 99.6
     },
     {
-      "name": "atoms=100000",
-      "ops": 1001656,
-      "margin": 6.04,
-      "percentSlower": 3.48
-    },
-    {
-      "name": "atoms=100000 [with logger]",
-      "ops": 91279,
-      "margin": 1.05,
-      "percentSlower": 91.2
+      "name": "atoms=10000 [with console formatter]",
+      "ops": 9,
+      "margin": 2.44,
+      "percentSlower": 99.77
     }
   ],
   "fastest": {
@@ -57,7 +63,7 @@
     "index": 0
   },
   "slowest": {
-    "name": "atoms=100 [with logger]",
-    "index": 1
+    "name": "atoms=10000 [with console formatter]",
+    "index": 8
   }
 }

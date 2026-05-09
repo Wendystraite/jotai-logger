@@ -1,7 +1,8 @@
 import { add, complete, cycle, save, suite } from 'benny';
 import { type PrimitiveAtom, atom, createStore } from 'jotai';
 
-import { bindAtomsLoggerToStore } from '../src/bind-atoms-logger-to-store.js';
+import { consoleFormatter } from '../dist/formatters/console.js';
+import { createLoggedStore } from '../dist/vanilla/create-logged-store.js';
 
 /**
  * Taken from Jotai benchmarks : [subscribe-write.ts](https://github.com/pmndrs/jotai/blob/main/benchmarks/subscribe-write.ts).
@@ -15,13 +16,24 @@ const cleanup = () => {
   cleanupFns.clear();
 };
 
-const createStateWithAtoms = (n: number, { withLogger }: { withLogger: boolean }) => {
+const silentLogger = {
+  log: () => {},
+  group: () => {},
+  groupCollapsed: () => {},
+  groupEnd: () => {},
+  warn: () => {},
+};
+
+const createStateWithAtoms = (
+  n: number,
+  { withLogger, withConsoleFormatter }: { withLogger: boolean; withConsoleFormatter?: boolean },
+) => {
   let targetAtom: PrimitiveAtom<number> | undefined;
-  const store = createStore();
+  let store = createStore();
   if (withLogger) {
-    bindAtomsLoggerToStore(store, {
+    store = createLoggedStore(store, {
       synchronous: true,
-      logger: { log: () => {}, group: () => {}, groupEnd: () => {} },
+      formatter: withConsoleFormatter ? consoleFormatter({ logger: silentLogger }) : () => {},
     });
   }
   for (let i = 0; i < n; ++i) {
@@ -54,6 +66,16 @@ const main = async () => {
         add(`atoms=${10 ** n} [with logger]`, () => {
           cleanup();
           const [store, targetAtom] = createStateWithAtoms(10 ** n, { withLogger: true });
+          return () => {
+            store.set(targetAtom, (c) => c + 1);
+          };
+        }),
+        add(`atoms=${10 ** n} [with console formatter]`, () => {
+          cleanup();
+          const [store, targetAtom] = createStateWithAtoms(10 ** n, {
+            withLogger: true,
+            withConsoleFormatter: true,
+          });
           return () => {
             store.set(targetAtom, (c) => c + 1);
           };

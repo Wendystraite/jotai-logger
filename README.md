@@ -4,6 +4,7 @@
 [![Codecov](https://img.shields.io/codecov/c/gh/Wendystraite/jotai-logger)](https://app.codecov.io/gh/Wendystraite/jotai-logger)
 [![npm bundle size](https://img.shields.io/bundlephobia/minzip/jotai-logger)](https://bundlephobia.com/package/jotai-logger)
 [![GitHub License](https://img.shields.io/github/license/Wendystraite/jotai-logger)](https://github.com/Wendystraite/jotai-logger/blob/main/LICENSE.md)
+[![pkg.pr.new](https://pkg.pr.new/badge/Wendystraite/jotai-logger)](https://pkg.pr.new/~/Wendystraite/jotai-logger)
 
 Logging utility for [Jotai](https://github.com/pmndrs/jotai) that helps you debug and track atom state changes.
 
@@ -20,6 +21,7 @@ Logging utility for [Jotai](https://github.com/pmndrs/jotai) that helps you debu
 - 🐞 Compatible with [jotai-devtools](https://github.com/jotaijs/jotai-devtools)
 - 📦 No dependencies, lightweight and tree-shakable
 - 🎯 Support for both React hooks and vanilla store API
+- 🔌 Pluggable formatter system with built-in console output
 
 ## Installation
 
@@ -36,228 +38,204 @@ pnpm install jotai-logger
 
 ## Compatibility
 
-ESM Only.
+ESM Only. Compatible with React 17+ and Jotai 2.20+.
+See the table below for older Jotai versions.
+
+<details>
+<summary>Version compatibility reference</summary>
 
 | jotai-logger | [react](https://github.com/facebook/react) | [jotai](https://github.com/pmndrs/jotai) | [jotai-devtools](https://github.com/jotaijs/jotai-devtools) |
 | ------------ | ------------------------------------------ | ---------------------------------------- | ----------------------------------------------------------- |
 | <= 2.5.2     | >=17.0.0                                   | >= 2.12.4 < 2.14.0                       | == 0.12.0                                                   |
 | >= 3.0.0     | >=17.0.0                                   | >= 2.14.0 < 2.18.0                       | >= 0.13.0                                                   |
-| >= 4.0.0     | >=17.0.0                                   | >= 2.18.0                                | >= 0.13.0                                                   |
+| >= 4.0.0     | >=17.0.0                                   | >= 2.18.0 < 2.20.0                       | >= 0.13.0                                                   |
+| >= 5.0.0     | >=17.0.0                                   | >= 2.20.0                                | >= 0.14.0                                                   |
+
+</details>
 
 ## Usage
 
-### Basic Setup
+<details>
+<summary>React Setup</summary>
 
 ```tsx
-import { useAtomsLogger } from 'jotai-logger';
+import { Provider } from 'jotai';
+import { AtomLoggerProvider } from 'jotai-logger';
 
 function App() {
   return (
-    <>
-      <AtomsLogger />
-      {/* your app */}
-    </>
+    <Provider>
+      <AtomLoggerProvider {...options}>
+        <MyApp />
+      </AtomLoggerProvider>
+    </Provider>
   );
-}
-
-function AtomsLogger() {
-  useAtomsLogger();
-  return null;
 }
 ```
 
-### Vanilla Setup
+</details>
+
+<details>
+<summary>Vanilla Setup</summary>
 
 ```ts
 import { createStore } from 'jotai';
-import { bindAtomsLoggerToStore } from 'jotai-logger';
+import { createLoggedStore } from 'jotai-logger/vanilla';
 
-const store = createStore();
-bindAtomsLoggerToStore(store);
+const parentStore = createStore();
+const store = createLoggedStore(parentStore, options);
 ```
 
-## Configuration Options
+</details>
 
-You can customize the logger with various options:
+## Logger Configuration
 
-```tsx
-import { AtomsLoggerOptions } from 'jotai-logger';
+Options passed to `createLoggedStore` / `AtomLoggerProvider` via `AtomLoggerOptions`.
+These control event collection and transaction scheduling only.
 
-const options: AtomsLoggerOptions = {
-  enabled: true,
-  domain: 'MyApp',
-  showPrivateAtoms: false,
-  // Add other options as needed
-};
+<details>
+<summary><code>AtomLoggerOptions</code> reference</summary>
 
-useAtomsLogger(options);
-// or
-bindAtomsLoggerToStore(store, options);
-```
-
-### Options
-
-You can customize the logger with various options:
-
-```tsx
-type AtomsLoggerOptions = {
-  /** Enable or disable the logger (default: true) */
-  enabled?: boolean;
-  /** Domain identifier for the logger in console output */
-  domain?: string;
-  /** Whether to show private atoms used internally by Jotai (default: false) */
-  shouldShowPrivateAtoms?: boolean;
-  /** Custom function to determine which atoms to show */
-  shouldShowAtom?: (atom: Atom) => boolean;
-  /** Custom logger to use instead of console */
-  logger?: Logger;
-  /** Whether to group transaction logs with logger.group (default: true) */
-  groupTransactions?: boolean;
-  /** Whether to group event logs with logger.group (default: false) */
-  groupEvents?: boolean;
-  /** Number of spaces for each indentation level (default: 0) */
-  indentSpaces?: number;
-  /** Whether to use colors/formatting in the console (default: true) */
-  formattedOutput?: boolean;
-  /** Color scheme to use: 'default', 'light', or 'dark' (default: 'default') */
-  colorScheme?: 'default' | 'light' | 'dark';
-  /** Maximum length of stringified data (default: 50) */
-  stringifyLimit?: number;
-  /** Whether to stringify data in the logs (default: true) */
-  stringifyValues?: boolean;
-  /** Custom function to stringify data in the logs (default: `toString` and `JSON.stringify`) */
-  stringify?: (value: unknown) => string;
-  /** Whether to show transaction numbers (default: true) */
-  showTransactionNumber?: boolean;
-  /** Whether to show events count in transactions (default: true) */
-  showTransactionEventsCount?: boolean;
-  /** Whether to show transaction timestamps (default: false) */
-  showTransactionLocaleTime?: boolean;
-  /** Whether to show elapsed time (default: true) */
-  showTransactionElapsedTime?: boolean;
-  /** Whether to automatically align transaction components for better readability (default: true) */
-  autoAlignTransactions?: boolean;
-  /** Whether to collapse transaction logs (default: true) */
-  collapseTransactions?: boolean;
-  /** Whether to collapse event logs (default: false) */
-  collapseEvents?: boolean;
-  /** Maximum number of owner stack entries to show (default: 2) */
-  ownerStackLimit?: number;
-  /** Custom function to retrieve the React component stack that triggered the transaction */
-  getOwnerStack?: () => string | null | undefined;
-  /** Custom function to retrieve the current React component's display name */
-  getComponentDisplayName?: () => string | undefined;
-  /** Whether to log synchronously or asynchronously (default: false) */
-  synchronous?: boolean;
-  /** Debounce time in milliseconds for grouping transactions (default: 250ms) */
-  transactionDebounceMs?: number;
-  /** Timeout in milliseconds for requestIdleCallback (default: 250ms) */
-  requestIdleCallbackTimeoutMs?: number;
-  /** Maximum processing time per batch in milliseconds (default: 16ms) */
-  maxProcessingTimeMs?: number;
-};
-
-const options: AtomsLoggerOptions = {
-  enabled: true,
-  domain: 'MyApp',
-  shouldShowPrivateAtoms: false,
-  // Add other options as needed
-};
-
-useAtomsLogger(options);
-// or
-bindAtomsLoggerToStore(store, options);
-```
-
-### Colors
-
-The default color scheme uses colors that are easy to read in both light and dark mode.
-The colors are from the colorblind-friendly palette known as the [Okabe-Ito color palette](https://siegal.bio.nyu.edu/color-palette/).
-
-The `colorScheme` option slightly changes the color palette contrast ratio to respect WCAG AA for normal text with a minimum contrast of 5:1 on a white (`#ffffff`) or dark (`#282828`) background.
-
-See example bellow if you want the colors to be automatically determined based on the user's system preference using `window.matchMedia` :
+### AtomLoggerOptions reference
 
 ```ts
-// If you want the colors to be automatically determined based on the user's system preference
-useAtomsLogger({
-  colorScheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
-});
+import type { AtomLoggerOptions } from 'jotai-logger/vanilla';
 
-// If you want the color to be specified in an environment variable (in vite)
-useAtomsLogger({ colorScheme: import.meta.env.VITE_ATOMS_LOGGER_COLOR_SCHEME });
+type AtomLoggerOptions = {
+  /** Custom formatter called for each completed transaction. Defaults to consoleFormatter(). */
+  formatter?: AtomLoggerFormatter;
 
-// If you want to disable colors
-useAtomsLogger({ formattedOutput: false });
+  /** Enable or disable the logger. @default true */
+  enabled?: boolean;
+
+  /** Show private atoms used internally by Jotai libraries. @default false */
+  shouldShowPrivateAtoms?: boolean;
+
+  /** Custom predicate to filter which atoms are logged. */
+  shouldShowAtom?: (atom: Atom) => boolean;
+
+  /** (Experimental) Retrieve the React component owner stack for a transaction. */
+  getOwnerStack?: () => string | null | undefined;
+
+  /** (Experimental) Retrieve the currently rendering React component's display name. */
+  getComponentDisplayName?: () => string | undefined;
+
+  /** Log synchronously instead of asynchronously. @default false */
+  synchronous?: boolean;
+
+  /** Debounce period for grouping events into a single transaction (ms). @default 250 */
+  transactionDebounceMs?: number;
+
+  /** Maximum timeout for requestIdleCallback scheduling (ms). @default 250 */
+  requestIdleCallbackTimeoutMs?: number;
+
+  /** Maximum processing time per batch (ms). @default 16 */
+  maxProcessingTimeMs?: number;
+};
 ```
 
-### Stringification
+</details>
 
-By default, the logger converts atom values to strings for console output using a combination of `toString` and `JSON.stringify`.
+<details>
+<summary>Changing options at runtime</summary>
 
-You can control how values appear in logs with these options:
+### Changing options at runtime
 
-- `stringifyValues`: Enable/disable string conversion (default: `true`)
-- `stringifyLimit`: Maximum length for stringified output (default: `50`)
-- `stringify`: Custom function for more advanced formatting
+You can change logger options at runtime by mutating the options object passed to `createLoggedStore` or `AtomLoggerProvider`:
 
-For better formatting of complex objects, you can use libraries like [@vitest/pretty-format](https://www.npmjs.com/package/@vitest/pretty-format) or [pretty-format](https://www.npmjs.com/package/pretty-format):
+```ts
+const options: AtomLoggerOptions = { enabled: true };
+const store = createLoggedStore(parentStore, options);
 
-```tsx
-import { format as prettyFormat } from '@vitest/pretty-format';
-import { useAtomsLogger } from 'jotai-logger';
-
-useAtomsLogger({
-  stringifyValues: true,
-  stringifyLimit: 0,
-  stringify(value) {
-    return prettyFormat(value, {
-      min: true,
-      maxDepth: 3,
-      maxWidth: 5,
-      // See options in https://github.com/jestjs/jest/tree/main/packages/pretty-format#usage-with-options
-    });
-  },
-});
+// Change options at runtime
+options.enabled = false;
 ```
+
+Alternatively, you can access the logger options from the store state:
+
+```ts
+import { getLoggedStoreOptions } from 'jotai-logger/vanilla';
+
+const store = createLoggedStore(parentStore, { enabled: true });
+
+// Change options at runtime
+getLoggedStoreOptions(store)!.enabled = false;
+```
+
+</details>
+
+<details>
+<summary>Component Tracking — <code>getOwnerStack</code> &amp; <code>getComponentDisplayName</code> (Experimental)</summary>
 
 ### Component Tracking (Experimental)
 
-These are experimental features designed for React applications that may not work in all cases.
+These features are designed for React and may not work in all cases.
 
-#### Owner Stack Tracking (`getOwnerStack`)
+#### Owner Stack (`getOwnerStack`)
 
-This feature allows the logger to track the React component hierarchy that triggered a transaction. When provided, the logger will display the parent components in the logs to help identify where state changes originate.
-
-It accepts React 19.1+'s [`captureOwnerStack`](https://react.dev/reference/react/captureOwnerStack) function to retrieve the component stack.
+Displays the React component hierarchy that triggered a transaction.
+Accepts React 19.1+'s [`captureOwnerStack`](https://react.dev/reference/react/captureOwnerStack).
 
 ```tsx
-import { useAtomsLogger } from 'jotai-logger';
+import { createLoggedStore } from 'jotai-logger/vanilla';
 import { captureOwnerStack } from 'react';
 
-// React 19.1+
-
-useAtomsLogger({
+createLoggedStore(parentStore, {
   getOwnerStack: captureOwnerStack,
 });
 ```
 
-The logger displays up to `ownerStackLimit` parent components.
+The number of parent components shown is controlled by `ownerStackLimit` in `consoleFormatter` (default: `2`).
+
+```tsx
+import { consoleFormatter } from 'jotai-logger/formatters/console';
+import { createLoggedStore } from 'jotai-logger/vanilla';
+import { captureOwnerStack } from 'react';
+
+createLoggedStore(parentStore, {
+  getOwnerStack: captureOwnerStack,
+  formatter: consoleFormatter({ ownerStackLimit: 5 }),
+});
+```
+
+Internal utility function that parses a stack trace from `captureOwnerStack` or any other source:
+
+```ts
+/**
+ * Parse a trace from {@link https://react.dev/reference/react/captureOwnerStack | captureOwnerStack} (React 19.1+) or any other source.
+ * @see {@link https://github.com/Wendystraite/jotai-logger#owner-stack-getownerstack | Jotai Logger Owner Stack Tracking}
+ * @see {@link https://github.com/Wendystraite/jotai-logger/blob/main/src/utils/parse-owner-stack.ts | Jotai Logger parseOwnerStack utility function}
+ */
+function parseOwnerStack(stack: string | null | undefined): string[] {
+  return (stack ?? '')
+    .split('\n')
+    .map((line) => /^\s*at\s+([^\s]+)\s+/.exec(line)?.[1])
+    .filter((c) => typeof c === 'string');
+}
+```
 
 #### Component Display Name (`getComponentDisplayName`)
 
-This feature shows the current React component's display name in transaction logs. It's particularly useful when combined with owner stack tracking.
+Shows the current component's display name in transaction logs.
+If it is already shown at the end of the owner stack, it won't be duplicated.
 
 ```tsx
-import React, { useAtomsLogger } from 'jotai-logger';
+import { createLoggedStore } from 'jotai-logger/vanilla';
+
+createLoggedStore(parentStore, {
+  getComponentDisplayName: getReact19ComponentDisplayName,
+});
+```
+
+<details>
+<summary>React 19+ implementation of <code>getReact19ComponentDisplayName</code></summary>
+
+```tsx
+import React from 'react';
 
 /**
- * Get the current React component's display name using React 19 internals.
- *
- * This only works when used directly within a React component's render
- * and will not work in other lifecycle methods like useEffect or event handlers.
- *
- * This is an experimental feature and may break in future React versions.
+ * Get the currently rendering React component's display name using React 19's internal APIs.
+ * @see {@link https://github.com/Wendystraite/jotai-logger#component-display-name-getcomponentdisplayname | Jotai Logger Component Display Name}
  */
 function getReact19ComponentDisplayName(): string | undefined {
   const React19 = React as {
@@ -274,146 +252,447 @@ function getReact19ComponentDisplayName(): string | undefined {
   )?.A?.getOwner?.().type;
   return component?.displayName ?? component?.name;
 }
-
-useAtomsLogger({
-  getComponentDisplayName: getReact19ComponentDisplayName,
-});
 ```
 
-If the component display name is already shown at the end of the owner stack, it won't be duplicated.
+</details>
+
+</details>
+
+<details>
+<summary>Synchronous vs. Asynchronous Logging</summary>
 
 ### Synchronous vs. Asynchronous Logging
 
-By default, the logger uses an asynchronous approach to log transactions, ensuring minimal impact on your application's performance.
+By default the logger uses asynchronous logging to minimise performance impact.
 
-#### Synchronous Logging
-
-You can switch to synchronous logging by setting the `synchronous` option to `true`.
-
-This option can be useful for debugging, testing, when you need deterministic log ordering or when you use your own logger that already logs asynchronously.
-However, it can significantly impact performance, especially in applications with frequent atom changes.
+#### Synchronous
 
 ```tsx
-import { useAtomsLogger } from 'jotai-logger';
-
-// Log transactions synchronously
-useAtomsLogger({
-  synchronous: true,
-});
+createLoggedStore(parentStore, { synchronous: true });
 ```
 
-#### Asynchronous Logging Configuration
+Useful for debugging, testing, or deterministic log ordering.
+Has a performance cost with frequent atom changes.
 
-For asynchronous logging, you can fine-tune three key parameters:
+#### Asynchronous pipeline
 
-1. `transactionDebounceMs` (default: `250ms`) - Controls how transactions are grouped:
-   - Higher values (e.g., `500ms`) - Group more unknown events into fewer transactions, reducing console noise
-   - Lower values (e.g., `50ms`) - See transactions more quickly, with less grouping
-   - Setting to `0` - Schedule each transaction to be logged immediately without debouncing incoming events. This is the same as `synchronous: true`.
+Three parameters control the async pipeline:
 
-2. `requestIdleCallbackTimeoutMs` (default: `250ms`) - Controls when scheduled transaction are written:
-   - Higher values - Allow more time for the browser to process logs during idle periods
-   - Setting to `0` - Only log when the browser is completely idle (may delay logs indefinitely)
-   - Setting to `-1` - Disable `requestIdleCallback` completely, logging scheduled transactions immediately. This is the same as `synchronous: true`.
-
-3. `maxProcessingTimeMs` (default: `16ms`) - Controls how long to process transactions in a single batch:
-   - Higher values (e.g., `50ms`) - Process more transactions per batch, potentially improving throughput but may impact UI responsiveness
-   - Lower values (e.g., `5ms`) - Process fewer transactions per batch, keeping the main thread more responsive
-   - Setting to `0` or negative - Process all queued transactions in one go without time limits (same as `synchronous: true`)
-   - The default `16ms` corresponds to approximately one frame at 60fps, balancing performance and responsiveness
-
-Here are some examples of how to configure these options based on your needs:
+1. `transactionDebounceMs` (default: `250ms`) — groups events into transactions:
+   - Higher → fewer, noisier transactions
+   - `0` → immediate scheduling (equivalent to `synchronous: true`)
+2. `requestIdleCallbackTimeoutMs` (default: `250ms`) — schedules when logs are written:
+   - `0` → only write when truly idle (may delay indefinitely)
+   - `-1` → disable idle scheduling entirely (equivalent to `synchronous: true`)
+3. `maxProcessingTimeMs` (default: `16ms`) — caps time per processing batch:
+   - `0` or negative → process everything in one go (equivalent to `synchronous: true`)
+   - `16ms` ≈ one frame at 60fps
 
 ```tsx
-// Quick feedback: minimal debounce, guaranteed logging within 100 to 150ms
-useAtomsLogger({
+// Quick feedback
+createLoggedStore(parentStore, {
   transactionDebounceMs: 50,
   requestIdleCallbackTimeoutMs: 100,
-  maxProcessingTimeMs: 10, // Short bursts to keep UI responsive
+  maxProcessingTimeMs: 10,
 });
 
-// Performance priority: group events aggressively, only log during idle time
-useAtomsLogger({
+// Performance priority
+createLoggedStore(parentStore, {
   transactionDebounceMs: 500,
-  requestIdleCallbackTimeoutMs: 0, // No maximum timeout, only log when truly idle
-  maxProcessingTimeMs: 50, // Longer processing time for better throughput
+  requestIdleCallbackTimeoutMs: 0,
+  maxProcessingTimeMs: 50,
 });
 
-// Balanced approach (default behavior)
-useAtomsLogger({
+// Default
+createLoggedStore(parentStore, {
   transactionDebounceMs: 250,
   requestIdleCallbackTimeoutMs: 250,
   maxProcessingTimeMs: 16,
 });
 ```
 
-## Tree-shaking
+</details>
 
-Jotai Logger can be used in production mode.
+<details>
+<summary>Logging Performances</summary>
 
-If you only want it in development mode we recommend wrapping the `AtomsLogger` in a conditional statement and tree-shake it out in production to avoid any accidental usage in production.
+### Logging Performances
 
-### Using with Vite.js
+The logger logs all transactions asynchronously to avoid blocking the main thread.
 
-For Vite.js applications, you can use environment variables to conditionally include the logger:
+Internally, the logger uses a multi-stage approach:
+
+1. **Debouncing**: Events are grouped into transactions using a debounce mechanism (`transactionDebounceMs`).
+2. **Idle scheduling**: Transactions are scheduled using
+   [requestIdleCallback](https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback) when the
+   browser is idle (`requestIdleCallbackTimeoutMs`).
+3. **Batch processing**: Transactions are processed in batches to prevent blocking the main thread
+   (`maxProcessingTimeMs`).
+
+This approach ensures that even when handling large queues of transactions, UI responsiveness is maintained by
+spreading the work across multiple idle periods.
+
+</details>
+
+## Custom Formatters
+
+<details>
+<summary>Custom Formatter</summary>
+
+### Formatter Option
+
+The `formatter` option accepts any function with the signature `(transaction: AtomTransaction) => void`,
+letting you send atom events to any logging backend.
+
+```ts
+import { createLoggedStore } from 'jotai-logger/vanilla';
+import type { AtomLoggerFormatter, AtomTransaction } from 'jotai-logger/vanilla';
+
+const myFormatter: AtomLoggerFormatter = (transaction: AtomTransaction) => {
+  console.log('[jotai]', transaction.type, transaction.events);
+};
+
+const store = createLoggedStore(parentStore, { formatter: myFormatter });
+```
+
+</details>
+
+<details>
+<summary>Formatter example with logTape and ansis</summary>
+
+### Formatter example with logTape and ansis
+
+Here's an example of a custom formatter that integrates with [logTape](https://github.com/dahlia/logtape) and uses [ansis](https://github.com/webdiscus/ansis) for color formatting in the console.
 
 ```tsx
-import { useAtomsLogger } from 'jotai-logger';
+import { getLogger } from '@logtape/logtape';
+import ansis from 'ansis';
+import {
+  AtomEventTypes,
+  AtomLoggerProvider,
+  AtomTransactionTypes,
+  type AtomEvent,
+  type AtomLoggerFormatter,
+  type AtomTransaction,
+} from 'jotai-logger';
+import React, { captureOwnerStack, type PropsWithChildren } from 'react';
 
-function App() {
+// Create a logTape logger instance for jotai
+const jotaiLogger = getLogger('jotai');
+
+// Provider component to wrap your app and enable logging with logTape
+export function LogTapeJotaiLoggerProvider({ children }: PropsWithChildren) {
   return (
-    <>
-      {import.meta.env.DEV && <AtomsLogger />}
-      {/* your app */}
-    </>
+    <AtomLoggerProvider
+      enabled={jotaiLogger.isEnabledFor('debug')}
+      getOwnerStack={captureOwnerStack}
+      getComponentDisplayName={getReact19ComponentDisplayName}
+      formatter={logTapeJotaiFormatter}
+    >
+      {children}
+    </AtomLoggerProvider>
   );
 }
 
-function AtomsLogger() {
-  useAtomsLogger();
-  return null;
+// Custom formatter that logs transactions and events to logTape with colors and structured properties
+const logTapeJotaiFormatter: AtomLoggerFormatter = (transaction) => {
+  // Calculate elapsed time in milliseconds with 2 decimal places
+  const elapsed = (
+    Math.round((transaction.endTimestamp - transaction.startTimestamp) * 100) / 100
+  ).toFixed(2);
+
+  // Parse the owner stack to get the top 2 components for context
+  const ownerStack = parseOwnerStack(transaction.ownerStack).splice(0, 2).join('.');
+
+  // Get the component display name if available
+  const componentName = transaction.componentDisplayName ?? '';
+
+  // Map transaction types to human-readable names with colors
+  const transactionName = {
+    [AtomTransactionTypes.unknown]: ansis.bold('unknown'),
+    [AtomTransactionTypes.storeGet]: ansis.bold.hex(Colors.blue)('store.get'),
+    [AtomTransactionTypes.storeSet]: ansis.bold.hex(Colors.yellow)('store.set'),
+    [AtomTransactionTypes.storeSubscribe]: ansis.bold.hex(Colors.green)('store.sub'),
+    [AtomTransactionTypes.storeUnsubscribe]: ansis.bold.hex(Colors.red)('store.unsubscribe'),
+    [AtomTransactionTypes.promiseResolved]: ansis.bold.hex(Colors.green)('promise.resolved'),
+    [AtomTransactionTypes.promiseRejected]: ansis.bold.hex(Colors.red)('promise.rejected'),
+  }[transaction.type];
+
+  // Prepare log properties without already logged fields
+  const logProperties: Record<string, unknown> = { ...transaction };
+  const keysToDelete: (keyof AtomTransaction)[] = [
+    'atom',
+    'type',
+    'transactionNumber',
+    'ownerStack',
+    'componentDisplayName',
+    'events',
+    'startTimestamp',
+    'endTimestamp',
+  ];
+  for (const key of keysToDelete) delete logProperties[key];
+
+  // Create the log message for the transaction
+  let log = '';
+  log += `transaction ${transaction.transactionNumber} - `;
+  log += transactionName;
+  log += `(${transaction.atom?.toString() ?? '<?>'})`;
+  log += ` - ${transaction.events.length} event${transaction.events.length > 1 ? 's' : ''}`;
+  log += ` - ${elapsed}ms`;
+  if (ownerStack) log += ` - [${ansis.reset(ownerStack)}]`;
+  if (componentName) log += ` ${ansis.reset(componentName)}`;
+  if (Object.keys(logProperties).length > 0) log += ` : {*}`;
+  log = ansis.hex(Colors.grey)(log);
+
+  // Log the transaction with logTape, using a child logger for this transaction number and passing structured properties
+  const transactionLogger = jotaiLogger.getChild(`${transaction.transactionNumber}`);
+  transactionLogger.debug(log, logProperties);
+
+  // Log each event in the transaction with its own child logger
+  for (const [eventIndex, event] of transaction.events.entries()) {
+    // Map event types to human-readable names with colors
+    const eventName = {
+      [AtomEventTypes.initialized]: ansis.bold.hex(Colors.blue)('initialized'),
+      [AtomEventTypes.initialPromisePending]: ansis.bold.hex(Colors.pink)('initialPromisePending'),
+      [AtomEventTypes.initialPromiseResolved]: ansis.bold.hex(Colors.green)(
+        'initialPromiseResolved',
+      ),
+      [AtomEventTypes.initialPromiseRejected]: ansis.bold.hex(Colors.red)('initialPromiseRejected'),
+      [AtomEventTypes.initialPromiseAborted]: ansis.bold.hex(Colors.red)('initialPromiseAborted'),
+      [AtomEventTypes.changed]: ansis.bold.hex(Colors.lightBlue)('changed'),
+      [AtomEventTypes.changedPromisePending]: ansis.bold.hex(Colors.pink)('changedPromisePending'),
+      [AtomEventTypes.changedPromiseResolved]: ansis.bold.hex(Colors.green)(
+        'changedPromiseResolved',
+      ),
+      [AtomEventTypes.changedPromiseRejected]: ansis.bold.hex(Colors.red)('changedPromiseRejected'),
+      [AtomEventTypes.changedPromiseAborted]: ansis.bold.hex(Colors.red)('changedPromiseAborted'),
+      [AtomEventTypes.dependenciesChanged]: ansis.bold.hex(Colors.yellow)('dependenciesChanged'),
+      [AtomEventTypes.mounted]: ansis.bold.hex(Colors.green)('mounted'),
+      [AtomEventTypes.unmounted]: ansis.bold.hex(Colors.red)('unmounted'),
+      [AtomEventTypes.destroyed]: ansis.bold.hex(Colors.red)('destroyed'),
+    }[event.type];
+
+    // Prepare log properties without already logged fields
+    const logProperties: Record<string, unknown> = { ...event };
+    const keysToDelete = ['type', 'atom'] satisfies (keyof AtomEvent)[];
+    for (const key of keysToDelete) delete logProperties[key];
+    for (const [key, value] of Object.entries(event)) {
+      // Convert Sets to arrays of strings for better logging
+      if (value instanceof Set) logProperties[key] = Array.from(value, (atom) => atom.toString());
+    }
+
+    // Create the log message for this event
+    let log = '';
+    log += eventName;
+    log += ` ${ansis.reset(event.atom.toString())}`;
+    if (Object.keys(logProperties).length > 0) log += ` : {*}`;
+    log = ansis.hex(Colors.grey)(log);
+
+    // Log the event with logTape, using a child logger for this event index and passing structured properties
+    const eventLogger = transactionLogger.getChild(`${eventIndex}`);
+    eventLogger.debug(log, logProperties);
+  }
+};
+
+/**
+ * Okabe-Ito colorblind-friendly palette.
+ * @see {@link https://siegal.bio.nyu.edu/color-palette/ | Okabe-Ito color palette}
+ * @see {@link https://github.com/Wendystraite/jotai-logger#colors | Jotai Logger Colors}
+ */
+const Colors = {
+  grey: '#757575',
+  yellow: '#E69F00',
+  lightBlue: '#56B4E9',
+  green: '#009E73',
+  blue: '#0072B2',
+  red: '#D55E00',
+  pink: '#CC79A7',
+};
+
+/**
+ * Parse a trace from {@link https://react.dev/reference/react/captureOwnerStack | captureOwnerStack} (React 19.1+) or any other source.
+ * @see {@link https://github.com/Wendystraite/jotai-logger#owner-stack-getownerstack | Jotai Logger Owner Stack Tracking}
+ * @see {@link https://github.com/Wendystraite/jotai-logger/blob/main/src/utils/parse-owner-stack.ts | Jotai Logger parseOwnerStack utility function}
+ */
+function parseOwnerStack(stack: string | null | undefined): string[] {
+  return (stack ?? '')
+    .split('\n')
+    .map((line) => /^\s*at\s+([^\s]+)\s+/.exec(line)?.[1])
+    .filter((c) => typeof c === 'string');
+}
+
+/**
+ * Get the currently rendering React component's display name using React 19's internal APIs.
+ * @see {@link https://github.com/Wendystraite/jotai-logger#component-display-name-getcomponentdisplayname | Jotai Logger Component Display Name}
+ */
+function getReact19ComponentDisplayName(): string | undefined {
+  const React19 = React as {
+    __CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE?: {
+      A?: { getOwner?: () => { type?: { displayName?: string; name?: string } } };
+    };
+    __SERVER_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE?: {
+      A?: { getOwner?: () => { type?: { displayName?: string; name?: string } } };
+    };
+  };
+  const component = (
+    React19.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE ??
+    React19.__SERVER_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE
+  )?.A?.getOwner?.().type;
+  return component?.displayName ?? component?.name;
 }
 ```
 
-### Using with Next.js
+</details>
 
-For Next.js applications, you can leverage environment variables or the built-in `process.env.NODE_ENV`:
+## Built-in Console Formatter
 
-```tsx
-// App.tsx
-import dynamic from 'next/dynamic';
+The default formatter — `consoleFormatter()` from `jotai-logger/formatters/console` logs atom transactions to
+the browser or Node.js console with colors, grouping, and timing information.
 
-const AtomsLogger = process.env.NODE_ENV === 'development'
-  ? dynamic(() => import('./AtomsLogger').then((mod) => ({ default: mod.AtomsLogger })), { ssr: false })
-  : null;
+<details>
+<summary><code>ConsoleFormatterOptions</code> reference</summary>
 
-function App() {
-  return (
-    <>
-      {AtomsLogger && <AtomsLogger />}
-      {/* your app */}
-    </>
-  );
-}
+### ConsoleFormatterOptions reference
 
-// AtomsLogger.tsx
-import { useAtomsLogger } from 'jotai-logger';
+```ts
+import { consoleFormatter } from 'jotai-logger/formatters/console';
+import type { ConsoleFormatterOptions } from 'jotai-logger/formatters/console';
 
-export function AtomsLogger() {
-  useAtomsLogger();
-  return null;
-}
+type ConsoleFormatterOptions = {
+  /** Prefix shown before the transaction number in logs. */
+  domain?: string;
+
+  /** Custom logger object. @default console */
+  logger?: Pick<Console, 'log'> & Partial<Pick<Console, 'group' | 'groupCollapsed' | 'groupEnd'>>;
+
+  /** Group transactions with console.group. @default true */
+  groupTransactions?: boolean;
+
+  /** Group events inside a transaction with console.group. @default false */
+  groupEvents?: boolean;
+
+  /** Spaces per indentation level (0 = disabled). @default 0 */
+  indentSpaces?: number;
+
+  /** Use %c color/style formatting. @default true */
+  formattedOutput?: boolean;
+
+  /** Color palette: 'default' | 'light' | 'dark'. @default 'default' */
+  colorScheme?: 'default' | 'light' | 'dark';
+
+  /** Max length of stringified values (0 = no limit). @default 50 */
+  stringifyLimit?: number;
+
+  /** Stringify atom values in logs. @default true */
+  stringifyValues?: boolean;
+
+  /** Custom value-to-string function. */
+  stringify?: (value: unknown) => string;
+
+  /** Show transaction number. @default true */
+  showTransactionNumber?: boolean;
+
+  /** Show event count per transaction. @default true */
+  showTransactionEventsCount?: boolean;
+
+  /** Show transaction start time (locale time string). @default false */
+  showTransactionLocaleTime?: boolean;
+
+  /** Show transaction elapsed time. @default true */
+  showTransactionElapsedTime?: boolean;
+
+  /** Pad fields for column alignment across transactions. @default true */
+  autoAlignTransactions?: boolean;
+
+  /** Collapse transaction groups by default. @default false */
+  collapseTransactions?: boolean;
+
+  /** Collapse event groups by default. @default false */
+  collapseEvents?: boolean;
+
+  /** Max parent components shown from owner stack. @default 2 */
+  ownerStackLimit?: number;
+};
 ```
 
-## Example Logs
+</details>
 
-Here are some examples of what the logs look like in the console:
+<details>
+<summary>Colors</summary>
 
-### Basic Transaction
+### Colors
 
-You can see a transaction as what triggered some atom changes and the following cascading events.
+The default color scheme uses colors easy to read in both light and dark mode, based on the colorblind-friendly
+[Okabe-Ito palette](https://siegal.bio.nyu.edu/color-palette/).
 
-When an atom is initialized or its change value, you'll see a transaction log like this:
+The `colorScheme` option adjusts contrast ratios to meet WCAG AA (min 5:1) on white (`#ffffff`) or dark
+(`#282828`) backgrounds.
+
+```ts
+import { consoleFormatter } from 'jotai-logger/formatters/console';
+import { createLoggedStore } from 'jotai-logger/vanilla';
+
+// Follow the system preference
+createLoggedStore(parentStore, {
+  formatter: consoleFormatter({
+    colorScheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+  }),
+});
+
+// Read from an environment variable (Vite)
+createLoggedStore(parentStore, {
+  formatter: consoleFormatter({
+    colorScheme: import.meta.env.VITE_ATOMS_LOGGER_COLOR_SCHEME,
+  }),
+});
+
+// Disable colors entirely
+createLoggedStore(parentStore, {
+  formatter: consoleFormatter({ formattedOutput: false }),
+});
+```
+
+</details>
+
+<details>
+<summary>Stringification</summary>
+
+### Stringification
+
+By default atom values are converted to strings using `toString()` and `JSON.stringify`.
+
+- `stringifyValues`: enable/disable conversion (default: `true`)
+- `stringifyLimit`: max output length in characters (default: `50`)
+- `stringify`: custom serialiser function
+
+```ts
+// Custom serialiser with @vitest/pretty-format
+import { format as prettyFormat } from '@vitest/pretty-format';
+import { consoleFormatter } from 'jotai-logger/formatters/console';
+import { createLoggedStore } from 'jotai-logger/vanilla';
+
+createLoggedStore(parentStore, {
+  formatter: consoleFormatter({
+    stringifyValues: true,
+    stringifyLimit: 0,
+    stringify(value) {
+      return prettyFormat(value, { min: true, maxDepth: 3, maxWidth: 5 });
+    },
+  }),
+});
+```
+
+</details>
+
+<details>
+<summary>Example Logs</summary>
+
+### Example Logs
+
+<details>
+<summary>Basic Transaction</summary>
+
+A transaction represents what triggered some atom changes and the cascading events that followed.
 
 ```ts
 const counterAtom = atom(0);
@@ -425,14 +704,14 @@ store.set(counterAtom, 1);
 ```
 ▶ transaction 1 - 2.35ms - 1 event : retrieved value of atom1:counter
   ▼ initialized value of atom1:counter to 0
-    value: 1
+    value: 0
 ▶ transaction 2 - 4.00ms - 1 event : set value of atom1:counter to 1
   ▼ changed value of atom1:counter from 0 to 1
     old value: 0
     new value: 1
 ```
 
-If a changed atom has dependents atoms, their new values will be in the same transaction:
+If a changed atom has dependent atoms, their new values appear in the same transaction:
 
 ```ts
 const resultAtom = atom((get) => get(counterAtom) * 2);
@@ -445,9 +724,10 @@ resultAtom.debugLabel = 'result';
   ▶ changed value of atom2:result from 2 to 4
 ```
 
-### Atom setter calls
+</details>
 
-If you call a write only atom method, it will trigger a new transaction :
+<details>
+<summary>Atom setter calls</summary>
 
 ```ts
 const incrementCounterAtom = atom(null, (get, set) => {
@@ -462,13 +742,14 @@ store.set(incrementCounterAtom);
   ▶ changed value of atom1:counter from 3 to 4
 ```
 
-### Async Transaction
+</details>
 
-When working with asynchronous atoms, multiple transactions will be triggered based on the promise state :
+<details>
+<summary>Async Transaction</summary>
 
 ```ts
 const userDataAsyncAtom = atomWithQuery(...);
-userDataAsyncAtom.debugLabel = "userDataAsync";
+userDataAsyncAtom.debugLabel = 'userDataAsync';
 ```
 
 ```
@@ -479,22 +760,20 @@ userDataAsyncAtom.debugLabel = "userDataAsync";
   ▶ resolved initial promise of atom4:userDataAsync to {"name":"Daishi"}
 ```
 
-Just like promises, these transactions can be either pending, resolved, rejected or aborted.
+Transactions can be pending, resolved, rejected, or aborted.
 
-### Mount and Unmount
+</details>
 
-When an atom is mounted or unmounted, you'll see logs like this:
+<details>
+<summary>Mount and Unmount</summary>
 
 ```ts
-// Vanilla style : counter is mounted when calling store.sub
-const unsub = store.sub(counterAtom, () => {
-  console.log('counterAtom value is changed to', store.get(counterAtom));
-});
+// Vanilla
+const unsub = store.sub(counterAtom, () => {});
 
-// React style : counter is mounted when calling useAtomValue
+// React
 function MyCounter() {
   const count = useAtomValue(counterAtom);
-  // ..
 }
 ```
 
@@ -506,9 +785,10 @@ function MyCounter() {
   ▶ unmounted atom4
 ```
 
-### Dependency Tracking
+</details>
 
-When an atom is used in a derived atom, the logger will show their dependencies and dependents:
+<details>
+<summary>Dependency Tracking</summary>
 
 ```ts
 const derivedAtom = atom((get) => `${get(counterAtom)} is the count`);
@@ -523,17 +803,7 @@ derivedAtom.debugLabel = 'derived';
   ▶ mounted atom5:derived
 ```
 
-If the derived atom has its dependencies changed, the logger will notify you:
-
-```ts
-const atomWithVariableDeps = atom((get) => {
-  if (get(isEnabledAtom)) {
-    const aValue = get(anAtom);
-  } else {
-    const anotherValue = get(anotherAtom);
-  }
-});
-```
+If an atom's dependencies change:
 
 ```
 ▶ transaction 10 - 2 events :
@@ -543,68 +813,214 @@ const atomWithVariableDeps = atom((get) => {
     new dependencies: ["atom6:isEnabledAtom", "atom9:anotherAtom"]
 ```
 
-### React components
+</details>
 
-If the `getOwnerStack` option is used the logger will log the parent React component that triggered the transaction.
+<details>
+<summary>React component tracking</summary>
+
+With `getOwnerStack` — shows parent component hierarchy:
 
 ```
 ▶ transaction 11 : [MyApp.MyParent] retrieved value of atom10
   ▶ initialized value of atom10 to false
 ```
 
-If the `getComponentDisplayName` option is used the logger will log the current React component that triggered the transaction.
-
-Note that, if using `getReact19ComponentDisplayName`, the component display name will only be shown when initializing atoms.
-It will not be shown for other events like retrieving or setting atom values.
+With `getComponentDisplayName` — shows the currently rendering component:
 
 ```
 ▶ transaction 11 : MyComponent retrieved value of atom10
   ▶ initialized value of atom10 to false
 ```
 
-When both `getOwnerStack` and `getComponentDisplayName` are used, the logger will show both the parent components and the current component.
+With both combined:
 
 ```
 ▶ transaction 11 : [MyApp.MyParent] MyComponent retrieved value of atom10
   ▶ initialized value of atom10 to false
 ```
 
-## Logging performances
+</details>
 
-The logger logs all transactions asynchronously to avoid blocking the main thread and ensure optimal performance.
+</details>
 
-Internally, the logger uses a multi-stage approach:
+## Tree-shaking
 
-1. **Debouncing**: Events are grouped into transactions using a debounce mechanism (with a default debounce period of 250ms / see `transactionDebounceMs` option).
-2. **Idle scheduling**: Transactions are scheduled to be logged using [requestIdleCallback](https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback) when the browser is idle (with a default timeout of 250ms / see `requestIdleCallbackTimeoutMs` option).
-3. **Batch processing**: Transactions are processed in batches with a maximum processing time limit to prevent blocking the main thread (with 16ms per batch by default / see `maxProcessingTimeMs` option).
+Jotai Logger can be used in production mode. If you only want it in development, wrap the component in a
+conditional and tree-shake it out to avoid accidental production usage.
 
-This approach ensures that even when handling large queues of transactions, UI responsiveness is maintained by spreading the work across multiple idle periods.
+<details>
+<summary>Using with Vite.js</summary>
+
+### Using with Vite.js
+
+```tsx
+import { AtomLoggerProvider } from 'jotai-logger';
+
+function App() {
+  return (
+    <>
+      {import.meta.env.DEV ? (
+        <AtomLoggerProvider>
+          <MyApp />
+        </AtomLoggerProvider>
+      ) : (
+        <MyApp />
+      )}
+    </>
+  );
+}
+```
+
+</details>
+
+<details>
+<summary>Using with Next.js</summary>
+
+### Using with Next.js
+
+```tsx
+// App.tsx
+import dynamic from 'next/dynamic';
+
+const AtomLoggerProvider =
+  process.env.NODE_ENV === 'development'
+    ? dynamic(() => import('jotai-logger').then((mod) => ({ default: mod.AtomLoggerProvider })), {
+        ssr: false,
+      })
+    : null;
+
+function App() {
+  return (
+    <>
+      {AtomLoggerProvider ? (
+        <AtomLoggerProvider>
+          <MyApp />
+        </AtomLoggerProvider>
+      ) : (
+        <MyApp />
+      )}
+    </>
+  );
+}
+```
+
+</details>
 
 ## Lifecycle of atoms
 
-Here's a brief overview of the lifecycle of atoms in Jotai and how they relate to the logger:
+<details>
+<summary>Atom lifecycle events</summary>
 
-- When an atom is **initialized** this means that the atom is created and its value is set for the first time.
-- When an atom is **changed** this means that the atom value changed.
-- When an atom is **mounted** this means that something is subscribed to its value or one of its dependents.
-- When an atom is **unmounted** this means that all subscribers are gone.
-- When an atom is **destroyed** this means that the atom is no longer used and its value is removed from memory.
-- When an async atom is used, its state will either be **pending**, **resolved**, **rejected** or **aborted**.
+- **initialized** — the atom is created and its value is set for the first time.
+- **changed** — the atom value changed.
+- **mounted** — something subscribed to its value or one of its dependents.
+- **unmounted** — all subscribers are gone.
+- **destroyed** — the atom is no longer referenced and its value is removed from memory.
+- **pending / resolved / rejected / aborted** — states for async atoms.
 
-In Jotai :
+</details>
 
-- When using `store.get`, `store.set` or `store.sub`, the atom is **initialized**.
-- When using `store.sub`, the atom is **mounted** when `store.sub` is called and **unmounted** when the `unsubscribe` method is called.
-- When using `store.set`, the atom is **changed**.
+<details>
+<summary>How the lifecycle events are triggered in vanilla Jotai</summary>
 
-In React :
+- `store.get`, `store.set`, `store.sub` → atom is **initialized**.
+- `store.sub` → atom is **mounted**; the returned unsubscribe function → **unmounted**.
+- `store.set` → atom is **changed**.
 
-- When using `useAtom` or `useAtomValue`, the atom is **initialized** and then **mounted** (it uses `store.get` and `store.sub`).
-- When all components are not using `useAtom` and `useAtomValue` on an atom, it is **unmounted**.
-- When calling `useAtom` or `useSetAtom`'s setter function, the atom is **changed** (it uses `store.set`).
+</details>
 
-Memory management :
+<details>
+<summary>How the lifecycle events are triggered in React</summary>
 
-Jotai uses a `WeakMap` to store the atom state, so when the atom is no longer referenced, it will be removed from memory by the garbage collector.
-The logger uses [FinalizationRegistry](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/FinalizationRegistry) to track when the atom is destroyed.
+- `useAtom` / `useAtomValue` → atom is **initialized** then **mounted**.
+- All components stop using the atom → **unmounted**.
+- `useAtom` / `useSetAtom` setter → atom is **changed**.
+
+</details>
+
+<details>
+<summary>Memory management</summary>
+
+Jotai uses a `WeakMap` to store atom state, so when an atom is no longer referenced it is removed by the garbage
+collector. The logger uses
+[FinalizationRegistry](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/FinalizationRegistry)
+to track when atoms are destroyed.
+
+</details>
+
+## Migration guide
+
+<details>
+<summary>From v4 to v5</summary>
+
+The v5 API no longer mutates the store. Instead of patching `store.get/set/sub` in place, it
+creates a **new derived store** that shares all internal state with the parent.
+
+**React API** :
+
+`useAtomsLogger` is replaced by `AtomLoggerProvider`, a Provider-like component that
+automatically picks up the nearest Jotai store from context and wraps children in a new logged store:
+
+```diff
+- import { useAtomsLogger } from 'jotai-logger';
++ import { AtomLoggerProvider } from 'jotai-logger';
+
+- function AtomsLoggerComponent() {
+-   useAtomsLogger(options);
+-   return null;
+- }
+-
+  function App() {
+    return (
+      <Provider>
+-       <AtomsLoggerComponent />
+-       <MyApp />
++       <AtomLoggerProvider {...options}>
++         <MyApp />
++       </AtomLoggerProvider>
+      </Provider>
+    );
+  }
+```
+
+All props of `AtomLoggerProvider` are the same options as `AtomLoggerOptions`.
+
+**Vanilla API** :
+
+`bindAtomsLoggerToStore` is replaced by `createLoggedStore` that creates and return a new store:
+
+```diff
+- import { bindAtomsLoggerToStore } from 'jotai-logger';
++ import { createLoggedStore } from 'jotai-logger';
+
+  const parentStore = createStore();
+- bindAtomsLoggerToStore(parentStore, options);
+- parentStore.get(myAtom);
++ const store = createLoggedStore(parentStore, options);
++ store.get(myAtom);
+```
+
+`isAtomsLoggerBoundToStore` → `isLoggedStore`:
+
+```diff
+- import { isAtomsLoggerBoundToStore } from 'jotai-logger/vanilla';
++ import { isLoggedStore } from 'jotai-logger/vanilla';
+
+- isAtomsLoggerBoundToStore(store);
++ isLoggedStore(store);
+```
+
+Updating options at runtime (no re-bind; mutate the logger options directly):
+
+```diff
+  const options: AtomLoggerOptions = { enabled: true };
+
+- bindAtomsLoggerToStore(parentStore, options);
++ const store = createLoggedStore(parentStore, options);
+
+  // Change options at runtime
+- bindAtomsLoggerToStore(store, { enabled: false });
++ options.enabled = false;
++ // or
++ getLoggedStoreOptions(store)!.enabled = false;
+```

@@ -1,0 +1,51 @@
+{
+  "name": "select-atom",
+  "date": "2026-05-08T23:20:52.534Z",
+  "version": null,
+  "results": [
+    {
+      "name": "selectAtom 10k writes (relevant key)",
+      "ops": 138312,
+      "margin": 1.45,
+      "percentSlower": 0
+    },
+    {
+      "name": "selectAtom 10k writes (relevant key) [with logger]",
+      "ops": 43918,
+      "margin": 2.1,
+      "percentSlower": 68.25
+    },
+    {
+      "name": "selectAtom 10k writes (relevant key) [with console formatter]",
+      "ops": 30291,
+      "margin": 2.42,
+      "percentSlower": 78.1
+    },
+    {
+      "name": "selectAtom 10k writes (irrelevant key)",
+      "ops": 120818,
+      "margin": 1.4,
+      "percentSlower": 12.65
+    },
+    {
+      "name": "selectAtom 10k writes (irrelevant key) [with logger]",
+      "ops": 45740,
+      "margin": 1.23,
+      "percentSlower": 66.93
+    },
+    {
+      "name": "selectAtom 10k writes (irrelevant key) [with console formatter]",
+      "ops": 32131,
+      "margin": 1.36,
+      "percentSlower": 76.77
+    }
+  ],
+  "fastest": {
+    "name": "selectAtom 10k writes (relevant key)",
+    "index": 0
+  },
+  "slowest": {
+    "name": "selectAtom 10k writes (relevant key) [with console formatter]",
+    "index": 2
+  }
+}

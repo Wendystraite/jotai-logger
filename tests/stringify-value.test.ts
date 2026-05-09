@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { stringifyValue } from '../src/utils/stringify-value.js';
+import { stringifyValue } from '../src/formatters/console/utils/stringify-value.js';
 
 describe('stringifyValue', () => {
   const defaultOptions = {

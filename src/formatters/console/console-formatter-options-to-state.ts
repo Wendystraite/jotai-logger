@@ -1,0 +1,55 @@
+import type { ConsoleFormatterOptions, ConsoleFormatterState } from './types.js';
+
+export function consoleFormatterOptionsToState(
+  options: ConsoleFormatterOptions = {},
+): ConsoleFormatterState {
+  const {
+    domain,
+    logger = console,
+    groupTransactions = true,
+    groupEvents = false,
+    indentSpaces = 0,
+    formattedOutput = true,
+    colorScheme = 'default',
+    stringifyLimit = 50,
+    stringifyValues = true,
+    stringify,
+    showTransactionNumber = true,
+    showTransactionEventsCount = true,
+    showTransactionLocaleTime = false,
+    showTransactionElapsedTime = true,
+    autoAlignTransactions = true,
+    collapseTransactions = true,
+    collapseEvents = false,
+    ownerStackLimit = 2,
+  } = options;
+
+  return {
+    domain,
+    logger,
+    groupTransactions,
+    groupEvents,
+    indentSpaces,
+    indentSpacesDepth1:
+      indentSpaces <= 0 ? '' : Array.from({ length: indentSpaces }, () => ' ').join(''),
+    indentSpacesDepth2:
+      indentSpaces <= 0 ? '' : Array.from({ length: indentSpaces * 2 }, () => ' ').join(''),
+    formattedOutput,
+    colorScheme,
+    stringifyLimit,
+    stringifyValues,
+    stringify,
+    showTransactionNumber,
+    showTransactionEventsCount,
+    showTransactionLocaleTime,
+    showTransactionElapsedTime,
+    autoAlignTransactions,
+    collapseTransactions,
+    collapseEvents,
+    ownerStackLimit,
+    maxWidths: {
+      eventsCount: 0,
+      elapsedTime: 0,
+    },
+  };
+}

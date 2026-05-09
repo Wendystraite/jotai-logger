@@ -1,0 +1,325 @@
+import { AtomEventTypes, type AtomEvent, type AtomEventType } from '../../vanilla/types/event.js';
+import { shouldSetStateInEvent } from '../../vanilla/utils/should-set-state-in-event.js';
+import { addAtomToLogs } from './add-atom-to-logs.js';
+import { addToLogs } from './add-to-logs.js';
+import { LogPipeline } from './log-pipeline.js';
+import type { ConsoleFormatterState } from './types.js';
+import { stringifyValue } from './utils/stringify-value.js';
+
+const addEventTypeToLogsMapping: Record<AtomEventType, Parameters<typeof addToLogs>[2]> = {
+  [AtomEventTypes.initialized]: {
+    plainText: () => 'initialized value of',
+    formatted: () => ['%cinitialized value %cof', ['blue', 'bold'], 'grey'],
+  },
+  [AtomEventTypes.changed]: {
+    plainText: () => 'changed value of',
+    formatted: () => ['%cchanged value %cof', ['lightBlue', 'bold'], 'grey'],
+  },
+  [AtomEventTypes.initialPromisePending]: {
+    plainText: () => 'pending initial promise of',
+    formatted: () => ['%cpending initial promise %cof', ['pink', 'bold'], 'grey'],
+  },
+  [AtomEventTypes.changedPromisePending]: {
+    plainText: () => 'pending promise of',
+    formatted: () => ['%cpending promise %cof', ['pink', 'bold'], 'grey'],
+  },
+  [AtomEventTypes.initialPromiseResolved]: {
+    plainText: () => 'resolved initial promise of',
+    formatted: () => [
+      '%cresolved %cinitial promise %cof',
+      ['green', 'bold'],
+      ['pink', 'bold'],
+      'grey',
+    ],
+  },
+  [AtomEventTypes.changedPromiseResolved]: {
+    plainText: () => 'resolved promise of',
+    formatted: () => ['%cresolved %cpromise %cof', ['green', 'bold'], ['pink', 'bold'], 'grey'],
+  },
+  [AtomEventTypes.initialPromiseRejected]: {
+    plainText: () => 'rejected initial promise of',
+    formatted: () => [
+      '%crejected %cinitial promise %cof',
+      ['red', 'bold'],
+      ['pink', 'bold'],
+      'grey',
+    ],
+  },
+  [AtomEventTypes.changedPromiseRejected]: {
+    plainText: () => 'rejected promise of',
+    formatted: () => ['%crejected %cpromise %cof', ['red', 'bold'], ['pink', 'bold'], 'grey'],
+  },
+  [AtomEventTypes.initialPromiseAborted]: {
+    plainText: () => 'aborted initial promise of',
+    formatted: () => [
+      '%caborted %cinitial promise %cof',
+      ['red', 'bold'],
+      ['pink', 'bold'],
+      'grey',
+    ],
+  },
+  [AtomEventTypes.changedPromiseAborted]: {
+    plainText: () => 'aborted promise of',
+    formatted: () => ['%caborted %cpromise %cof', ['red', 'bold'], ['pink', 'bold'], 'grey'],
+  },
+  [AtomEventTypes.destroyed]: {
+    plainText: () => 'destroyed',
+    formatted: () => ['%cdestroyed', ['red', 'bold']],
+  },
+  [AtomEventTypes.dependenciesChanged]: {
+    plainText: () => 'changed dependencies of',
+    formatted: () => ['%cchanged dependencies %cof', ['yellow', 'bold'], 'grey'],
+  },
+  [AtomEventTypes.mounted]: {
+    plainText: () => 'mounted',
+    formatted: () => ['%cmounted', ['green', 'bold']],
+  },
+  [AtomEventTypes.unmounted]: {
+    plainText: () => 'unmounted',
+    formatted: () => ['%cunmounted', ['red', 'bold']],
+  },
+};
+
+export const EventLogPipeline = new LogPipeline()
+  .withArgs<{
+    event: AtomEvent;
+    options: ConsoleFormatterState;
+    mergedOldValues?: unknown[];
+  }>()
+
+  // Initialize base logging context
+  .withMeta<{
+    logs: [string, ...unknown[]];
+    subLogsArray: [string, ...unknown[]][];
+    subLogsObject: Record<string, unknown>;
+  }>(function addLogsToEventMeta(context) {
+    context.logs = [] as unknown[] as [string, ...unknown[]];
+    context.subLogsArray = [];
+    context.subLogsObject = {};
+  })
+
+  // Process old values
+  .withMeta<
+    (
+      | { hasOldValues: true; oldValues: unknown[] }
+      | { hasOldValues?: undefined; oldValues?: undefined }
+    ) &
+      (
+        | { hasOldValue: true; oldValue: unknown; isOldValueError: boolean }
+        | { hasOldValue?: undefined; oldValue?: undefined; isOldValueError?: undefined }
+      )
+  >(function addOldValuesToEventMeta(context) {
+    const { event, mergedOldValues } = context;
+    if (mergedOldValues !== undefined && mergedOldValues.length > 0) {
+      context.hasOldValues = true;
+      context.oldValues = mergedOldValues;
+      context.hasOldValue = true;
+      context.oldValue = mergedOldValues[0];
+      context.isOldValueError = mergedOldValues[0] instanceof Error;
+    } else if ('oldValue' in event) {
+      context.hasOldValue = true;
+      context.oldValue = event.oldValue;
+      context.isOldValueError = event.oldValue instanceof Error;
+    }
+  })
+
+  // Process new values
+  .withMeta<
+    (
+      | { hasNewValue: true; newValue: unknown; isNewValueError: boolean }
+      | { hasNewValue?: undefined; newValue?: undefined; isNewValueError?: undefined }
+    ) & { showNewValueInLog: boolean }
+  >(function addNewValuesToEventMeta(context) {
+    const { event } = context;
+    if ('newValue' in event) {
+      context.hasNewValue = true;
+      context.newValue = event.newValue;
+      context.isNewValueError = false;
+    } else if ('value' in event) {
+      context.hasNewValue = true;
+      context.newValue = event.value;
+      context.isNewValueError = false;
+    } else if ('error' in event) {
+      context.hasNewValue = true;
+      context.newValue = event.error;
+      context.isNewValueError = true;
+    }
+    context.showNewValueInLog = event.type !== AtomEventTypes.mounted;
+  })
+
+  // {event}
+  .withLog(function addEventToEventLogs(context) {
+    const { logs, event, options } = context;
+    addToLogs(logs, options, addEventTypeToLogsMapping[event.type]);
+  })
+
+  // {atom}
+  .withLog(function addAtomToEventLogs({ logs, event, options }) {
+    addAtomToLogs(logs, event.atom, options);
+  })
+
+  // xx times
+  .withLog(function addCallTimesToEventLogs({ logs, hasOldValues, oldValues, options }) {
+    if (hasOldValues) {
+      addToLogs(logs, options, {
+        plainText: () => `${oldValues.length.toString()} times`,
+        formatted: () => [`%c${oldValues.length.toString()} %ctimes`, 'default', 'grey'],
+      });
+    }
+  })
+
+  // from xx
+  .withLog(function addOldValuesToEventLogs({
+    logs,
+    subLogsArray,
+    subLogsObject,
+    options,
+    options: { stringifyValues },
+    hasOldValue,
+    oldValue,
+    isOldValueError,
+    hasOldValues,
+    oldValues,
+  }) {
+    if (hasOldValue) {
+      addToLogs(logs, options, {
+        plainText: () => {
+          if (stringifyValues) {
+            const stringifiedState = stringifyValue(oldValue, options);
+            return `from ${stringifiedState}`;
+          } else if (hasOldValues) {
+            return [`from`, oldValues];
+          } else {
+            return [`from`, oldValue];
+          }
+        },
+        formatted: () => {
+          if (stringifyValues) {
+            const stringifiedState = stringifyValue(oldValue, options);
+            return [`%cfrom %c${stringifiedState}`, 'grey', 'default'];
+          } else {
+            return [`%cfrom %c%o`, 'grey', 'default', { data: oldValue }];
+          }
+        },
+      });
+    }
+
+    if (hasOldValues) {
+      subLogsArray.push(['old values', oldValues]);
+      if (options.stringifyValues) subLogsObject.oldValues = oldValues;
+    } else if (hasOldValue) {
+      if (isOldValueError) {
+        subLogsArray.push(['old error', oldValue]);
+        if (options.stringifyValues) subLogsObject.oldError = oldValue;
+      } else {
+        subLogsArray.push(['old value', oldValue]);
+        if (options.stringifyValues) subLogsObject.oldValue = oldValue;
+      }
+    }
+  })
+
+  // to xx
+  .withLog(function addNewValuesToEventLogs({
+    logs,
+    subLogsArray,
+    subLogsObject,
+    options,
+    options: { stringifyValues },
+    hasNewValue,
+    newValue,
+    isNewValueError,
+    showNewValueInLog,
+    hasOldValue,
+    isOldValueError,
+  }) {
+    if (showNewValueInLog && hasNewValue) {
+      addToLogs(logs, options, {
+        plainText: () => {
+          if (stringifyValues) {
+            const stringifiedState = stringifyValue(newValue, options);
+            return `to ${stringifiedState}`;
+          } else {
+            return [`to`, newValue];
+          }
+        },
+        formatted: () => {
+          if (stringifyValues) {
+            const stringifiedState = stringifyValue(newValue, options);
+            return [`%cto %c${stringifiedState}`, 'grey', 'default'];
+          } else {
+            return [`%cto %c%o`, 'grey', 'default', { data: newValue }];
+          }
+        },
+      });
+    }
+
+    if (hasNewValue) {
+      if (isNewValueError) {
+        if (hasOldValue && isOldValueError) {
+          subLogsArray.push(['new error', newValue]);
+          if (options.stringifyValues) subLogsObject.newError = newValue;
+        } else {
+          subLogsArray.push(['error', newValue]);
+          if (options.stringifyValues) subLogsObject.error = newValue;
+        }
+      } else {
+        if (hasOldValue && !isOldValueError) {
+          subLogsArray.push(['new value', newValue]);
+          if (options.stringifyValues) subLogsObject.newValue = newValue;
+        } else {
+          subLogsArray.push(['value', newValue]);
+          if (options.stringifyValues) subLogsObject.value = newValue;
+        }
+      }
+    }
+  })
+
+  // Extra data logger
+  .withLog(function addExtraDataToEventLogs({ subLogsArray, subLogsObject, event }) {
+    if (!shouldSetStateInEvent(event)) return;
+
+    const { pendingPromises, dependencies, dependents } = event;
+
+    const showPendingPromises = pendingPromises && pendingPromises.size > 0;
+    const showDependents = dependents && dependents.size > 0;
+
+    const isDepsChangedEvent = event.type === AtomEventTypes.dependenciesChanged;
+    const showDependencies = !isDepsChangedEvent && dependencies && dependencies.size > 0;
+
+    if (showPendingPromises) {
+      const pendingPromisesArray = Array.from(pendingPromises, (a) => a.toString());
+      subLogsArray.push(['pending promises', pendingPromisesArray]);
+      subLogsObject.pendingPromises = pendingPromisesArray;
+    }
+    if (isDepsChangedEvent) {
+      const oldDependenciesArray = Array.from(event.oldDependencies ?? [], (a) => a.toString());
+      const newDependenciesArray = Array.from(event.dependencies ?? [], (a) => a.toString());
+      subLogsArray.push(['old dependencies', oldDependenciesArray]);
+      subLogsObject.oldDependencies = oldDependenciesArray;
+      subLogsArray.push(['new dependencies', newDependenciesArray]);
+      subLogsObject.newDependencies = newDependenciesArray;
+    }
+    if (showDependencies) {
+      const dependenciesArray = Array.from(dependencies, (a) => a.toString());
+      subLogsArray.push(['dependencies', dependenciesArray]);
+      subLogsObject.dependencies = dependenciesArray;
+    }
+    if (showDependents) {
+      const dependentsArray = Array.from(dependents, (a) => a.toString());
+      subLogsArray.push(['dependents', dependentsArray]);
+      subLogsObject.dependents = dependentsArray;
+    }
+  })
+
+  // Indentation
+  .withLog(function addIndentationToEventLogs({ logs, subLogsArray, options }) {
+    const { indentSpaces, indentSpacesDepth1, indentSpacesDepth2 } = options;
+
+    if (indentSpaces > 0) {
+      logs[0] = `${indentSpacesDepth1}${logs[0]}`;
+
+      for (const subLogs of subLogsArray) {
+        subLogs[0] = `${indentSpacesDepth2}${subLogs[0]}`;
+      }
+    }
+  });

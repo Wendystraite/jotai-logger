@@ -1,0 +1,87 @@
+{
+  "name": "derived-chain",
+  "date": "2026-05-08T23:05:08.200Z",
+  "version": null,
+  "results": [
+    {
+      "name": "depth=10",
+      "ops": 21394,
+      "margin": 1.19,
+      "percentSlower": 0
+    },
+    {
+      "name": "depth=10 [with logger]",
+      "ops": 10590,
+      "margin": 0.9,
+      "percentSlower": 50.5
+    },
+    {
+      "name": "depth=10 [with console formatter]",
+      "ops": 6062,
+      "margin": 2.37,
+      "percentSlower": 71.66
+    },
+    {
+      "name": "depth=50",
+      "ops": 4669,
+      "margin": 1.14,
+      "percentSlower": 78.18
+    },
+    {
+      "name": "depth=50 [with logger]",
+      "ops": 2325,
+      "margin": 1.09,
+      "percentSlower": 89.13
+    },
+    {
+      "name": "depth=50 [with console formatter]",
+      "ops": 1426,
+      "margin": 1.16,
+      "percentSlower": 93.33
+    },
+    {
+      "name": "depth=100",
+      "ops": 2428,
+      "margin": 1.16,
+      "percentSlower": 88.65
+    },
+    {
+      "name": "depth=100 [with logger]",
+      "ops": 1149,
+      "margin": 1.02,
+      "percentSlower": 94.63
+    },
+    {
+      "name": "depth=100 [with console formatter]",
+      "ops": 712,
+      "margin": 1.24,
+      "percentSlower": 96.67
+    },
+    {
+      "name": "depth=200",
+      "ops": 1186,
+      "margin": 1.26,
+      "percentSlower": 94.46
+    },
+    {
+      "name": "depth=200 [with logger]",
+      "ops": 502,
+      "margin": 1.31,
+      "percentSlower": 97.65
+    },
+    {
+      "name": "depth=200 [with console formatter]",
+      "ops": 330,
+      "margin": 1.25,
+      "percentSlower": 98.46
+    }
+  ],
+  "fastest": {
+    "name": "depth=10",
+    "index": 0
+  },
+  "slowest": {
+    "name": "depth=200 [with console formatter]",
+    "index": 11
+  }
+}

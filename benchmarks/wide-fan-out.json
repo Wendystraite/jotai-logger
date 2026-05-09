@@ -1,0 +1,69 @@
+{
+  "name": "wide-fan-out",
+  "date": "2026-05-08T23:07:11.387Z",
+  "version": null,
+  "results": [
+    {
+      "name": "1→100 derived",
+      "ops": 1746,
+      "margin": 5.9,
+      "percentSlower": 0
+    },
+    {
+      "name": "1→100 derived [with logger]",
+      "ops": 394,
+      "margin": 3.62,
+      "percentSlower": 77.43
+    },
+    {
+      "name": "1→100 derived [with console formatter]",
+      "ops": 242,
+      "margin": 3.03,
+      "percentSlower": 86.14
+    },
+    {
+      "name": "1→500 derived",
+      "ops": 248,
+      "margin": 3.33,
+      "percentSlower": 85.8
+    },
+    {
+      "name": "1→500 derived [with logger]",
+      "ops": 42,
+      "margin": 3.6,
+      "percentSlower": 97.59
+    },
+    {
+      "name": "1→500 derived [with console formatter]",
+      "ops": 29,
+      "margin": 5.68,
+      "percentSlower": 98.34
+    },
+    {
+      "name": "1→1000 derived",
+      "ops": 123,
+      "margin": 4.23,
+      "percentSlower": 92.96
+    },
+    {
+      "name": "1→1000 derived [with logger]",
+      "ops": 12,
+      "margin": 5.47,
+      "percentSlower": 99.31
+    },
+    {
+      "name": "1→1000 derived [with console formatter]",
+      "ops": 10,
+      "margin": 5.69,
+      "percentSlower": 99.43
+    }
+  ],
+  "fastest": {
+    "name": "1→100 derived",
+    "index": 0
+  },
+  "slowest": {
+    "name": "1→1000 derived [with console formatter]",
+    "index": 8
+  }
+}
