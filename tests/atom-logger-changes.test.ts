@@ -350,4 +350,21 @@ describe('changes', () => {
       [`initialized value of ${circularAtom} to [Circular]`, { value: circularValue }],
     ]);
   });
+
+  it('should emit a changed event when value changes from -0 to 0 (Object.is differs but === does not)', () => {
+    const numAtom = atom(-0);
+    store = createLoggedStore(store, defaultOptions);
+
+    store.sub(numAtom, vi.fn());
+    vi.runAllTimers();
+    vi.clearAllMocks();
+
+    store.set(numAtom, 0);
+    vi.runAllTimers();
+
+    expect(consoleMock.log.mock.calls).toEqual([
+      [`transaction 2 : set value of ${numAtom} to 0`, { value: 0 }],
+      [`changed value of ${numAtom} from 0 to 0`, { newValue: 0, oldValue: -0 }],
+    ]);
+  });
 });
