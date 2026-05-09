@@ -1,5 +1,55 @@
 # jotai-logger
 
+## 5.0.0
+
+### Major Changes
+
+- 4436d69: Split the package into vanilla/react/formatter entry points
+  - Split the core logger from its console formatter.
+  - The core handle only scheduling and filtering options and accepts a new `formatter` option.
+  - The new `consoleFormatter` factory creates the built in console formatter and accepts the old display options (`domain`, `logger`, `colorScheme`, etc.).
+  - Add the `formatter` option to `bindAtomsLoggerToStore` and `useAtomsLogger` to replace the default console output with any custom function.
+
+  BREAKING CHANGE:
+
+  Formatting options that were present in `bindAtomsLoggerToStore` and `useAtomsLogger` are now moved to the new `consoleFormatter` factory options.
+
+  ```diff
+  - bindAtomsLoggerToStore(store, { stringifyLimit: 100 });
+  + const loggedStore = createLoggedStore(store, { formatter: consoleFormatter({ stringifyLimit: 100 }) });
+  ```
+
+- 43291e2: Jotai 2.20 support
+
+  Adds support for Jotai 2.20's new internal `INTERNAL_buildStoreRev3` API
+  (see [pmndrs/jotai#3293](https://github.com/pmndrs/jotai/pull/3293)).
+
+  BREAKING CHANGE:
+
+  Only jotai 2.20.0 and up is supported due to changes in their internal APIs.
+
+- 496b4e0: Replace the mutation-based API with a derived-store API
+  - The store is no longer mutated. Instead, `createLoggedStore` returns a **new** store that shares all internal state with the parent but intercepts `get`, `set` and `sub` for logging.
+  - On the React side, `AtomLoggerProvider` propagates the logged store to children via a Jotai `<Provider>`, retrieving the parent store from context automatically.
+  - This approach aligns with Jotai's internal `INTERNAL_buildStoreRev2` API introduced in jotai v2.15 (see https://github.com/pmndrs/jotai/pull/3149).
+
+  BREAKING CHANGE:
+
+  A migration guide from v4 to v5 is present in the README. [See link](https://github.com/Wendystraite/jotai-logger#migration-guide). TLDR:
+  - `useAtomsLogger` is replaced by `AtomLoggerProvider`, a Provider-like component that automatically picks up the nearest Jotai store from context and wraps children in a new logged store.
+  - `bindAtomsLoggerToStore` is replaced by `createLoggedStore` that creates and return a new store.
+  - `isAtomsLoggerBoundToStore` removed → use `isLoggedStore`
+  - `createLoggedStore` **throws** instead of returning `false`
+
+### Minor Changes
+
+- 096fdc0: fix: retroactively set dependents and pendingPromises on initialized/mounted events
+
+### Patch Changes
+
+- ffa5442: fix: track dependencies that have the same name
+- ff5a893: fix: don't add empty or undefined data to events
+
 ## 4.0.0
 
 ### Major Changes
