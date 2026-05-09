@@ -1,5 +1,15 @@
 # jotai-logger
 
+## 5.1.0
+
+### Minor Changes
+
+- ca043b1: refactor: remove all internal store proxy hacks
+
+### Patch Changes
+
+- 1d2e58c: fix: fix a rare cases of values not detected as changed
+
 ## 5.0.0
 
 ### Major Changes
